@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QApplication,QCheckBox,QComboBox,QDialog,QDialogB
 APP_NAME="Python Desktop Pet v4"; ROOT=Path(__file__).resolve().parent; ASSETS=ROOT/"assets"; CUSTOM=ROOT/"custom_characters"; CONFIG=ROOT/"pet_config.json"; CANVAS=(1536,1024); MAX_EXTRA=4
 BUILTINS={"藍色大肥魚（DeepSeek）":"sprite.png","GPT 龍娘":"sprite-gpt.png","大小姐 Claude":"sprite-claude.png","北美貓娘 Gemini":"sprite-gemini.png"}
 EXPR={"GPT 龍娘":"gpt","大小姐 Claude":"claude","北美貓娘 Gemini":"gemini"}
+DARK_EXPRESSIONS={"default":"sprite-deepseek-dark.png","dark_anger":"sprite-deepseek-dark-anger.png","dark_smirk":"sprite-deepseek-dark-smirk.png","dark_glow":"sprite-deepseek-dark-glow.png","dark_void":"sprite-deepseek-dark-void.png"}
 LINES=["今天也要記得休息一下。","我有看到你在努力喔。","要不要餵我一點飯？","目前沒有啟用 AI 對話，我先用隨機文句陪你。","桌面巡邏完成，暫時安全。","今天的狀態：可愛但有點餓。","別忘了喝水。","我會在這裡陪著你。"]
 
 def configure_tls():
@@ -67,7 +68,15 @@ class SpeechBubble(QLabel):
  def __init__(self,pet):
   super().__init__(pet); self.pet=pet; self.setWordWrap(True); self.setAlignment(Qt.AlignCenter); self.setAttribute(Qt.WA_TransparentForMouseEvents); self.hide()
  def show_message(self,text,thought=False):
-  self.setText(text); self.setStyleSheet("QLabel{color:#222;background:%s;border:2px solid #555;border-radius:16px;padding:8px 12px;font-size:15px;}" % ("#e8e8e8" if thought else "#fffdf2")); self.setMaximumWidth(max(180,min(360,self.pet.width()-20))); self.adjustSize(); self.resize(min(360,max(180,self.sizeHint().width())),max(44,self.sizeHint().height())); self.move(max(5,(self.pet.width()-self.width())//2),8); self.raise_(); self.show(); QTimer.singleShot(6500,self.hide)
+  dark=self.pet.is_deepseek_dark(); self._thought=thought; self.setText(text);
+  if dark:
+   self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if thought else "#35111b")); QTimer.singleShot(180,self.dark_flash)
+  else:self.setStyleSheet("QLabel{color:#222;background:%s;border:2px solid #555;border-radius:16px;padding:8px 12px;font-size:15px;}" % ("#e8e8e8" if thought else "#fffdf2"))
+  self.setMaximumWidth(max(180,min(360,self.pet.width()-20))); self.adjustSize(); self.resize(min(360,max(180,self.sizeHint().width())),max(44,self.sizeHint().height())); self.move(max(5,(self.pet.width()-self.width())//2),8); self.raise_(); self.show(); QTimer.singleShot(6500,self.hide)
+ def dark_flash(self):
+  if self.isVisible() and self.pet.is_deepseek_dark(): self.setStyleSheet("QLabel{color:#fff;background:#5b1020;border:3px solid #ff3658;border-radius:16px;padding:7px 11px;font-size:15px;font-weight:bold;}"); QTimer.singleShot(240,self.restore_dark)
+ def restore_dark(self):
+  if self.isVisible() and self.pet.is_deepseek_dark(): self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if getattr(self,"_thought",False) else "#35111b"))
 
 class ChatDialog(QDialog):
  def __init__(self,pet):
@@ -162,7 +171,7 @@ class Panel(QDialog):
   tab=QWidget(); h=QHBoxLayout(tab); self.list=QListWidget(); self.paths=[]
   for label,name in BUILTINS.items(): self.list.addItem(label); self.paths.append(ASSETS/name)
   self.list.currentRowChanged.connect(self.preview); h.addWidget(self.list); col=QVBoxLayout(); self.pic=QLabel(); self.pic.setMinimumSize(350,250); self.pic.setAlignment(Qt.AlignCenter); col.addWidget(self.pic); use=QPushButton("套用角色"); use.clicked.connect(self.use); col.addWidget(use); imp=QPushButton("匯入自訂角色"); imp.clicked.connect(pet.import_character); col.addWidget(imp); h.addLayout(col); tabs.addTab(tab,"角色與表情"); self.list.setCurrentRow(0)
-  exp=QWidget(); ef=QFormLayout(exp); self.expr=QComboBox(); self.expr.addItems(["default","expression_11","expression_12","expression_21","expression_22"]); self.expr.setCurrentText(pet.config.get("expression","default")); ef.addRow("舊表情差分",self.expr); applye=QPushButton("套用表情"); applye.clicked.connect(lambda:pet.set_expression(self.expr.currentText())); ef.addRow(applye); self.expr_note=QLabel("Claude、Gemini、GPT 的舊表情已接入；沒有 walking sprite 的角色不會自動行走。"); self.expr_note.setWordWrap(True); ef.addRow(self.expr_note); tabs.addTab(exp,"表情差分")
+  exp=QWidget(); ef=QFormLayout(exp); self.expr=QComboBox(); self.expr.addItems(["default","expression_11","expression_12","expression_21","expression_22","dark_anger","dark_smirk","dark_glow","dark_void"]); self.expr.setCurrentText(pet.config.get("expression","default")); ef.addRow("舊表情差分",self.expr); applye=QPushButton("套用表情"); applye.clicked.connect(lambda:pet.set_expression(self.expr.currentText())); ef.addRow(applye); self.expr_note=QLabel("Claude、Gemini、GPT 的舊表情已接入；黑化 DeepSeek 另有 anger／smirk／glow／void 專屬表情；沒有 walking sprite 的角色不會自動行走。"); self.expr_note.setWordWrap(True); ef.addRow(self.expr_note); tabs.addTab(exp,"表情差分")
   ap=QWidget(); af=QFormLayout(ap); self.opacity=QSpinBox(); self.opacity.setRange(20,100); self.opacity.setValue(pet.config.get("opacity",100)); af.addRow("透明度 %",self.opacity); self.size=QSpinBox(); self.size.setRange(180,1000); self.size.setValue(pet.config.get("size",520)); af.addRow("寬度 px",self.size); self.snap=QCheckBox("自動貼邊"); self.snap.setChecked(pet.config.get("auto_snap",True)); af.addRow(self.snap); applya=QPushButton("套用外觀"); applya.clicked.connect(self.apply_appearance); af.addRow(applya); tabs.addTab(ap,"外觀與 DPI")
   sim=QWidget(); sf=QVBoxLayout(sim); self.status=QLabel(); self.status.setWordWrap(True); sf.addWidget(self.status); b=QPushButton("模擬模式設定"); b.clicked.connect(lambda:(SimulationDialog(pet).exec(),self.refresh())); sf.addWidget(b); b=QPushButton("立即模擬事件"); b.clicked.connect(lambda:(pet.simulate(),self.refresh())); sf.addWidget(b); self.log=QTextEdit(); self.log.setReadOnly(True); sf.addWidget(self.log); tabs.addTab(sim,"模擬與事件紀錄"); self.refresh()
   api=QWidget(); q=QVBoxLayout(api); self.api_status=QLabel("API 模式會使用目前供應商的實際查詢；DeepSeek 使用官方 /user/balance。"); self.api_status.setWordWrap(True); q.addWidget(self.api_status); k=QPushButton("API Key 與 AI 對話設定"); k.clicked.connect(lambda:KeyDialog(pet).exec()); q.addWidget(k); r=QPushButton("立即查詢 API 餘額"); r.clicked.connect(pet.refresh_api); q.addWidget(r); chat=QPushButton("與角色對話"); chat.clicked.connect(pet.chat); q.addWidget(chat); q.addStretch(); tabs.addTab(api,"API 與對話")
@@ -189,9 +198,10 @@ class Pet(QMainWindow):
   w=int(self.config.get("size",520)); self.resize(w,max(220,round(w*CANVAS[1]/CANVAS[0]))); self.setWindowOpacity(int(self.config.get("opacity",100))/100); flags=Qt.FramelessWindowHint|Qt.Tool|(Qt.WindowStaysOnTopHint if self.config.get("always_on_top",True) else Qt.WindowType(0)); self.setWindowFlags(flags); self.setAttribute(Qt.WA_TransparentForMouseEvents,bool(self.config.get("click_through",False))); self.show()
  def render(self):
   role=next((k for k,v in BUILTINS.items() if v==self.current.name),"")
-  p=self.current
-  if p.name=="sprite.png" and self.config.get("deepseek_dark") and (ASSETS/"sprite-deepseek-dark.png").exists(): p=ASSETS/"sprite-deepseek-dark.png"
-  n=self.config.get("expression","default"); folder=EXPR.get(role); ep=ASSETS/"legacy_chars"/folder/"sprites"/f"{n}.png" if folder and n!="default" else None; p=ep if ep and ep.exists() else p; pix=QPixmap(str(p)); self.label.setPixmap(pix.scaled(self.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
+  p=self.current; n=self.config.get("expression","default")
+  if role=="藍色大肥魚（DeepSeek）" and self.config.get("deepseek_dark"):
+   p=ASSETS/DARK_EXPRESSIONS.get(n,DARK_EXPRESSIONS["default"])
+  folder=EXPR.get(role); ep=ASSETS/"legacy_chars"/folder/"sprites"/f"{n}.png" if folder and n!="default" else None; p=ep if ep and ep.exists() and not (role=="藍色大肥魚（DeepSeek）" and self.config.get("deepseek_dark")) else p; pix=QPixmap(str(p)); self.label.setPixmap(pix.scaled(self.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
  def resizeEvent(self,e): super().resizeEvent(e); self.render()
  def mousePressEvent(self,e):
   if e.button()==Qt.LeftButton:self.drag=e.globalPosition().toPoint()-self.frameGeometry().topLeft()
@@ -203,15 +213,16 @@ class Pet(QMainWindow):
   for w in self.walkers:
    if self.geometry().intersects(w.geometry()): w.move(w.x(),w.y()-20)
  def menu(self):
-  m=QMenu(self); a=m.addAction("開啟控制面板"); a.triggered.connect(self.open_panel); profiles=m.addAction("API 設定檔／多模型管理"); profiles.triggered.connect(lambda:KeyDialog(self).exec()); chatmode=m.addAction("AI 對話模式："+ ("開啟" if self.config.get("ai_chat_enabled") else "關閉")); chatmode.triggered.connect(lambda: self.update({"ai_chat_enabled":not self.config.get("ai_chat_enabled",False)})); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("隨機表情").triggered.connect(self.random_expression); dark=m.addAction("DeepSeek："+ ("切換正常版" if self.config.get("deepseek_dark") else "切換黑化版")); dark.setEnabled(self.current.name in ("sprite.png","sprite-deepseek-dark.png")); dark.triggered.connect(self.toggle_deepseek_dark); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
+  m=QMenu(self); a=m.addAction("開啟控制面板"); a.triggered.connect(self.open_panel); profiles=m.addAction("API 設定檔／多模型管理"); profiles.triggered.connect(lambda:KeyDialog(self).exec()); chatmode=m.addAction("AI 對話模式："+ ("開啟" if self.config.get("ai_chat_enabled") else "關閉")); chatmode.triggered.connect(lambda: self.update({"ai_chat_enabled":not self.config.get("ai_chat_enabled",False)})); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("隨機表情").triggered.connect(self.random_expression); darkexpr=m.addMenu("黑化專屬表情"); darkexpr.setEnabled(self.is_deepseek_dark()); [darkexpr.addAction(label).triggered.connect(lambda checked=False,n=name:self.set_expression(n)) for name,label in [("dark_anger","狂怒"),("dark_smirk","冷笑"),("dark_glow","幽光"),("dark_void","虛無")]]; dark=m.addAction("DeepSeek："+ ("切換正常版" if self.config.get("deepseek_dark") else "切換黑化版")); dark.setEnabled(self.current.name in ("sprite.png","sprite-deepseek-dark.png")); dark.triggered.connect(self.toggle_deepseek_dark); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
  def open_panel(self):
   if not self.panel:self.panel=Panel(self)
   self.panel.show(); self.panel.raise_(); self.panel.activateWindow()
  def set_mode(self,mode): self.update({"mode":mode}); self.tray.showMessage(APP_NAME,"已切換到"+mode)
  def select(self,name): self.current=ASSETS/name; self.update({"character":str(self.current)}); self.render()
  def set_expression(self,name): self.update({"expression":name})
+ def is_deepseek_dark(self): return self.current.name=="sprite.png" and bool(self.config.get("deepseek_dark"))
  def random_expression(self):
-  self.set_expression(random.choice(["default","expression_11","expression_12","expression_21","expression_22"]))
+  choices=list(DARK_EXPRESSIONS) if self.is_deepseek_dark() else ["default","expression_11","expression_12","expression_21","expression_22"]; self.set_expression(random.choice(choices))
  def toggle_deepseek_dark(self):
   if self.current.name=="sprite.png" or self.current.name=="sprite-deepseek-dark.png": self.update({"deepseek_dark":not self.config.get("deepseek_dark",False)})
  def import_character(self):
@@ -270,7 +281,7 @@ class Pet(QMainWindow):
   prompt="你是桌面上的可愛角色。請用繁體中文、簡短自然地回應使用者，不要輸出思考過程。使用者說："+text
   self.chat_worker=Worker(profile,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
  def chat_result(self,dialog,ok,data):
-  reply=data.get("message") if ok else random.choice(LINES); self.show_bubble(reply,False); dialog.add_message("角色",reply)
+  reply=data.get("message") if ok else random.choice(LINES); self.show_bubble(reply,False); dialog.add_message("角色",reply); self.play("hit.mp3") if self.is_deepseek_dark() else None
   if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))
 
 def main():

@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  DSH balance pet  (v2)
 #
 #  A draggable desktop overlay: the character holds a tablet whose screen stays
@@ -38,6 +38,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -110,6 +111,7 @@ internal static class Native {
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
     // Diagnostics only: drives the window's real mouse handlers with posted messages, so a whole
     // drag-and-drop can be exercised without moving the user's cursor.
@@ -210,6 +212,10 @@ internal static class Native {
     public const int WS_EX_LAYERED = 0x00080000;
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_NOACTIVATE = 0x08000000;
+    public const int WS_EX_TRANSPARENT = 0x00000020;
+    public const int SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_FRAMECHANGED = 0x0020;
+    public const int MOD_ALT = 0x0001, MOD_CONTROL = 0x0002;
+    public const int VK_P = 0x50;
     public const int WM_NCHITTEST = 0x0084;
     public const int HTTRANSPARENT = -1;
     public const int HTCLIENT = 1;
@@ -362,7 +368,7 @@ sealed class UploadWindow : Form {
 // Rows that DO something still do it and close the panel - a one-shot action has nothing to show
 // afterwards. Rows that LEAD somewhere keep it open.
 sealed class CrumbPanel : Form {
-    enum Act { None, Refresh, Demo, Settings, Key, Quit, Back }
+    enum Act { None, Refresh, Demo, Settings, Key, Quit, Back, Mode, Char, Web }
     sealed class Row { public Act A; public Rectangle R; public Row(Act a, Rectangle r) { A = a; R = r; } }
 
     readonly DshPet _pet;
@@ -623,7 +629,7 @@ sealed class CrumbPanel : Form {
     // Five rows and the separator, exactly as the menu laid them out (--menushot measured the real
     // menu at 199x180). The first version added an extra 12 px on top of this, which is the
     // "too much empty space" the panel was reported for.
-    int RootContentHeight() { return RowH * 5 + 8; }
+    int RootContentHeight() { return RowH * 8 + 8; }
 
     int DemoContentHeight() {
         // The hosted rows, drawn once into a throwaway bitmap purely to measure. Cheap, and it keeps
@@ -739,7 +745,10 @@ sealed class CrumbPanel : Form {
         y = RootRow(g, y, _pet.StrDemo, Act.Demo, ic[1]);
         y = RootRow(g, y, _pet.StrSettings, Act.Settings, ic[2]);
         y = RootSeparator(g, y);
+        y = RootRow(g, y, _pet.StrMode, Act.Mode, ic[0]);
         y = RootRow(g, y, _pet.StrSetKey, Act.Key, ic[3]);
+        y = RootRow(g, y, _pet.StrChar, Act.Char, ic[2]);
+        y = RootRow(g, y, _pet.StrWeb, Act.Web, ic[1]);
         y = RootRow(g, y, _pet.StrQuit, Act.Quit, ic[4]);
     }
 
@@ -872,6 +881,9 @@ sealed class CrumbPanel : Form {
             case Act.Settings: _inSettings = true; _setPage = 0; AdjustSize(); Invalidate(); break;
             case Act.Refresh: Close(); _pet.RefreshNowUi(); break;
             case Act.Key: Close(); _pet.AskKeyUi(); break;
+            case Act.Mode: Close(); _pet.ToggleModeUi(); break;
+            case Act.Char: Close(); _pet.CycleCharacterUi(); break;
+            case Act.Web: Close(); _pet.OpenWebUi(); break;
             case Act.Quit: Close(); _pet.QuitUi(); break;
         }
     }
@@ -987,6 +999,212 @@ sealed class InputDialog : Form {
         _box.Focus();
     }
     public string Value { get { return _box.Text.Trim(); } }
+}
+
+
+// Provider + key + budget dialog. One window for every vendor: the combo picks the vendor, and the
+// fields below show that vendor's stored values (kept per vendor while the dialog is open).
+sealed class ProviderDialog : Form {
+    readonly ComboBox _cb = new ComboBox();
+    readonly TextBox _key = new TextBox();
+    readonly TextBox _budget = new TextBox();
+    readonly TextBox _since = new TextBox();
+    readonly Label _hint = new Label();
+    readonly Label _lblBudget = new Label();
+    readonly Label _lblSince = new Label();
+    readonly string[] _keys;
+    readonly double[] _budgets;
+    readonly string[] _sinces;
+    int _cur;
+    bool _loading;
+    public int Provider { get { return _cur; } }
+    public string[] Keys { get { return _keys; } }
+    public double[] Budgets { get { return _budgets; } }
+    public string[] Sinces { get { return _sinces; } }
+
+    static readonly string[] Hints = new string[] {
+        "DeepSeek\uFF1A\u8CBC\u4E0A sk- \u958B\u982D\u7684 API Key\uFF0C\u76F4\u63A5\u8B80\u53D6\u5E33\u6236\u9918\u984D\uFF08\u4EBA\u6C11\u5E63\uFF09\u3002",
+        "OpenAI\uFF1A\u5B98\u65B9\u6C92\u6709\u9918\u984D\u4ECB\u9762\uFF0C\u53EA\u6709\u82B1\u8CBB\u5831\u8868\uFF0C\u9700\u8981 Admin Key\uFF08sk-admin-\u2026\uFF0C\u5230 platform.openai.com \u7684 Admin keys \u5EFA\u7ACB\uFF09\u3002\u9918\u984D = \u8D77\u59CB\u984D\u5EA6 \u2212 \u8D77\u7B97\u65E5\u81F3\u4ECA\u7684\u82B1\u8CBB\uFF08\u7F8E\u5143\uFF09\u3002",
+        "Anthropic\uFF1A\u5B98\u65B9\u6C92\u6709\u9918\u984D\u4ECB\u9762\uFF0C\u53EA\u6709\u82B1\u8CBB\u5831\u8868\uFF0C\u9700\u8981 Admin Key\uFF08sk-ant-admin\u2026\uFF0C\u5230 Console \u7684 Admin keys \u5EFA\u7ACB\uFF0C\u50C5\u7D44\u7E54\u5E33\u865F\u53EF\u7528\uFF09\u3002\u9918\u984D = \u8D77\u59CB\u984D\u5EA6 \u2212 \u8D77\u7B97\u65E5\u81F3\u4ECA\u7684\u82B1\u8CBB\uFF08\u7F8E\u5143\uFF09\u3002",
+        "Google Gemini\uFF1A\u5B98\u65B9\u6C92\u6709\u4EFB\u4F55\u9918\u984D\u6216\u82B1\u8CBB\u7684 API\uFF0C\u7121\u6CD5\u81EA\u52D5\u53D6\u5F97\u3002\u9019\u4E00\u9805\u53EA\u4FDD\u5B58 Key\uFF0CAPI \u6A21\u5F0F\u4E0B\u6703\u986F\u793A\u300C\u4E0D\u652F\u63F4\u300D\uFF0C\u8ACB\u6539\u7528\u6A21\u64EC\u6A21\u5F0F\u3002"
+    };
+
+    public ProviderDialog(string[] names, int prov, string[] keys, double[] budgets, string[] sinces) {
+        PetTheme t = InputDialog.CurrentTheme;
+        _keys = (string[])keys.Clone();
+        _budgets = (double[])budgets.Clone();
+        _sinces = (string[])sinces.Clone();
+        _cur = prov;
+        int W = 720, pad = 16, inner = W - pad * 2;
+        Text = "API Key / \u5EE0\u5546\u8A2D\u5B9A";
+        Icon = DshPet.LoadWindowIcon(DshPet.AppBaseDir, "cursor");
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        StartPosition = FormStartPosition.CenterScreen;
+        MaximizeBox = false; MinimizeBox = false;
+        ClientSize = new Size(W, 350);
+        TopMost = true;
+        BackColor = t.Window;
+        ForeColor = t.Ink;
+        Font = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+
+        Label l1 = new Label(); l1.Text = "\u5EE0\u5546"; l1.SetBounds(pad, 12, inner, 22); l1.ForeColor = t.Secondary; Controls.Add(l1);
+        _cb.DropDownStyle = ComboBoxStyle.DropDownList;
+        _cb.FlatStyle = FlatStyle.Flat;
+        _cb.BackColor = t.Card; _cb.ForeColor = t.Ink;
+        _cb.SetBounds(pad, 36, inner, 26);
+        for (int i = 0; i < names.Length; i++) _cb.Items.Add(names[i]);
+        Controls.Add(_cb);
+
+        Label l2 = new Label(); l2.Text = "API Key\uFF08\u4E0D\u906E\u853D\uFF0C\u65B9\u4FBF\u6838\u5C0D\uFF1B\u7559\u7A7A\u8868\u793A\u4E0D\u4F7F\u7528\uFF09"; l2.SetBounds(pad, 74, inner, 22); l2.ForeColor = t.Secondary; Controls.Add(l2);
+        _key.SetBounds(pad, 98, inner, 26);
+        _key.BackColor = t.Card; _key.ForeColor = t.Ink; _key.BorderStyle = BorderStyle.FixedSingle;
+        _key.Font = new Font("Consolas", 10f);
+        Controls.Add(_key);
+
+        _hint.SetBounds(pad, 134, inner, 70);
+        _hint.ForeColor = t.Secondary;
+        Controls.Add(_hint);
+
+        _lblBudget.Text = "\u8D77\u59CB\u984D\u5EA6\uFF08\u7F8E\u5143\uFF09"; _lblBudget.SetBounds(pad, 214, 300, 22); _lblBudget.ForeColor = t.Secondary; Controls.Add(_lblBudget);
+        _budget.SetBounds(pad, 238, 300, 26);
+        _budget.BackColor = t.Card; _budget.ForeColor = t.Ink; _budget.BorderStyle = BorderStyle.FixedSingle;
+        Controls.Add(_budget);
+        _lblSince.Text = "\u8D77\u7B97\u65E5\uFF08yyyy-MM-dd\uFF0CUTC\uFF09"; _lblSince.SetBounds(pad + 330, 214, 340, 22); _lblSince.ForeColor = t.Secondary; Controls.Add(_lblSince);
+        _since.SetBounds(pad + 330, 238, 300, 26);
+        _since.BackColor = t.Card; _since.ForeColor = t.Ink; _since.BorderStyle = BorderStyle.FixedSingle;
+        Controls.Add(_since);
+
+        const int BtnW = 96, BtnH = 32, BtnGap = 10;
+        int by = 298;
+        Button ok = new Button();
+        ok.Text = "OK"; ok.DialogResult = DialogResult.OK;
+        ok.SetBounds(W - pad - BtnW - BtnGap - BtnW, by, BtnW, BtnH);
+        ok.FlatStyle = FlatStyle.Flat; ok.FlatAppearance.BorderColor = t.Border; ok.BackColor = t.Card; ok.ForeColor = t.Ink;
+        ok.Click += delegate { Store(); };
+        Controls.Add(ok);
+        Button cancel = new Button();
+        cancel.Text = "Cancel"; cancel.DialogResult = DialogResult.Cancel;
+        cancel.SetBounds(W - pad - BtnW, by, BtnW, BtnH);
+        cancel.FlatStyle = FlatStyle.Flat; cancel.FlatAppearance.BorderColor = t.Border; cancel.BackColor = t.Card; cancel.ForeColor = t.Ink;
+        Controls.Add(cancel);
+        AcceptButton = ok; CancelButton = cancel;
+
+        _cb.SelectedIndexChanged += delegate {
+            if (_loading) return;
+            Store();
+            _cur = _cb.SelectedIndex < 0 ? 0 : _cb.SelectedIndex;
+            LoadFields();
+        };
+        _cb.SelectedIndex = (prov >= 0 && prov < names.Length) ? prov : 0;
+        _cur = _cb.SelectedIndex;
+        LoadFields();
+    }
+
+    void LoadFields() {
+        _loading = true;
+        _key.Text = _keys[_cur] ?? "";
+        _budget.Text = _budgets[_cur].ToString("0.##", CultureInfo.InvariantCulture);
+        _since.Text = _sinces[_cur] ?? "";
+        _hint.Text = Hints[_cur];
+        bool spend = _cur == 1 || _cur == 2;
+        _lblBudget.Visible = spend; _budget.Visible = spend;
+        _lblSince.Visible = spend; _since.Visible = spend;
+        _loading = false;
+    }
+
+    void Store() {
+        _keys[_cur] = _key.Text.Trim();
+        double b;
+        if (double.TryParse(_budget.Text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out b) && b >= 0) _budgets[_cur] = b;
+        DateTime dt;
+        string s = _since.Text.Trim();
+        if (DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) _sinces[_cur] = s;
+    }
+}
+
+
+// Character picker: a list with a live preview, plus import / delete for custom characters.
+sealed class CharPicker : Form {
+    readonly ListBox _lb = new ListBox();
+    readonly PictureBox _pb = new PictureBox();
+    readonly string[] _ids, _dirs;
+    readonly Button _del = new Button();
+    public string Selected;
+    public bool AddRequested;
+    public string DeleteId;
+
+    public CharPicker(string[] ids, string[] names, string[] dirs, string current) {
+        PetTheme t = InputDialog.CurrentTheme;
+        _ids = ids; _dirs = dirs;
+        Text = "\u9078\u64C7\u89D2\u8272";
+        Icon = DshPet.LoadWindowIcon(DshPet.AppBaseDir, "cursor");
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        StartPosition = FormStartPosition.CenterScreen;
+        MaximizeBox = false; MinimizeBox = false;
+        ClientSize = new Size(660, 430);
+        TopMost = true;
+        BackColor = t.Window; ForeColor = t.Ink;
+        Font = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
+
+        _lb.SetBounds(16, 16, 260, 350);
+        _lb.BackColor = t.Card; _lb.ForeColor = t.Ink; _lb.BorderStyle = BorderStyle.FixedSingle;
+        _lb.IntegralHeight = false;
+        int sel = 0;
+        for (int i = 0; i < names.Length; i++) {
+            _lb.Items.Add(names[i] + (ids[i] == current ? "  \uFF08\u76EE\u524D\uFF09" : ""));
+            if (ids[i] == current) sel = i;
+        }
+        Controls.Add(_lb);
+
+        _pb.SetBounds(292, 16, 352, 350);
+        _pb.SizeMode = PictureBoxSizeMode.Zoom;
+        _pb.BackColor = t.Card;
+        Controls.Add(_pb);
+
+        Button add = MakeBtn("\u65B0\u589E\u81EA\u8A02\u89D2\u8272\u2026", 16, 382, 150, t);
+        add.Click += delegate { AddRequested = true; DialogResult = DialogResult.Cancel; Close(); };
+        _del.Text = "\u522A\u9664";
+        StyleBtn(_del, t);
+        _del.SetBounds(176, 382, 100, 34);
+        _del.Click += delegate { int i = _lb.SelectedIndex; if (i >= 0) { DeleteId = _ids[i]; DialogResult = DialogResult.Cancel; Close(); } };
+        Controls.Add(_del);
+
+        Button ok = MakeBtn("\u9078\u64C7", 430, 382, 100, t);
+        ok.DialogResult = DialogResult.OK;
+        ok.Click += delegate { int i = _lb.SelectedIndex; if (i >= 0) Selected = _ids[i]; };
+        Button cancel = MakeBtn("\u53D6\u6D88", 544, 382, 100, t);
+        cancel.DialogResult = DialogResult.Cancel;
+        AcceptButton = ok; CancelButton = cancel;
+
+        _lb.SelectedIndexChanged += delegate { ShowPreview(); };
+        _lb.DoubleClick += delegate { int i = _lb.SelectedIndex; if (i >= 0) { Selected = _ids[i]; DialogResult = DialogResult.OK; Close(); } };
+        _lb.SelectedIndex = sel;
+        ShowPreview();
+    }
+
+    Button MakeBtn(string text, int x, int y, int w, PetTheme t) {
+        Button b = new Button();
+        b.Text = text;
+        StyleBtn(b, t);
+        b.SetBounds(x, y, w, 34);
+        Controls.Add(b);
+        return b;
+    }
+    static void StyleBtn(Button b, PetTheme t) {
+        b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderColor = t.Border; b.BackColor = t.Card; b.ForeColor = t.Ink;
+    }
+
+    void ShowPreview() {
+        int i = _lb.SelectedIndex;
+        _del.Enabled = i >= 0 && _ids[i].StartsWith("custom_");
+        if (_pb.Image != null) { Image old = _pb.Image; _pb.Image = null; old.Dispose(); }
+        if (i < 0) return;
+        try {
+            string p = Path.Combine(_dirs[i], "sprite.png");
+            using (FileStream fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (Image im = Image.FromStream(fs)) _pb.Image = new Bitmap(im);
+        } catch { }
+    }
 }
 
 // ---------------------------------------------------------------- sound ----
@@ -3415,6 +3633,7 @@ public sealed class Rice {
     public bool BeingSucked;
     public bool LandedLogged;        // diagnostics: landing line printed once
     public bool Fed;                 // delivered to the girl -> fade out
+    public double IdleT;             // seconds the bowl has sat untouched (auto-clear)
     public double FedAmount;         // what it actually paid out (the floater text)
     public double DieT;
     // ---- iron bowl (the pot that lands on her head) --------------------------
@@ -3813,7 +4032,7 @@ public sealed class DshPet : Form {
     const string S_LOADING = "\u8FDE\u63A5\u4E2D...";
     const string S_KEYT    = "API Key";
     const string S_KEYP    = "\u7C98\u8D34 DeepSeek API Key\uFF08\u7559\u7A7A\u5219\u4E0D\u4FEE\u6539\uFF09";
-    const string S_SETKEY  = "\u8BBE\u7F6E API Key";
+    const string S_SETKEY  = "API Key / \u5382\u5546\u8BBE\u7F6E";
     // Recharge rehearsal: drives the real top-up path locally so the bowl can be
     // tested without paying. Default amount is a plain 3 yuan.
     const string S_TOPT    = "\u6D4B\u8BD5\u5145\u503C\u91D1\u989D";
@@ -4086,7 +4305,7 @@ public sealed class DshPet : Form {
     // Mood mapping (user-specified, do not reshuffle):
     //   idle / no charge / no lock        -> HAPPY   (expression_11, open smile)
     //   while a charge is being played    -> NERVOUS (expression_22, eyes shut)
-    //   bowl unclaimed for 10 s (locked)  -> ALOOF   (expression_12, pout)
+    //   bowl unclaimed for the configured delay (locked)  -> ALOOF   (expression_12, pout)
     //   iron pot worn on her head         -> CALM    (expression_21, flat face)
     //
     // CALM outranks a charge: the user's rule is that once the pot is on her head she
@@ -4114,7 +4333,7 @@ public sealed class DshPet : Form {
     // Expression state machine timers, all in seconds.
     //   _happyT   : set when a bowl is fed, so the smile is actually seen.
     //   _bowlWait : how long the current bowl has been lying uncollected; the pet
-    //               turns aloof and the radar lock appears once it passes BowlWaitSec.
+    //               turns aloof and the radar lock appears once it passes _bowlWaitSec.
     //
     // There is no nervous timer: the grimace lasts exactly as long as a cue is playing
     // (cueRunning in UpdateExpression). A run of charges still shows ONE grimace from the
@@ -4127,9 +4346,9 @@ public sealed class DshPet : Form {
     bool _bowlLocked;
     // Menu -> "open fire-control radar": show the nameplate on the current bowl
     // WITHOUT arming the magnet, purely so the readouts can be checked by hand. The
-    // automatic 10 s flow is untouched and will still lock and pull the bowl in.
+    // automatic the configured delay flow is untouched and will still lock and pull the bowl in.
     bool _radarManual;
-    // Set when the batch lock engages: ANY rice bowl whose 10 s deadline has passed
+    // Set when the batch lock engages: ANY rice bowl whose the configured delay deadline has passed
     // locks EVERY bowl on screen. Cleared only when no lockable bowl is left.
     bool _lockAll;
     // The little squash-and-stretch the girl does when the pot lands on her head and
@@ -4235,7 +4454,7 @@ public sealed class DshPet : Form {
     // (the cold face, the erase pass, the click-to-remove) reads this.
     bool HeadPotOn { get { for (int i = 0; i < _rices.Count; i++) if (_rices[i].OnHead) return true; return false; } }
     // ---- radar lock (War Thunder style target nameplate) ---------------------
-    // Shown only while the bowl is LOCKED (left unclaimed past BowlWaitSec), not for
+    // Shown only while the bowl is LOCKED (left unclaimed past _bowlWaitSec), not for
     // every bowl: an always-on frame would clutter the desktop.
     // Readouts are derived from the bowl's live physics; see UpdateRadar().
     // All three quantities are SCREEN PIXELS - see UpdateRadar for why they are no
@@ -4294,8 +4513,17 @@ public sealed class DshPet : Form {
     // cue is actually running, then left to decay - see UpdateExpression.
     //
     // How long a bowl may lie unclaimed before the pet turns aloof and locks on.
-    // User-specified: 10 s without being fed switches her to the aloof art.
-    const double BowlWaitSec = 10.0;
+    // User-specified: the configured delay without being fed switches her to the aloof art.
+    double _bowlWaitSec = 10.0;
+    int _opacityPercent = 88;
+    bool _fixedMode;
+    bool _clickThrough;
+    bool _walkEnabled = true;
+    bool _chibiMode;
+    double _walkT;
+    int _walkBaseX;
+    const int ClickThroughHotkeyId = 0xB0C;
+    const double BowlAutoClearSec = 45.0;   // an untouched bowl is collected silently after this long
     // After the lock appears, how long before the bowl is dragged in magnetically.
     // User-specified: 1 s of lock, then the bowl is pulled toward her.
     const double LockDelaySec = 1.0;
@@ -4646,8 +4874,217 @@ public sealed class DshPet : Form {
     bool _soundWanted = true;
     volatile bool _noNetwork;        // set by the offline self-tests
     int _pollInFlight;               // only one balance request at a time
+    // ---- simulation mode: active whenever no API key is set; no network is touched ----
+    double _simBal = 50.00;
+    long _simNextTick;               // Stopwatch timestamp of the next random event
+    readonly Random _simRng = new Random();
+    // ---- click-to-pat and idle fidget (added) ----
+    double _clickPatMs;              // > 0 while a click-triggered head pat is playing
+    double _idleFidgetMs = 8000;     // countdown to the next small idle bounce
+    long _lastClickPatTick;
+    int _clickPatCombo;
+    readonly Random _fidgetRng = new Random();
+    // ---- selectable characters (mac v1.4.3 roster); the choice lives in character.txt ----
+    static readonly string[] CharIds = new string[] { "deepseek", "gpt", "claude", "gemini" };
+    static readonly string[] CharNames = new string[] { "\u84DD\u8272\u5927\u80A5\u9C7C", "GPT\u9F99\u5A18", "\u5927\u5C0F\u59D0Claude", "\u5317\u7F8E\u732B\u5A18Gemini" };
+    string _charId = "deepseek";
+    string CharArtDir(string baseDir) {
+        return _charId == "deepseek" ? baseDir : Path.Combine(Path.Combine(baseDir, "chars"), _charId);
+    }
+    static bool SafeCharId(string v) {
+        if (string.IsNullOrEmpty(v) || v.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || v.Contains("..")) return false;
+        return true;
+    }
+    static string ReadCharId(string baseDir) {
+        try {
+            string f = Path.Combine(baseDir, "character.txt");
+            if (File.Exists(f)) {
+                string v = File.ReadAllText(f).Trim();
+                if (v == "deepseek") return v;
+                if (SafeCharId(v) && File.Exists(Path.Combine(Path.Combine(Path.Combine(baseDir, "chars"), v), "sprite.png"))) return v;
+            }
+        } catch { }
+        return "deepseek";
+    }
+
+    // Built-in roster plus every folder under chars\ that holds a sprite.png (custom characters).
+    // Each entry: { id, display name, art folder }.
+    List<string[]> CharEntries() {
+        List<string[]> list = new List<string[]>();
+        for (int i = 0; i < CharIds.Length; i++) {
+            string dir = CharIds[i] == "deepseek" ? _baseDir : Path.Combine(Path.Combine(_baseDir, "chars"), CharIds[i]);
+            if (File.Exists(Path.Combine(dir, "sprite.png"))) list.Add(new string[] { CharIds[i], CharNames[i], dir });
+        }
+        try {
+            string root = Path.Combine(_baseDir, "chars");
+            if (Directory.Exists(root)) {
+                foreach (string d in Directory.GetDirectories(root)) {
+                    string id = Path.GetFileName(d);
+                    if (Array.IndexOf(CharIds, id) >= 0) continue;
+                    if (!File.Exists(Path.Combine(d, "sprite.png"))) continue;
+                    string nm = id.StartsWith("custom_") ? id.Substring(7) : id;
+                    list.Add(new string[] { id, "\u81EA\u8A02\uFF1A" + nm, d });
+                }
+            }
+        } catch { }
+        return list;
+    }
+
+    string CharLabel() {
+        string name = _charId;
+        foreach (string[] e in CharEntries()) { if (e[0] == _charId) { name = e[1]; break; } }
+        return "\u89D2\u8272\uFF1A" + name + "\uFF08\u9EDE\u64CA\u9078\u64C7\uFF09";
+    }
+
+    // Character changes stay in this process: release the old GDI+ surfaces, load the new
+    // sprite set, rebuild only the size-dependent caches, then repaint immediately.
+    void SwitchCharacter(string id) {
+        if (id == null || id == _charId) return;
+        string oldId = _charId;
+        try {
+            string dir = id == "deepseek" ? _baseDir : Path.Combine(Path.Combine(_baseDir, "chars"), id);
+            string sprite = Path.Combine(dir, "sprite.png");
+            if (!File.Exists(sprite)) throw new FileNotFoundException("sprite not found", sprite);
+            Bitmap oldFlat = _flat;
+            ReleaseExprCache();
+            for (int i = 0; i < _exprArt.Length; i++) {
+                if (_exprArt[i] != null && _exprArt[i] != oldFlat) _exprArt[i].Dispose();
+                _exprArt[i] = null;
+            }
+            if (oldFlat != null) oldFlat.Dispose();
+            _charId = id;
+            _flat = new Bitmap(sprite);
+            _hasExpressions = false; _expr = EXPR_HAPPY;
+            LoadExpressionArt(_baseDir);
+            LoadCustomQuad();
+            ApplyChibiArtIfEnabled();
+            _girlAlpha = null; _girlStampedOn = null; _panelCacheValid = false;
+            _exprPrewarmFor = -1;
+            Relayout();
+            _dirty = true;
+            RenderToCanvas(); PushLayer();
+            try { File.WriteAllText(Path.Combine(_baseDir, "character.txt"), id, Encoding.UTF8); } catch { }
+            if (_miChar != null) _miChar.Text = CharLabel();
+            Log("character -> " + id + " (in-process reload)");
+        } catch (Exception ex) {
+            Log("character switch failed: " + ex.Message);
+            _charId = oldId;
+        }
+    }
+
+    void CycleCharacter() { PickCharacter(); }
+
+    void PickCharacter() {
+        List<string[]> es = CharEntries();
+        string[] ids = new string[es.Count], names = new string[es.Count], dirs = new string[es.Count];
+        for (int i = 0; i < es.Count; i++) { ids[i] = es[i][0]; names[i] = es[i][1]; dirs[i] = es[i][2]; }
+        using (CharPicker d = new CharPicker(ids, names, dirs, _charId)) {
+            DialogResult r = d.ShowDialog(this);
+            if (d.AddRequested) { AddCustomCharacter(); return; }
+            if (d.DeleteId != null) { DeleteCustomCharacter(d.DeleteId); return; }
+            if (r == DialogResult.OK && d.Selected != null) SwitchCharacter(d.Selected);
+        }
+    }
+
+    // Import any picture as a character: it is fitted into a 1024x1024 transparent canvas, and the
+    // balance screen is drawn on a floating panel under her (tablet.txt holds its four corners and can
+    // be edited to match a picture that holds a tablet).
+    void AddCustomCharacter() {
+        string path;
+        using (OpenFileDialog ofd = new OpenFileDialog()) {
+            ofd.Title = "\u9078\u64C7\u89D2\u8272\u5716\u7247\uFF08\u5EFA\u8B70\u900F\u660E\u80CC\u666F\u7684 PNG\uFF09";
+            ofd.Filter = "\u5716\u7247|*.png;*.jpg;*.jpeg;*.bmp|\u6240\u6709\u6A94\u6848|*.*";
+            if (ofd.ShowDialog(this) != DialogResult.OK) return;
+            path = ofd.FileName;
+        }
+        string nm;
+        using (InputDialog d = new InputDialog("\u81EA\u8A02\u89D2\u8272\u540D\u7A31", "\u7D66\u9019\u500B\u89D2\u8272\u53D6\u500B\u540D\u5B57\uFF08\u4E2D\u82F1\u6587\u6216\u6578\u5B57\uFF09", "", "")) {
+            if (d.ShowDialog(this) != DialogResult.OK) return;
+            nm = d.Value;
+        }
+        foreach (char ch in Path.GetInvalidFileNameChars()) nm = nm.Replace(ch.ToString(), "");
+        nm = nm.Replace(" ", "_").Trim();
+        if (nm.Length == 0) return;
+        string id = "custom_" + nm;
+        string dir = Path.Combine(Path.Combine(_baseDir, "chars"), id);
+        try {
+            Directory.CreateDirectory(dir);
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (Image im = Image.FromStream(fs))
+            using (Bitmap outb = new Bitmap(1024, 1024, PixelFormat.Format32bppArgb)) {
+                double sc = Math.Min(1024.0 / im.Width, 1024.0 / im.Height);
+                int w = Math.Max(1, (int)Math.Round(im.Width * sc)), h = Math.Max(1, (int)Math.Round(im.Height * sc));
+                using (Graphics g = Graphics.FromImage(outb)) {
+                    g.Clear(Color.Transparent);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.DrawImage(im, (1024 - w) / 2, 1024 - h, w, h);
+                }
+                outb.Save(Path.Combine(dir, "sprite.png"), ImageFormat.Png);
+            }
+            File.WriteAllText(Path.Combine(dir, "tablet.txt"), "330,790,694,790,694,960,330,960", Encoding.ASCII);
+        } catch (Exception ex) {
+            Log("custom character failed: " + ex.Message);
+            MessageBox.Show(this, "\u532F\u5165\u5931\u6557\uFF1A" + ex.Message, "\u81EA\u8A02\u89D2\u8272", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        MessageBox.Show(this, "\u5DF2\u5EFA\u7ACB\u81EA\u8A02\u89D2\u8272\u300C" + nm + "\u300D\uFF0C\u63A5\u4E0B\u4F86\u6703\u91CD\u65B0\u555F\u52D5\u4E26\u5957\u7528\u3002\n\n\u9918\u984D\u87A2\u5E55\u6703\u756B\u5728\u89D2\u8272\u4E0B\u65B9\u7684\u6D6E\u52D5\u9762\u677F\u3002" +
+            "\u5982\u679C\u5716\u7247\u88E1\u6709\u62FF\u5E73\u677F\uFF0C\u53EF\u4EE5\u4FEE\u6539\nchars\\" + id + "\\tablet.txt \u7684\u56DB\u500B\u89D2\uFF08\u5DE6\u4E0A\u3001\u53F3\u4E0A\u3001\u53F3\u4E0B\u3001\u5DE6\u4E0B\uFF0Cx,y \u5171 8 \u500B\u6578\u5B57\uFF0C" +
+            "\u4EE5 1024x1024 \u70BA\u5EA7\u6A19\uFF09\u3002", "\u81EA\u8A02\u89D2\u8272", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        SwitchCharacter(id);
+    }
+
+    void DeleteCustomCharacter(string id) {
+        if (id == null || !id.StartsWith("custom_") || !SafeCharId(id)) return;
+        if (MessageBox.Show(this, "\u78BA\u5B9A\u522A\u9664\u81EA\u8A02\u89D2\u8272\u300C" + id.Substring(7) + "\u300D\uFF1F", "\u81EA\u8A02\u89D2\u8272",
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+        try { Directory.Delete(Path.Combine(Path.Combine(_baseDir, "chars"), id), true); } catch (Exception ex) { Log("delete failed: " + ex.Message); }
+        if (id == _charId) {
+            try { File.WriteAllText(Path.Combine(_baseDir, "character.txt"), "deepseek", Encoding.ASCII); } catch { }
+            _charId = id;           // so SwitchCharacter does not early-out
+            SwitchCharacter("deepseek");
+        }
+    }
+
+    double[] _customQuad;
+    void LoadCustomQuad() {
+        _customQuad = null;
+        try {
+            string f = Path.Combine(CharArtDir(_baseDir), "tablet.txt");
+            if (!File.Exists(f)) return;
+            string[] parts = File.ReadAllText(f).Split(new char[] { ',', ' ', ';', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 8) return;
+            double[] q = new double[8];
+            for (int i = 0; i < 8; i++) if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out q[i])) return;
+            _customQuad = q;
+        } catch { }
+    }
+    bool _askKeyOnFirstRun = false;  // first-run key prompt is off; simulation runs without a key
     double _bankedBal; bool _bankedSnap; bool _bankedValid;
 
+    Bitmap BuildCompactChibi(Bitmap src) {
+        Bitmap b = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(b)) {
+            g.Clear(Color.Transparent);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            int w = (int)Math.Round(src.Width * 0.78), h = (int)Math.Round(src.Height * 0.78);
+            g.DrawImage(src, (src.Width - w) / 2, src.Height - h, w, h);
+        }
+        return b;
+    }
+    void ApplyChibiArtIfEnabled() {
+        if (!_chibiMode) return;
+        string p = Path.Combine(_baseDir, "chibi.png");
+        Bitmap b = null;
+        try { if (File.Exists(p)) b = new Bitmap(p); } catch { b = null; }
+        if (b == null) b = BuildCompactChibi(_flat);
+        if (_flat != null) _flat.Dispose();
+        _flat = b;
+        _hasExpressions = false;
+        ReleaseExprCache();
+        for (int i = 0; i < _exprArt.Length; i++) { if (_exprArt[i] != null) { _exprArt[i].Dispose(); _exprArt[i] = null; } }
+        Log("chibi artwork active (" + (File.Exists(p) ? "chibi.png" : "compact fallback") + ")");
+    }
     public DshPet(string baseDir, string[] args) {
         _baseDir = baseDir;
         // Console output as UTF-8. Without this the process writes with the system ANSI code page,
@@ -4691,6 +5128,7 @@ public sealed class DshPet : Form {
         LoadUsage();             // reads usage.ini and zeroes it if the stored day is not today
         _apiKey  = Get("DSHPET_KEY", "");
         _apiUrl  = Get("DSHPET_API", "https://api.deepseek.com/user/balance");
+        LoadProviderCfg();
         _pollMs  = int.Parse(Get("DSHPET_POLL_MS", "2000"));
         _cm      = double.Parse(Get("DSHPET_CM", "8"), CultureInfo.InvariantCulture);
         _soundWanted = Get("DSHPET_SOUND", "1") != "0";
@@ -4707,7 +5145,11 @@ public sealed class DshPet : Form {
         // master level to seed any more: each pool is created at ITS OWN cue's level below, and
         // ReadState/ApplyAllCueVolumes then applies whatever was stored.
 
-        string sprite = Get("DSHPET_SPRITE", Path.Combine(baseDir, "sprite.png"));
+        _charId = ReadCharId(baseDir);
+        string sprite = _charId == "deepseek" ? Get("DSHPET_SPRITE", Path.Combine(baseDir, "sprite.png"))
+                                              : Path.Combine(CharArtDir(baseDir), "sprite.png");
+        if (!File.Exists(sprite)) { _charId = "deepseek"; sprite = Path.Combine(baseDir, "sprite.png"); }
+        LoadCustomQuad();
         if (!File.Exists(sprite)) throw new FileNotFoundException("sprite not found: " + sprite);
         _flat = new Bitmap(sprite);
         LoadExpressionArt(baseDir);
@@ -4778,18 +5220,21 @@ public sealed class DshPet : Form {
         Text = "DSH Balance Pet";
 
         ReadState();
+        ApplyChibiArtIfEnabled();
         // ReadState resolves the per-cue volumes, but the pools did not exist when it ran for the
         // cuevol keys it parsed... they DO now, so push them.
         ApplyAllCueVolumes();
         Relayout();
         SnapToCorner(true);
+        _walkBaseX = _offX;
         BuildMenu();
+        if (!_diagRun) StartWeb();
 
         // Shared copy, first run: nothing configured a key, so ask once instead
         // of leaving the tablet stuck on "--". Cancelling keeps it offline.
         bool quietRun = Array.IndexOf(args, "--selftest") >= 0 || Array.IndexOf(args, "--shot") >= 0 ||
                         Array.IndexOf(args, "--menushot") >= 0;
-        if (string.IsNullOrEmpty(_apiKey) && !quietRun && !File.Exists(KeyPath)) {
+        if (_askKeyOnFirstRun && string.IsNullOrEmpty(_apiKey) && !quietRun && !File.Exists(KeyPath)) {
             using (InputDialog d = new InputDialog(S_KEYT, S_KEYP, "", "", KeyDialogW, true)) {
                 if (d.ShowDialog(this) == DialogResult.OK) {
                     string k = d.Value;
@@ -5100,9 +5545,25 @@ public sealed class DshPet : Form {
         // SettingsWindow now, where the choices are visible side by side instead of behind another
         // popup and where a value can be shown in place.
         ToolStripMenuItem settingsRow = NewItem(IC_SIZE, S_SETTINGS);
-        settingsRow.Click += delegate { ShowSettingsUi(); };
         _menu.Items.Add(settingsRow);
-
+        ToolStripMenuItem opacity = NewItem(IC_SIZE, "Opacity: " + _opacityPercent + "%");
+        opacity.Click += delegate { SetOpacityUi(); };
+        _menu.Items.Add(opacity);
+        ToolStripMenuItem fixedRow = NewItem(IC_SIZE, "Fixed position: " + (_fixedMode ? "ON" : "OFF"));
+        fixedRow.Click += delegate { ToggleFixedUi(); };
+        _menu.Items.Add(fixedRow);
+        ToolStripMenuItem passRow = NewItem(IC_SIZE, "Mouse pass-through: " + (_clickThrough ? "ON" : "OFF"));
+        passRow.Click += delegate { ToggleThroughUi(); };
+        _menu.Items.Add(passRow);
+        ToolStripMenuItem walkRow = NewItem(IC_CASCADE, "Walk around: " + (_walkEnabled ? "ON" : "OFF"));
+        walkRow.Click += delegate { ToggleWalkUi(); };
+        _menu.Items.Add(walkRow);
+        ToolStripMenuItem chibiRow = NewItem(IC_SIZE, "Chibi appearance: " + (_chibiMode ? "ON" : "OFF"));
+        chibiRow.Click += delegate { ToggleChibiUi(); };
+        _menu.Items.Add(chibiRow);
+        ToolStripMenuItem fireRow = NewItem(IC_BOLT, "Fire-control delay: " + _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture) + " sec");
+        fireRow.Click += delegate { SetBowlWaitUi(); };
+        _menu.Items.Add(fireRow);
         // ---- sound settings ----
         //
         // NOT a second row: the settings window already covers sound, and two rows that open the
@@ -5114,15 +5575,43 @@ public sealed class DshPet : Form {
         _menu.Items.Add(new ToolStripSeparator());
 
         // ---- system ----
+        _miMode = NewItem(IC_REFRESH, ModeLabel());
+        _miMode.Click += delegate { SetMode(!_simMode); };
+        _menu.Items.Add(_miMode);
+
         ToolStripMenuItem key = NewItem(IC_KEY, S_SETKEY);
         key.Click += delegate { AskKey(); };
         _menu.Items.Add(key);
+
+        _miChar = NewItem(IC_SIZE, CharLabel());
+        _miChar.Click += delegate { CycleCharacter(); };
+        _menu.Items.Add(_miChar);
+
+        ToolStripMenuItem web = NewItem(IC_CASCADE, WebLabel());
+        web.Click += delegate { OpenWebUi(); };
+        _menu.Items.Add(web);
 
         ToolStripMenuItem quit = NewItem(IC_QUIT, S_QUIT);
         quit.Click += delegate { Quit(); };
         _menu.Items.Add(quit);
 
-        _menu.Opening += delegate { RefreshMenuChecks(); };
+        _menu.Opening += delegate {
+            RefreshMenuChecks();
+            if (_miMode != null) _miMode.Text = ModeLabel();
+            if (_miChar != null) _miChar.Text = CharLabel();
+            if (_menu.Items.Count > 0) {
+                for (int mi = 0; mi < _menu.Items.Count; mi++) {
+                    ToolStripMenuItem x = _menu.Items[mi] as ToolStripMenuItem;
+                    if (x == null) continue;
+                    if (x.Text.StartsWith("Opacity:")) x.Text = "Opacity: " + _opacityPercent + "%";
+                    else if (x.Text.StartsWith("Fixed position:")) x.Text = "Fixed position: " + (_fixedMode ? "ON" : "OFF");
+                    else if (x.Text.StartsWith("Mouse pass-through:")) x.Text = "Mouse pass-through: " + (_clickThrough ? "ON" : "OFF");
+                    else if (x.Text.StartsWith("Walk around:")) x.Text = "Walk around: " + (_walkEnabled ? "ON" : "OFF");
+                    else if (x.Text.StartsWith("Chibi appearance:")) x.Text = "Chibi appearance: " + (_chibiMode ? "ON" : "OFF");
+                    else if (x.Text.StartsWith("Fire-control delay:")) x.Text = "Fire-control delay: " + _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture) + " sec";
+                }
+            }
+        };
         StyleMenu(_menu.Items);
         // The band markers were recorded while building; resolve them now that every item has
         // been added and therefore knows which popup it belongs to.
@@ -5193,7 +5682,7 @@ public sealed class DshPet : Form {
         ComputeBlip(bowl);          // fill the readouts now, not on the next tick
         _dirty = true;
         Log("manual radar: locked on, " + _blip.DistText + " / " + _blip.ClosureText +
-            " / " + _blip.AltText + " (display only; the 10 s flow still runs)");
+            " / " + _blip.AltText + " (display only; the the configured delay flow still runs)");
     }
 
     void SetSoundEnabled(bool on) {
@@ -5473,6 +5962,8 @@ public sealed class DshPet : Form {
     // push - but several guards call this to mean "make the menu consistent before I read it",
     // which is still a meaningful statement of intent. An empty method says that honestly;
     // deleting it would only move the churn into the guards.
+    ToolStripMenuItem _miMode, _miChar;
+
     void RefreshMenuChecks() {
         // Nothing to do: see above. SettingsWindow renders its own state on every paint.
     }
@@ -5932,16 +6423,26 @@ public sealed class DshPet : Form {
     }
 
     void AskKey() {
-        using (InputDialog d = new InputDialog(S_KEYT, S_KEYP, "",
-                                               _apiKey, KeyDialogW, true)) {
+        _provKey[0] = _apiKey ?? "";
+        using (ProviderDialog d = new ProviderDialog(ProvNames, _prov, _provKey, _provBudget, _provSince)) {
             if (d.ShowDialog(this) != DialogResult.OK) return;
-            string k = d.Value;
-            if (k.Length > 0 && k != _apiKey) {
-                _apiKey = k;
-                SaveKey(k);
-                _pollWant = 2;
-                Log("api key set manually (length " + k.Length + ")");
+            for (int p = 0; p < 4; p++) {
+                string k = d.Keys[p] ?? "";
+                if (k != (_provKey[p] ?? "")) {
+                    _provKey[p] = k;
+                    if (p == 0) _apiKey = k;
+                    try { File.WriteAllText(ProvKeyPath(p), k, Encoding.ASCII); } catch { }
+                    Log("api key for " + ProvIds[p] + " updated (length " + k.Length + ")");
+                }
+                _provBudget[p] = d.Budgets[p];
+                _provSince[p] = d.Sinces[p];
             }
+            _prov = d.Provider;
+            // Saving a key means "use it": leave simulation for the chosen vendor.
+            if (!string.IsNullOrEmpty(ActiveKey)) _simMode = false;
+            SaveProviderCfg();
+            ResetBalanceTracking();
+            Log("provider=" + ProvIds[_prov] + " mode=" + (_simMode ? "sim" : "api"));
         }
     }
 
@@ -6054,7 +6555,7 @@ public sealed class DshPet : Form {
     // Load the mood sprites. Purely optional: if the folder is missing the pet
     // behaves exactly as before, so a stripped-down release install still runs.
     void LoadExpressionArt(string baseDir) {
-        string dir = Path.Combine(baseDir, "sprites");
+        string dir = Path.Combine(CharArtDir(baseDir), "sprites");
         string[] files = new string[] {
             "expression_11.png",    // EXPR_HAPPY   - resting face
             "expression_22.png",    // EXPR_NERVOUS - charging
@@ -6091,7 +6592,8 @@ public sealed class DshPet : Form {
         _flat = _exprArt[e];
         _girlAlpha = null;                 // cached alpha belongs to the old art
         _girlStampedOn = null;
-        _canvas = null;                    // forces a full widget repaint
+        // (the canvas is deliberately kept: Relayout nulls _lastCanvas, which already forces a full
+        //  repaint, and reallocating a screen-sized bitmap on every mood change was the stutter)
         // A mood change swaps the ARTWORK only. Everything else Relayout does - the rice
         // bowl, the iron pot's two bitmaps and their TrimTransparent pixel scans, the
         // full-screen canvas allocation - is a function of the widget SIZE, which a mood
@@ -6133,8 +6635,35 @@ public sealed class DshPet : Form {
     // The nervous branch deliberately does NOT look at the queue alone: it keeps the
     // grimace until the damage cues have finished playing, otherwise a 0.2 s gap
     // between two charges would flash the resting face for a frame.
+    int _exprPrewarmFor = -1;
+    void PrewarmExpr() {
+        if (!_hasExpressions || _flat == null) return;
+        for (int i = 0; i < _exprArt.Length; i++) {
+            Bitmap a = _exprArt[i];
+            if (a == null) continue;
+            if (_exprSprCache[i] != null && _exprRedCache[i] != null) continue;
+            try {
+                Bitmap sc = _exprSprCache[i];
+                if (sc == null) {
+                    int sw = Math.Max(2, (int)Math.Round(a.Width * _scale));
+                    int sh = Math.Max(2, (int)Math.Round(a.Height * _scale));
+                    sc = new Bitmap(sw, sh, PixelFormat.Format32bppArgb);
+                    using (Graphics g = Graphics.FromImage(sc)) {
+                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                        g.CompositingMode = CompositingMode.SourceCopy;
+                        g.DrawImage(a, new Rectangle(0, 0, sw, sh));
+                    }
+                    _exprSprCache[i] = sc;
+                }
+                if (_exprRedCache[i] == null) _exprRedCache[i] = BuildRedLayer(sc);
+            } catch (Exception ex) { Log("prewarm failed: " + ex.Message); }
+        }
+    }
+
     void UpdateExpression(double dt) {
         if (!_hasExpressions) return;
+        if (_exprPrewarmFor != _sizeCachedFor) { _exprPrewarmFor = _sizeCachedFor; PrewarmExpr(); }
         if (_happyT > 0) _happyT -= dt;
         // anyBowl counts RICE bowls only. The iron pot does not keep her interested in
         // the way an uncollected bowl does: it is a prop, not a debt, and letting it
@@ -6192,7 +6721,7 @@ public sealed class DshPet : Form {
             // alive, so the face never drops mid-run. The hold only ever added a second of
             // grimace on top of the END of the run, which reads as the pet being stuck.
             want = EXPR_NERVOUS;
-        } else if (_bowlWait >= BowlWaitSec) {
+        } else if (_bowlWait >= _bowlWaitSec) {
             want = EXPR_ALOOF;
         } else {
             want = EXPR_HAPPY;                            // the resting face
@@ -6307,7 +6836,7 @@ public sealed class DshPet : Form {
         bl.AltPx      = -dy;                                 // screen Y grows down
         bl.DirDeg     = Math.Atan2(uy, ux) * 180.0 / Math.PI;
         double bowlDia = 2.0 * (_riceArt == null ? 40.0 : _riceArt.Width * 0.42);
-        bl.S = 1.33 * bowlDia;
+        bl.S = 0.95 * bowlDia;
         bl.Cx = bowl.X; bl.Cy = bowl.Y;
         bl.DistText    = FmtKpx(bl.DistPx);
         bl.ClosureText = FmtPxS(bl.ClosurePxS);
@@ -6343,7 +6872,7 @@ public sealed class DshPet : Form {
         // ---- multi-target, one plate per bowl -------------------------------------
         //
         // User rule (2026-10): EVERY bowl on screen gets a bracket, and they all get
-        // pulled in together. A bowl that has waited out the 10 s deadline locks the
+        // pulled in together. A bowl that has waited out the the configured delay deadline locks the
         // whole set - not just itself - so a bowl dropped two seconds ago is collected
         // at the same moment as the one that actually ran out of patience.
         //
@@ -6383,7 +6912,7 @@ public sealed class DshPet : Form {
         // Batch lock. _bowlWait is the unclaimed-bowl clock; it keeps running while
         // bowls are out, which is what lets a later bowl ride on an earlier one's
         // deadline.
-        if (_bowlWait >= BowlWaitSec) _lockAll = true;
+        if (_bowlWait >= _bowlWaitSec) _lockAll = true;
 
         // Manual display-only lock (menu -> "open fire-control radar"). It turns the
         // plates on WITHOUT setting _lockAll / _bowlLocked, because those freeze the
@@ -6731,6 +7260,13 @@ public sealed class DshPet : Form {
         // detect the swap (see the comment there).
         double[] qx = new double[] { 549.6, 949.7, 984.7, 584.6 };
         double[] qy = new double[] { 706.2, 642.0, 860.2, 924.3 };
+        if (_charId == "gemini") {
+            qx[0] += 5.1; qx[1] -= 13.3; qx[2] -= 13.3; qx[3] += 5.1;
+            qy[1] += 2.0; qy[2] += 2.0;
+        }
+        if (_customQuad != null) {
+            for (int i = 0; i < 4; i++) { qx[i] = _customQuad[i * 2]; qy[i] = _customQuad[i * 2 + 1]; }
+        }
         _fx = new double[4]; _fy = new double[4];
         for (int i = 0; i < 4; i++) {
             double qxs = _snapRight ? ((double)_sprNormalSourceW - qx[i]) : qx[i];
@@ -6771,7 +7307,8 @@ public sealed class DshPet : Form {
         // A stored pixel edge wins: that is what the cup presets and the custom
         // entry record, and it is monitor-independent. _cm is only the fallback
         // for a state.ini written by an older build.
-        int px = _sizePx > 0 ? _sizePx : (int)Math.Round(_cm / 2.54 * dpiY);
+        int px = _sizePx > 0 ? _sizePx : 454;
+        if (_sizePx <= 0) _sizePx = px;
         if (px < 40) px = 40;
         // _w/_h describe the WIDGET (and the canvas/scale derived from it), NOT the
         // window. The window is created SCREEN-SIZED and keeps that size forever: any
@@ -6903,7 +7440,7 @@ public sealed class DshPet : Form {
         // preset changes. 0.44 of the edge, clamped so it stays draggable even at
         // the smallest preset.
         if (!_skipHeavyArt && _riceFlat != null) {
-            int rw = Math.Max(24, (int)Math.Round(_w * 0.44));
+            int rw = Math.Max(24, (int)Math.Round(_w * 0.30));
             // Re-point every live bowl at the new bitmap BEFORE the old one is freed,
             // and re-measure their footprint. Bowls now carry their own Art, so without
             // this a resize left them holding a disposed Bitmap and the next frame threw
@@ -7059,7 +7596,7 @@ public sealed class DshPet : Form {
         // Only the ENTRY POINT and the drift sign are mirrored - the bowl is never flipped,
         // scaled or drawn backwards, so nothing on screen (least of all text) becomes
         // unreadable. Where it lands does not gate anything: the bowl is dragged to her by
-        // hand, and the 10 s radar lock pulls it in from anywhere (the magnet steps toward her
+        // hand, and the the configured delay radar lock pulls it in from anywhere (the magnet steps toward her
         // every frame with no range limit).
         // X/Y are SCREEN pixels; DrawRiceArt converts them into the canvas, which is why the
         // bowl can start far outside the widget. Extra bowls are nudged apart so a burst does
@@ -7089,6 +7626,37 @@ public sealed class DshPet : Form {
     // rolled back by a real poll. Only UNFED bowls are dropped: a fed one has already
     // paid out, and its money was folded back into the readout instead. A genuinely
     // pending top-up (from a real recharge) is left completely alone.
+    // Remove a bowl without the feeding animation. A rice bowl still pays out what it carries, so the
+    // printed figure and the real one cannot drift apart; a loose pot just disappears.
+    void CollectBowlQuiet(Rice bowl) {
+        if (bowl == null || bowl.OnHead) return;
+        if (!bowl.Iron && !bowl.Fed) {
+            bool have = !double.IsNaN(_realBal) && !double.IsNaN(_bookedBal);
+            double shortfall = have ? Math.Round(_realBal - _bookedBal, 2) : 0;
+            if (shortfall < 0) shortfall = 0;
+            double owed = Math.Max(_creditPending, shortfall);
+            double gain = Math.Min(bowl.Amount, owed);
+            if (gain <= 1e-9) gain = owed;
+            if (gain > 1e-9) {
+                ApplyCredit(gain);
+                _creditPending = Math.Round(Math.Max(0, _creditPending - gain), 4);
+            }
+            _testOffset = 0;
+        }
+        _rices.Remove(bowl);
+        if (_rice == bowl) _rice = null;
+        if (_riceGrab == bowl) { _riceGrab = null; bowl.Dragging = false; }
+        _bowlWait = 0;
+        if (_rices.Count == 0) _radarManual = false;
+        _dirty = true;
+        Log("bowl cleared (right-click / auto) bowlsLeft=" + _rices.Count);
+    }
+
+    public void ClearBowlsUi() {
+        List<Rice> copy = new List<Rice>(_rices);
+        for (int i = 0; i < copy.Count; i++) CollectBowlQuiet(copy[i]);
+    }
+
     void DropPhantomBowls() {
         int dropped = 0;
         for (int i = _rices.Count - 1; i >= 0; i--) {
@@ -7565,6 +8133,15 @@ public sealed class DshPet : Form {
                     Log("bowl removed (fed) bowlsLeft=" + _rices.Count);
                 }
                 continue;
+            }
+            // Auto-clear: a bowl nobody picked up is collected silently after a while, so it can
+            // neither pile up nor hold the deductions back for ever.
+            if (!r.Iron && !r.OnHead) {
+                if (r.Dragging || r == _riceGrab) r.IdleT = 0;
+                else {
+                    r.IdleT += dt;
+                    if (r.IdleT >= BowlAutoClearSec) { CollectBowlQuiet(r); continue; }
+                }
             }
             if (r.SquishT < r.SquishDur) r.SquishT += dt;
             // ---- iron pot worn on the head ------------------------------------
@@ -8336,6 +8913,18 @@ public sealed class DshPet : Form {
                     _sizePx = n;                       // presets / custom entry
                 else if (k == "cm" && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d >= 0.8)
                     _cm = d;                           // legacy, only used if px is absent
+                else if (k == "opacity" && int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out n) && n >= 15 && n <= 100)
+                    _opacityPercent = n;
+                else if (k == "fixed" && (v == "0" || v == "1"))
+                    _fixedMode = v == "1";
+                else if (k == "through" && (v == "0" || v == "1"))
+                    _clickThrough = v == "1";
+                else if (k == "walk" && (v == "0" || v == "1"))
+                    _walkEnabled = v == "1";
+                else if (k == "chibi" && (v == "0" || v == "1"))
+                    _chibiMode = v == "1";
+                else if (k == "bowlwait" && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d >= 0.5 && d <= 3600)
+                    _bowlWaitSec = d;
                 else if (k == "volume") {
                     // RETIRED, and deliberately not read. There is no master level any more, and
                     // the old code applied this key as the STARTING VALUE for all four cues -
@@ -8496,6 +9085,12 @@ public sealed class DshPet : Form {
             // older build could still read the file.
             sb.Append("px=").Append(_sizePx.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("cm=").Append(_cm.ToString("0.##", CultureInfo.InvariantCulture)).Append("\r\n");
+            sb.Append("opacity=").Append(_opacityPercent.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
+            sb.Append("fixed=").Append(_fixedMode ? "1" : "0").Append("\r\n");
+            sb.Append("through=").Append(_clickThrough ? "1" : "0").Append("\r\n");
+            sb.Append("walk=").Append(_walkEnabled ? "1" : "0").Append("\r\n");
+            sb.Append("chibi=").Append(_chibiMode ? "1" : "0").Append("\r\n");
+            sb.Append("bowlwait=").Append(_bowlWaitSec.ToString("0.##", CultureInfo.InvariantCulture)).Append("\r\n");
             // `volume=` is NOT written: there is no master level. A file that still has one is
             // read-and-ignored (see ReadState). Each cue's level is cuevolN below.
             sb.Append("sound=").Append(_soundEnabled ? "1" : "0").Append("\r\n");
@@ -8551,15 +9146,17 @@ public sealed class DshPet : Form {
         get {
             CreateParams cp = base.CreateParams;
             cp.ExStyle |= Native.WS_EX_LAYERED | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE;
+            if (_clickThrough) cp.ExStyle |= Native.WS_EX_TRANSPARENT;
             return cp;
         }
     }
 
     protected override void OnHandleCreated(EventArgs e) {
         base.OnHandleCreated(e);
-        _dirty = true;
         RenderToCanvas();
         PushLayer();
+        try { Native.RegisterHotKey(Handle, ClickThroughHotkeyId, Native.MOD_CONTROL | Native.MOD_ALT, Native.VK_P); } catch { }
+        ApplyClickThroughStyle();
     }
 
     // A persistent 32bpp DIB the size of the canvas, plus the DC that holds it.
@@ -8704,6 +9301,7 @@ public sealed class DshPet : Form {
 
     // Composite now, or wait for the next frame?
     bool PushDue() {
+        if (_patActive || _clickPatMs > 0 || _drag || _riceGrab != null) return true;
         if (_pushEvery <= 1) return true;
         double now = NowSec();
         if (_lastPushSec < 0.0 ||
@@ -8771,7 +9369,7 @@ public sealed class DshPet : Form {
             Native.POINT dst = new Native.POINT(); dst.X = Left; dst.Y = Top;
             Native.BLENDFUNCTION bf = new Native.BLENDFUNCTION();
             bf.BlendOp = Native.AC_SRC_OVER; bf.BlendFlags = 0;
-            bf.SourceConstantAlpha = 255; bf.AlphaFormat = Native.AC_SRC_ALPHA;
+            bf.SourceConstantAlpha = (byte)Math.Max(1, Math.Min(255, (int)Math.Round(_opacityPercent * 2.55))); bf.AlphaFormat = Native.AC_SRC_ALPHA;
             return Native.UpdateLayeredWindow(Handle, screenDc, ref dst, ref size, _memDc,
                                               ref src, 0, ref bf, Native.ULW_ALPHA);
         } finally {
@@ -8800,7 +9398,7 @@ public sealed class DshPet : Form {
             Native.POINT dst = new Native.POINT(); dst.X = Left; dst.Y = Top;
             Native.BLENDFUNCTION bf = new Native.BLENDFUNCTION();
             bf.BlendOp = Native.AC_SRC_OVER; bf.BlendFlags = 0;
-            bf.SourceConstantAlpha = 255; bf.AlphaFormat = Native.AC_SRC_ALPHA;
+            bf.SourceConstantAlpha = (byte)Math.Max(1, Math.Min(255, (int)Math.Round(_opacityPercent * 2.55))); bf.AlphaFormat = Native.AC_SRC_ALPHA;
             Native.UpdateLayeredWindow(Handle, screenDc, ref dst, ref size, memDc, ref src, 0, ref bf, Native.ULW_ALPHA);
         } finally {
             if (old != IntPtr.Zero) Native.SelectObject(memDc, old);
@@ -8971,6 +9569,10 @@ public sealed class DshPet : Form {
             DashCamDump("hotkey");
             return;
         }
+        if (m.Msg == Native.WM_HOTKEY && (int)m.WParam == ClickThroughHotkeyId) {
+            _clickThrough = !_clickThrough; ApplyClickThroughStyle(); SaveState();
+            return;
+        }
         if (m.Msg == Native.WM_NCHITTEST) {
             int lp = (int)m.LParam;
             int x = (short)(lp & 0xFFFF), y = (short)((lp >> 16) & 0xFFFF);
@@ -9036,6 +9638,7 @@ public sealed class DshPet : Form {
                 KnockPotOff();
                 return;
             }
+            if (_fixedMode) { base.OnMouseDown(e); return; }
             _drag = true;
             _snapping = false;
             _dragStart = Cursor.Position;
@@ -9071,6 +9674,9 @@ public sealed class DshPet : Form {
                 _lastBodyClickPt = new Point(e.X, e.Y);
             }
         } else if (e.Button == MouseButtons.Right) {
+            // Right-click on a bowl or a loose pot clears it (the money is still credited).
+            Rice rb = BowlAt(e.X, e.Y);
+            if (rb != null) { CollectBowlQuiet(rb); return; }
             // Menu only on the girl, always. The window is screen-sized while a
             // bowl is out, so an unguarded right-click anywhere over the bowl would
             // pop the menu; the request is explicitly "right-click the girl only".
@@ -9163,13 +9769,36 @@ public sealed class DshPet : Form {
         return true;
     }
 
+    // A short left click on her (not on the tablet, which keeps its double-click) plays a head pat,
+    // hearts and the feed sound. Each click inside 2.5 s of the last one extends the combo.
+    void ClickPat() {
+        if (!_patReady || !_fxPat || HeadPotOn || _riceGrab != null) return;
+        long now = Environment.TickCount;
+        _clickPatCombo = (now - _lastClickPatTick <= 2500) ? _clickPatCombo + 1 : 1;
+        _lastClickPatTick = now;
+        _clickPatMs = 1300 + Math.Min(_clickPatCombo, 5) * 200;
+        _headSquashT = 0;
+        SpawnHearts(_headX + _offX, (int)(_h * 0.20) + _offY);
+        if (_clickPatCombo >= 3) SpawnHearts(_headX + _offX, (int)(_h * 0.20) + _offY);
+        PlayCue(CUE_FEED, _feedSound);
+        _dirty = true;
+        Log("click pat (combo " + _clickPatCombo + ")");
+    }
+
     protected override void OnMouseUp(MouseEventArgs e) {
+        bool wasShortClick = false;
+        if (e.Button == MouseButtons.Left && _drag && _riceGrab == null) {
+            Point upPos = Cursor.Position;
+            wasShortClick = Math.Abs(upPos.X - _dragStart.X) <= 6 && Math.Abs(upPos.Y - _dragStart.Y) <= 6 &&
+                            GirlPixelSolid(e.X, e.Y) && !OnTablet(e.X, e.Y);
+        }
+        if (wasShortClick) ClickPat();
         if (_riceGrab != null && _riceGrab.Dragging) {
             ReleaseBowl();
         } else if (_drag) {
             _drag = false;
             SyncSideToPosition();       // (already done during the drag; this is the safety net)
-            SnapToCorner(false);        // release -> fly home to the nearer bottom corner
+            if (!_fixedMode) SnapToCorner(false);        // release -> fly home to the nearer bottom corner
         }
         base.OnMouseUp(e);
     }
@@ -9219,7 +9848,9 @@ public sealed class DshPet : Form {
 
     void Quit() {
         if (_spendDirty) SaveUsage();     // one write, on the way out
+        StopWeb();
         try { _timer.Stop(); _poll.Stop(); } catch { }
+        try { Native.UnregisterHotKey(Handle, ClickThroughHotkeyId); } catch { }
         if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         if (_sound != null) { try { _sound.Dispose(); } catch { } }
         SaveState();
@@ -9801,8 +10432,10 @@ public sealed class DshPet : Form {
                 g.PixelOffsetMode = PixelOffsetMode.Half;
                 DrawHearts(g);
             }
+            Rectangle hr = Rectangle.Intersect(new Rectangle(_offX - _w / 3, _offY - _h / 2, _w * 5 / 3, _h), CanvasRect());
+            _paintRects.Add(hr);
+            MarkDirty(hr);
         }
-
         BuildHitMap(ox + _offX, oy + _offY);
         if (_perfPhases) { _phHit += Ms(t0); }
         // Hand this frame's boxes to the next frame, which erases them.
@@ -10617,7 +11250,7 @@ public sealed class DshPet : Form {
 
     // Three lines on the tablet: the clock, who is on duty, and today's spend.
     Bitmap BuildPanelPeak(int pw, int ph) {
-        string key = "peak|" + CloudBeijing().ToString("HH:mm:ss") + "|" + OffPeakNow() + "|" +
+        string key = "peak|" + _charId + "|" + _simMode + "|" + _prov + "|" + CloudBeijing().ToString("HH:mm:ss") + "|" + OffPeakNow() + "|" +
                       _todayUsed.ToString("0.00", CultureInfo.InvariantCulture);
         if (_panelCacheValid && _panelCache != null && _panelCacheW == pw && _panelCacheH == ph &&
             _panelCacheText == key) return _panelCache;
@@ -10635,17 +11268,21 @@ public sealed class DshPet : Form {
                 TimeSpan left = UntilSwitch(out toPeak);
                 string cd = ((int)left.TotalHours).ToString("0") + ":" +
                             left.Minutes.ToString("00") + ":" + left.Seconds.ToString("00");
-                string[] lines = new string[] {
+                string[] lines = _charId == "deepseek" ? new string[] {
                     CloudBeijing().ToString("HH:mm:ss"),
                     OffPeakNow() ? S_PEAK_OFF : S_PEAK_PEAK,
                     (toPeak ? S_TO_PEAK : S_TO_OFF) + " " + cd
+                } : new string[] {
+                    DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                    _simMode ? "\u6A21\u64EC\u6A21\u5F0F" : ProvNames[_prov],
+                    S_USED + " " + _todayUsed.ToString("0.00", CultureInfo.InvariantCulture)
                 };
                 float[] frac = new float[] { 0.10f, 0.38f, 0.66f };
                 float[] size = new float[] { 0.26f, 0.26f, 0.18f };
                 for (int i = 0; i < 3; i++) {
                     // Colour carries the tariff too: the off-peak line reads green, the peak line warm,
                     // so the state is legible at a glance and does not rely on reading the name.
-                    Color ink = i == 1 ? (OffPeakNow() ? Color.FromArgb(255, 150, 226, 170)
+                    Color ink = (i == 1 && _charId == "deepseek") ? (OffPeakNow() ? Color.FromArgb(255, 150, 226, 170)
                                                         : Color.FromArgb(255, 240, 190, 120))
                                        : Color.FromArgb(255, 236, 242, 252);
                     using (Font f = new Font("Microsoft YaHei UI", H * size[i], FontStyle.Bold,
@@ -10936,8 +11573,23 @@ public sealed class DshPet : Form {
         }
     }
 
+    void UpdateWalk(double dt) {
+        if (!_walkEnabled || _fixedMode || _rices.Count > 0 || _drag || _snapping) return;
+        if (_walkBaseX == 0) _walkBaseX = HomeX();
+        _walkT += dt;
+        double phase = Math.Sin(_walkT * 0.75);
+        Rectangle vs = SystemInformation.VirtualScreen;
+        Rectangle wa = Screen.PrimaryScreen.WorkingArea;
+        int travel = Math.Max(24, Math.Min(140, _w / 3));
+        int x = _walkBaseX + (int)Math.Round(phase * travel);
+        int min = wa.Left - vs.Left, max = wa.Right - vs.Left - _w;
+        if (x < min) x = min; if (x > max) x = max;
+        _offX = x;
+        bool right = InRightHalf();
+        if (right != _snapRight) { _snapRight = right; UpdateMirrorGeometry(); }
+        _dirty = true;
+    }
     // ---------------------------------------------------------------- tick ---
-
     void OnTick() {
         // Always stamped: LastTickMs feeds the runtime ledger, and leaving it 0 made
         // Ms(0) report "time since boot" - a 38,000,000 ms tick_avg in the log.
@@ -10967,6 +11619,7 @@ public sealed class DshPet : Form {
                 PushLayer();
             }
 
+            UpdateWalk(dt);
             _lastCueAmount = 0;              // diagnostics: what fired this frame
             DrainBankedBalance();            // apply any reading that arrived
             if (_perfPhases) { _phDrain += Ms(tPh0); tPh0 = Stopwatch.GetTimestamp(); }
@@ -10982,6 +11635,15 @@ public sealed class DshPet : Form {
             else _cueGrace = 0;
             // Head-squash timer. Runs to HeadSquashDur and stops; the renderer treats
             // "at duration" as "no animation".
+            // Idle fidget: every 7-16 s she does a small bounce on her own, so she is never frozen.
+            _idleFidgetMs -= _timer.Interval;
+            if (_idleFidgetMs <= 0) {
+                _idleFidgetMs = 7000 + _fidgetRng.Next(0, 9000);
+                if (!_patActive && _clickPatMs <= 0 && !_drag && _riceGrab == null && !HeadPotOn &&
+                    _headSquashT >= HeadSquashDur && _pendingStep <= 0 && _hits.Count == 0) {
+                    _headSquashT = 0;
+                }
+            }
             if (_headSquashT < HeadSquashDur) {
                 _headSquashT += dt;
                 if (_headSquashT > HeadSquashDur) _headSquashT = HeadSquashDur;
@@ -11329,6 +11991,570 @@ public sealed class DshPet : Form {
         return _nodePath;
     }
 
+
+    // =========================================================================
+    // Modes and providers.
+    //   simulation : fake balance, no network (default until a key is saved)
+    //   api        : real figure from the chosen vendor
+    // DeepSeek has a real balance endpoint. OpenAI and Anthropic only expose spend reports (admin key),
+    // so their balance is "starting budget - spend since the start date". Gemini has no API at all.
+    // The choice lives in provider.ini; keys live in apikey*.txt next to the script.
+    // =========================================================================
+    bool _simMode = true;
+    int _prov;
+    static readonly string[] ProvIds = new string[] { "deepseek", "openai", "anthropic", "gemini" };
+    static readonly string[] ProvNames = new string[] { "DeepSeek", "OpenAI", "Anthropic (Claude)", "Google Gemini" };
+    readonly string[] _provKey = new string[] { "", "", "", "" };
+    readonly double[] _provBudget = new double[] { 0, 100, 100, 0 };
+    readonly string[] _provSince = new string[4];
+    DateTime _lastRemote = DateTime.MinValue;
+
+    string CfgPath { get { return Path.Combine(_baseDir, "provider.ini"); } }
+    string ProvKeyPath(int p) {
+        return p == 0 ? KeyPath : Path.Combine(_baseDir, "apikey_" + ProvIds[p] + ".txt");
+    }
+    string ActiveKey { get { return _prov == 0 ? _apiKey : _provKey[_prov]; } }
+    string ActiveCurrency { get { return (_simMode || _prov == 0) ? "CNY" : "USD"; } }
+
+    void LoadProviderCfg() {
+        string monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        for (int p = 0; p < 4; p++) _provSince[p] = monthStart;
+        for (int p = 1; p < 4; p++) {
+            try { if (File.Exists(ProvKeyPath(p))) _provKey[p] = File.ReadAllText(ProvKeyPath(p)).Trim(); } catch { }
+        }
+        if (string.IsNullOrEmpty(_apiKey)) {
+            try { if (File.Exists(KeyPath)) _apiKey = File.ReadAllText(KeyPath).Trim(); } catch { }
+        }
+        _provKey[0] = _apiKey ?? "";
+        string mode = null;
+        try {
+            if (File.Exists(CfgPath)) {
+                foreach (string line in File.ReadAllLines(CfgPath)) {
+                    int i = line.IndexOf('=');
+                    if (i <= 0) continue;
+                    string k = line.Substring(0, i).Trim(), v = line.Substring(i + 1).Trim();
+                    double d;
+                    if (k == "mode") mode = v;
+                    else if (k == "provider") { int ix = Array.IndexOf(ProvIds, v); if (ix >= 0) _prov = ix; }
+                    else if (k.StartsWith("budget_") && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d >= 0) {
+                        int ix = Array.IndexOf(ProvIds, k.Substring(7)); if (ix >= 0) _provBudget[ix] = d;
+                    }
+                    else if (k.StartsWith("since_")) {
+                        DateTime dt;
+                        int ix = Array.IndexOf(ProvIds, k.Substring(6));
+                        if (ix >= 0 && DateTime.TryParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) _provSince[ix] = v;
+                    }
+                }
+            }
+        } catch { }
+        if (mode == "sim") _simMode = true;
+        else if (mode == "api") _simMode = false;
+        else _simMode = string.IsNullOrEmpty(ActiveKey);     // first run with an existing key keeps the old behaviour
+        Log("mode=" + (_simMode ? "sim" : "api") + " provider=" + ProvIds[_prov]);
+    }
+
+    void SaveProviderCfg() {
+        try {
+            StringBuilder b = new StringBuilder();
+            b.AppendLine("mode=" + (_simMode ? "sim" : "api"));
+            b.AppendLine("provider=" + ProvIds[_prov]);
+            for (int p = 1; p < 3; p++) {
+                b.AppendLine("budget_" + ProvIds[p] + "=" + _provBudget[p].ToString("0.####", CultureInfo.InvariantCulture));
+                b.AppendLine("since_" + ProvIds[p] + "=" + _provSince[p]);
+            }
+            File.WriteAllText(CfgPath, b.ToString(), Encoding.ASCII);
+        } catch { }
+    }
+
+    string ModeLabel() {
+        return _simMode ? "\u6A21\u5F0F\uFF1A\u6A21\u64EC\uFF08\u9EDE\u64CA\u5207\u63DB\u5230 API\uFF09" : "\u6A21\u5F0F\uFF1AAPI \u00B7 " + ProvNames[_prov] + "\uFF08\u9EDE\u64CA\u5207\u63DB\u5230\u6A21\u64EC\uFF09";
+    }
+    string WebLabel() { return "\u5728\u7DB2\u9801\u4E0A\u67E5\u770B\u9918\u984D"; }
+
+    // A different source means a different number: forget everything derived from the old one so the
+    // jump is not booked as spending, and so no bowl of rice is left over from the other mode.
+    void ResetBalanceTracking() {
+        lock (_hits) {
+            _realBal = double.NaN;
+            _bankedValid = false;
+            _connected = false;
+            _lastPollResult = "";
+            _creditPending = 0;
+            _pending = 0;
+            _pendingStep = 0;
+            _dueGap = 0;
+        }
+        for (int bi = _rices.Count - 1; bi >= 0; bi--) {
+            Rice rb2 = _rices[bi];
+            if (rb2.Iron) continue;
+            _rices.RemoveAt(bi);
+            if (_rice == rb2) _rice = null;
+            if (_riceGrab == rb2) { _riceGrab = null; rb2.Dragging = false; }
+        }
+        _bowlWait = 0; _radarManual = false;
+        _testBumpAmount = 0; _testBumpFrom = double.NaN;
+        _todayBase = double.NaN; _lastBalSeen = double.NaN; _todayTopUp = 0; _todayUsed = 0;
+        lock (_webLock) { _webPrev = double.NaN; _webEvents.Clear(); }
+        _lastRemote = DateTime.MinValue;
+        _pollWant = 2;
+        _dirty = true;
+    }
+
+    void SetMode(bool sim) {
+        if (_simMode == sim) return;
+        _simMode = sim;
+        SaveProviderCfg();
+        ResetBalanceTracking();
+        Log("mode switched to " + (sim ? "simulation" : "api (" + ProvIds[_prov] + ")"));
+        if (!sim && string.IsNullOrEmpty(ActiveKey)) AskKey();
+    }
+
+    void ApplyClickThroughStyle() {
+        if (Handle == IntPtr.Zero) return;
+        int ex = Native.GetWindowLong(Handle, Native.GWL_EXSTYLE);
+        if (_clickThrough) ex |= Native.WS_EX_TRANSPARENT; else ex &= ~Native.WS_EX_TRANSPARENT;
+        Native.SetWindowLong(Handle, Native.GWL_EXSTYLE, ex);
+        Native.SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
+            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_FRAMECHANGED);
+    }
+    void SetOpacityUi() {
+        using (InputDialog d = new InputDialog("Opacity", "Enter 15-100", "%", _opacityPercent.ToString(CultureInfo.InvariantCulture))) {
+            if (d.ShowDialog(this) != DialogResult.OK) return;
+            int n;
+            if (int.TryParse(d.Value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out n) && n >= 15 && n <= 100) {
+                _opacityPercent = n; SaveState(); _dirty = true; RenderToCanvas(); PushLayer();
+            }
+        }
+    }
+    void SetBowlWaitUi() {
+        using (InputDialog d = new InputDialog("Fire-control delay", "Seconds before automatic radar", "sec", _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture))) {
+            if (d.ShowDialog(this) != DialogResult.OK) return;
+            double n;
+            if (double.TryParse(d.Value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out n) && n >= 0.5 && n <= 3600) {
+                _bowlWaitSec = n; SaveState(); _dirty = true; Log("fire-control delay=" + n.ToString("0.#", CultureInfo.InvariantCulture) + "s");
+            }
+        }
+    }
+    void ToggleFixedUi() {
+        _fixedMode = !_fixedMode; if (_fixedMode) { _walkEnabled = false; _snapping = false; }
+        SaveState(); _dirty = true;
+    }
+    void ToggleThroughUi() {
+        _clickThrough = !_clickThrough; ApplyClickThroughStyle(); SaveState();
+        Log("mouse pass-through=" + (_clickThrough ? "on" : "off"));
+    }
+    void ToggleWalkUi() {
+        _walkEnabled = !_walkEnabled; if (_walkEnabled) { _fixedMode = false; _walkBaseX = HomeX(); _walkT = 0; }
+        SaveState(); _dirty = true;
+    }
+    void ToggleChibiUi() {
+        _chibiMode = !_chibiMode; SaveState();
+        Log("chibi=" + (_chibiMode ? "on (use chibi.png when present)" : "off"));
+        MessageBox.Show(this, _chibiMode ? "Chibi mode is on. Put chibi.png next to dsh_pet.ps1 for a custom chibi image; otherwise a compact fallback is used." : "Chibi mode is off.", "VK-1", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+    public void ToggleModeUi() { SetMode(!_simMode); }
+    public void CycleCharacterUi() { CycleCharacter(); }
+    public void OpenWebUi() {
+        if (_webPort == 0) { Log("web view is not running"); return; }
+        try {
+            ProcessStartInfo psi = new ProcessStartInfo("http://127.0.0.1:" + _webPort + "/");
+            psi.UseShellExecute = true;
+            Process.Start(psi);
+        } catch (Exception ex) { Log("open web failed: " + ex.Message); }
+    }
+    public string StrMode { get { return ModeLabel(); } }
+    public string StrChar { get { return CharLabel(); } }
+    public string StrWeb { get { return WebLabel(); } }
+
+    // ---- real balance for the active provider -------------------------------------------------
+    double FetchProviderBalance() {
+        if (_prov == 0) {
+            string body = FetchBalance();
+            double v = ParseCny(body);
+            if (double.IsNaN(v)) throw new Exception("cannot parse response: " + Trunc(body));
+            return v;
+        }
+        if (_prov == 3) throw new Exception("Gemini has no balance or spend API (use simulation mode)");
+        DateTime since;
+        if (!DateTime.TryParseExact(_provSince[_prov], "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out since))
+            throw new Exception("bad start date");
+        double spend = _prov == 1 ? OpenAiSpend(since) : AnthropicSpend(since);
+        return Math.Max(0, Math.Round(_provBudget[_prov] - spend, 2));
+    }
+
+    static string HttpGetText(string url, string h1, string v1, string h2, string v2) {
+        HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.TryAddWithoutValidation(h1, v1);
+        if (h2 != null) req.Headers.TryAddWithoutValidation(h2, v2);
+        req.Headers.TryAddWithoutValidation("Accept", "application/json");
+        HttpResponseMessage resp = Http.SendAsync(req).GetAwaiter().GetResult();
+        string body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        if (!resp.IsSuccessStatusCode) throw new Exception("HTTP " + (int)resp.StatusCode + " " + Trunc(body));
+        return body;
+    }
+
+    static double SumMatches(string body, string pattern, double scale) {
+        double sum = 0;
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(body, pattern)) {
+            double d;
+            if (double.TryParse(m.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out d)) sum += d * scale;
+        }
+        return sum;
+    }
+
+    static string NextPage(string body) {
+        System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(body, "\"next_page\"\\s*:\\s*\"([^\"]+)\"");
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
+    // OpenAI: GET /v1/organization/costs (admin key). amount.value is in USD.
+    double OpenAiSpend(DateTime sinceUtc) {
+        long st = (long)(sinceUtc - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+        double sum = 0;
+        string page = null;
+        for (int n = 0; n < 60; n++) {
+            string url = "https://api.openai.com/v1/organization/costs?start_time=" + st + "&bucket_width=1d&limit=180" +
+                         (page != null ? "&page=" + Uri.EscapeDataString(page) : "");
+            string body = HttpGetText(url, "Authorization", "Bearer " + _provKey[1], null, null);
+            sum += SumMatches(body, "\"amount\"\\s*:\\s*\\{\\s*\"value\"\\s*:\\s*(-?[0-9.eE+-]+)", 1.0);
+            page = NextPage(body);
+            if (string.IsNullOrEmpty(page)) break;
+        }
+        return sum;
+    }
+
+    // Anthropic: GET /v1/organizations/cost_report (admin key). amount is a decimal string in cents.
+    double AnthropicSpend(DateTime sinceUtc) {
+        string from = sinceUtc.ToString("yyyy-MM-dd'T'00:00:00'Z'", CultureInfo.InvariantCulture);
+        double sum = 0;
+        string page = null;
+        for (int n = 0; n < 60; n++) {
+            string url = "https://api.anthropic.com/v1/organizations/cost_report?starting_at=" + Uri.EscapeDataString(from) +
+                         "&bucket_width=1d&limit=31" + (page != null ? "&page=" + Uri.EscapeDataString(page) : "");
+            string body = HttpGetText(url, "x-api-key", _provKey[2], "anthropic-version", "2023-06-01");
+            sum += SumMatches(body, "\"amount\"\\s*:\\s*\"?(-?[0-9.eE+-]+)\"?", 0.01);
+            page = NextPage(body);
+            if (string.IsNullOrEmpty(page)) break;
+        }
+        return sum;
+    }
+
+    // ---- local web view -------------------------------------------------------------------------
+    // A tiny HTTP server bound to 127.0.0.1 only. GET shows the state; POST /api/action runs a few
+    // buttons and needs a per-run token (embedded in the page) plus a loopback Host/Origin, so another
+    // site open in the browser cannot drive the pet.
+    TcpListener _web;
+    Thread _webThread;
+    int _webPort;
+    volatile bool _webStop;
+    readonly object _webLock = new object();
+    readonly List<string> _webEvents = new List<string>();
+    double _webPrev = double.NaN;
+    string _webUpdated = "";
+    readonly string _webToken = Guid.NewGuid().ToString("N");
+
+    void StartWeb() {
+        for (int p = 8765; p <= 8775; p++) {
+            try {
+                TcpListener l = new TcpListener(IPAddress.Loopback, p);
+                l.Start();
+                _web = l; _webPort = p;
+                break;
+            } catch { }
+        }
+        if (_web == null) { Log("web: no free port in 8765-8775"); return; }
+        _webThread = new Thread(WebLoop);
+        _webThread.IsBackground = true;
+        _webThread.Start();
+        Log("web: http://127.0.0.1:" + _webPort + "/");
+    }
+
+    void StopWeb() {
+        _webStop = true;
+        try { if (_web != null) _web.Stop(); } catch { }
+    }
+
+    void WebLoop() {
+        while (!_webStop) {
+            TcpClient c;
+            try { c = _web.AcceptTcpClient(); } catch { break; }
+            TcpClient cc = c;
+            ThreadPool.QueueUserWorkItem(delegate {
+                try { WebHandle(cc); } catch { } finally { try { cc.Close(); } catch { } }
+            });
+        }
+    }
+
+    void WebNote(double bal) {
+        lock (_webLock) {
+            if (!double.IsNaN(_webPrev) && Math.Abs(bal - _webPrev) >= 0.005) {
+                double d = Math.Round(bal - _webPrev, 2);
+                _webEvents.Add(DateTime.Now.ToString("MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + "|" +
+                               d.ToString("0.00", CultureInfo.InvariantCulture) + "|" +
+                               bal.ToString("0.00", CultureInfo.InvariantCulture));
+                while (_webEvents.Count > 300) _webEvents.RemoveAt(0);
+            }
+            _webPrev = bal;
+            _webUpdated = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+        }
+    }
+
+    static string JsonEsc(string s) {
+        if (s == null) return "";
+        StringBuilder b = new StringBuilder();
+        foreach (char ch in s) {
+            if (ch == '\\') b.Append("\\\\");
+            else if (ch == '"') b.Append("\\\"");
+            else if (ch < 32) b.Append(' ');
+            else b.Append(ch);
+        }
+        return b.ToString();
+    }
+
+    string[] WebLogTail(int n) {
+        try {
+            using (FileStream fs = new FileStream(Path.Combine(_baseDir, "pet.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+                int take = (int)Math.Min(fs.Length, 8192);
+                fs.Seek(-take, SeekOrigin.End);
+                byte[] b = new byte[take];
+                int got = fs.Read(b, 0, take);
+                string[] ls = Encoding.UTF8.GetString(b, 0, got).Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                int from = Math.Max(0, ls.Length - n);
+                string[] res = new string[ls.Length - from];
+                for (int i = from; i < ls.Length; i++) res[i - from] = ls[i].TrimEnd('\r');
+                return res;
+            }
+        } catch { return new string[0]; }
+    }
+
+    string WebStateJson() {
+        double bal = DrawnBalance;
+        CultureInfo inv = CultureInfo.InvariantCulture;
+        StringBuilder sb = new StringBuilder();
+        sb.Append("{\"mode\":\"").Append(_simMode ? "sim" : "api").Append("\"");
+        sb.Append(",\"provider\":\"").Append(JsonEsc(_simMode ? "\u6A21\u64EC" : ProvNames[_prov])).Append("\"");
+        sb.Append(",\"currency\":\"").Append(ActiveCurrency).Append("\"");
+        sb.Append(",\"balance\":").Append(double.IsNaN(bal) ? "null" : bal.ToString("0.00", inv));
+        sb.Append(",\"connected\":").Append(_connected ? "true" : "false");
+        sb.Append(",\"error\":\"").Append(JsonEsc(_lastPollResult)).Append("\"");
+        sb.Append(",\"character\":\"").Append(JsonEsc(CharLabel().Replace("\uFF08\u9EDE\u64CA\u9078\u64C7\uFF09", ""))).Append("\"");
+        double used = double.IsNaN(_todayUsed) ? 0 : _todayUsed;
+        double top = double.IsNaN(_todayTopUp) ? 0 : _todayTopUp;
+        sb.Append(",\"todayUsed\":").Append(used.ToString("0.00", inv));
+        sb.Append(",\"todayTopUp\":").Append(top.ToString("0.00", inv));
+        int bowls = 0;
+        try { for (int i = 0; i < _rices.Count; i++) if (!_rices[i].Iron && !_rices[i].Fed) bowls++; } catch { }
+        sb.Append(",\"bowls\":").Append(bowls);
+        if (!_simMode && (_prov == 1 || _prov == 2))
+            sb.Append(",\"budget\":").Append(_provBudget[_prov].ToString("0.00", inv)).Append(",\"since\":\"").Append(_provSince[_prov]).Append("\"");
+        else sb.Append(",\"budget\":null,\"since\":\"\"");
+        lock (_webLock) {
+            sb.Append(",\"updated\":\"").Append(_webUpdated).Append("\",\"events\":[");
+            for (int i = 0; i < _webEvents.Count; i++) {
+                string[] f = _webEvents[i].Split('|');
+                if (i > 0) sb.Append(",");
+                sb.Append("{\"t\":\"").Append(f[0]).Append("\",\"d\":").Append(f[1]).Append(",\"b\":").Append(f[2]).Append("}");
+            }
+            sb.Append("]");
+        }
+        sb.Append(",\"log\":[");
+        string[] lg = WebLogTail(14);
+        for (int i = 0; i < lg.Length; i++) { if (i > 0) sb.Append(","); sb.Append("\"").Append(JsonEsc(lg[i])).Append("\""); }
+        sb.Append("]}");
+        return sb.ToString();
+    }
+
+    string WebCsv() {
+        StringBuilder sb = new StringBuilder();
+        sb.Append("\uFEFFtime,delta,balance\r\n");
+        lock (_webLock) {
+            for (int i = 0; i < _webEvents.Count; i++) sb.Append(_webEvents[i].Replace('|', ',')).Append("\r\n");
+        }
+        return sb.ToString();
+    }
+
+    bool WebAction(string name) {
+        Action a = null;
+        switch (name) {
+            case "refresh": a = delegate { RefreshNowUi(); }; break;
+            case "mode": a = delegate { ToggleModeUi(); }; break;
+            case "charge1": a = delegate { DemoChargeUi(1); }; break;
+            case "charge10": a = delegate { DemoChargeUi(10); }; break;
+            case "topup": a = delegate { DemoTopUpUi(); }; break;
+            case "clearbowls": a = delegate { ClearBowlsUi(); }; break;
+        }
+        if (a == null) return false;
+        try { BeginInvoke(a); } catch { return false; }
+        return true;
+    }
+
+    static void WebSend(NetworkStream ns, int code, string type, byte[] body) {
+        string reason = code == 200 ? "OK" : (code == 404 ? "Not Found" : (code == 403 ? "Forbidden" : "Error"));
+        string head = "HTTP/1.1 " + code + " " + reason + "\r\n" +
+                      "Content-Type: " + type + "\r\n" +
+                      "Content-Length: " + body.Length + "\r\n" +
+                      "Cache-Control: no-store\r\n" +
+                      "X-Content-Type-Options: nosniff\r\n" +
+                      "Connection: close\r\n\r\n";
+        byte[] h = Encoding.ASCII.GetBytes(head);
+        ns.Write(h, 0, h.Length);
+        ns.Write(body, 0, body.Length);
+    }
+
+    static string HeaderValue(string[] lines, string name) {
+        for (int i = 1; i < lines.Length; i++) {
+            if (lines[i].StartsWith(name + ":", StringComparison.OrdinalIgnoreCase)) return lines[i].Substring(name.Length + 1).Trim();
+        }
+        return "";
+    }
+
+    void WebHandle(TcpClient c) {
+        c.ReceiveTimeout = 3000; c.SendTimeout = 3000;
+        NetworkStream ns = c.GetStream();
+        byte[] buf = new byte[8192];
+        int n = 0;
+        while (n < buf.Length) {
+            int r = ns.Read(buf, n, buf.Length - n);
+            if (r <= 0) break;
+            n += r;
+            if (Encoding.ASCII.GetString(buf, 0, n).IndexOf("\r\n\r\n") >= 0) break;
+        }
+        string req = Encoding.ASCII.GetString(buf, 0, n);
+        string[] lines = req.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+        string[] first = lines[0].Split(' ');
+        byte[] deny = Encoding.ASCII.GetBytes("forbidden");
+        if (first.Length < 2 || (first[0] != "GET" && first[0] != "POST")) { WebSend(ns, 403, "text/plain", deny); return; }
+        string host = HeaderValue(lines, "Host");
+        string good1 = "127.0.0.1:" + _webPort, good2 = "localhost:" + _webPort;
+        if (host != good1 && host != good2) { WebSend(ns, 403, "text/plain", deny); return; }
+        string path = first[1], query = "";
+        int q = path.IndexOf('?');
+        if (q >= 0) { query = path.Substring(q + 1); path = path.Substring(0, q); }
+        if (first[0] == "POST") {
+            string origin = HeaderValue(lines, "Origin");
+            bool originOk = origin == "" || origin == "http://" + good1 || origin == "http://" + good2;
+            string tok = "", name = "";
+            foreach (string kv in query.Split('&')) {
+                if (kv.StartsWith("token=")) tok = kv.Substring(6);
+                else if (kv.StartsWith("name=")) name = kv.Substring(5);
+            }
+            if (path != "/api/action" || !originOk || tok != _webToken) { WebSend(ns, 403, "text/plain", deny); return; }
+            bool ok = WebAction(name);
+            WebSend(ns, ok ? 200 : 404, "application/json", Encoding.ASCII.GetBytes(ok ? "{\"ok\":true}" : "{\"ok\":false}"));
+            return;
+        }
+        if (path == "/" || path == "/index.html") {
+            WebSend(ns, 200, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(WebPage.Replace("@@TOKEN@@", _webToken)));
+        } else if (path == "/api/state") {
+            WebSend(ns, 200, "application/json; charset=utf-8", Encoding.UTF8.GetBytes(WebStateJson()));
+        } else if (path == "/history.csv") {
+            WebSend(ns, 200, "text/csv; charset=utf-8", Encoding.UTF8.GetBytes(WebCsv()));
+        } else if (path == "/sprite.png") {
+            string sp = Path.Combine(CharArtDir(_baseDir), "sprite.png");
+            if (File.Exists(sp)) WebSend(ns, 200, "image/png", File.ReadAllBytes(sp));
+            else WebSend(ns, 404, "text/plain", Encoding.ASCII.GetBytes("not found"));
+        } else {
+            WebSend(ns, 404, "text/plain", Encoding.ASCII.GetBytes("not found"));
+        }
+    }
+
+    const string WebPage =
+        "<!doctype html>\n" +
+        "<html lang=\"zh-Hant\"><head><meta charset=\"utf-8\">\n" +
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n" +
+        "<title>VK-1 \u4F59\u984D\u5BF5\u7269</title>\n" +
+        "<style>\n" +
+        ":root{--bg:#f4f5f7;--card:#fff;--ink:#1d1d1f;--sub:#6e6e73;--line:#e3e3e8;--acc:#2f6bff;--bad:#e5484d;--good:#2ea043}\n" +
+        "@media (prefers-color-scheme:dark){:root{--bg:#161618;--card:#232326;--ink:#f2f2f4;--sub:#9a9aa2;--line:#35353a;--acc:#6b95ff;--bad:#ff6a6f;--good:#4cc36a}}\n" +
+        "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 \"Microsoft YaHei UI\",\"PingFang TC\",system-ui,sans-serif}\n" +
+        "main{max-width:980px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:16px;grid-template-columns:260px 1fr}\n" +
+        "@media (max-width:700px){main{grid-template-columns:1fr}}\n" +
+        ".card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}\n" +
+        ".pet{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}.pet img{width:100%;max-width:240px}\n" +
+        ".badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;border:1px solid var(--line);color:var(--sub)}\n" +
+        ".badge.api{color:var(--acc);border-color:var(--acc)}\n" +
+        ".bal{font-size:56px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums;margin:6px 0 0}\n" +
+        ".bal small{font-size:18px;font-weight:500;color:var(--sub);margin-left:8px}\n" +
+        ".row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sub{color:var(--sub);font-size:13px}\n" +
+        ".dot{width:9px;height:9px;border-radius:50%;background:var(--bad);display:inline-block}.dot.on{background:var(--good)}\n" +
+        "svg{width:100%;height:110px;display:block;margin-top:10px}\n" +
+        ".stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}\n" +
+        ".stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}\n" +
+        "button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}\n" +
+        "button:hover{border-color:var(--acc);color:var(--acc)}\n" +
+        "ul{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto}\n" +
+        "li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}\n" +
+        "li:first-child{border-top:0}.neg{color:var(--bad)}.pos{color:var(--good)}\n" +
+        "h2{font-size:14px;margin:0 0 8px;color:var(--sub);font-weight:600}\n" +
+        ".wide{grid-column:1/-1}pre{margin:0;white-space:pre-wrap;font:12px/1.5 Consolas,monospace;color:var(--sub);max-height:220px;overflow:auto}\n" +
+        "a{color:var(--acc)}\n" +
+        "</style></head><body><main>\n" +
+        "<div class=\"card pet\"><img id=\"pet\" src=\"/sprite.png\" alt=\"\"><span id=\"char\" class=\"sub\"></span><span id=\"info\" class=\"sub\"></span></div>\n" +
+        "<div class=\"card\">\n" +
+        " <div class=\"row\"><span id=\"mode\" class=\"badge\">-</span><span class=\"row sub\"><span id=\"dot\" class=\"dot\"></span><span id=\"status\">\u9023\u7DDA\u4E2D\u2026</span></span></div>\n" +
+        " <div class=\"bal\"><span id=\"bal\">--</span><small id=\"cur\"></small></div>\n" +
+        " <div class=\"sub\" id=\"upd\"></div>\n" +
+        " <svg id=\"spark\" viewBox=\"0 0 300 100\" preserveAspectRatio=\"none\"></svg>\n" +
+        " <div class=\"row sub\" style=\"justify-content:space-between\"><span id=\"mn\"></span><span id=\"mx\"></span></div>\n" +
+        " <div class=\"stats\">\n" +
+        "  <div class=\"stat\"><span class=\"sub\">\u4ECA\u65E5\u5DF2\u7528</span><b id=\"used\">-</b></div>\n" +
+        "  <div class=\"stat\"><span class=\"sub\">\u4ECA\u65E5\u5145\u503C</span><b id=\"top\">-</b></div>\n" +
+        "  <div class=\"stat\"><span class=\"sub\">\u5834\u4E0A\u98EF\u76C6</span><b id=\"bowls\">-</b></div>\n" +
+        "  <div class=\"stat\"><span class=\"sub\">\u8A18\u9304\u7B46\u6578</span><b id=\"cnt\">-</b></div>\n" +
+        " </div>\n" +
+        " <div class=\"row\" style=\"margin-top:14px\">\n" +
+        "  <button onclick=\"act('refresh')\">\u7ACB\u5373\u5237\u65B0</button>\n" +
+        "  <button onclick=\"act('mode')\">\u5207\u63DB\u6A21\u5F0F</button>\n" +
+        "  <button onclick=\"act('charge1')\">\u6A21\u64EC\u6263\u6B3E</button>\n" +
+        "  <button onclick=\"act('charge10')\">\u9023\u7E8C\u6263\u6B3E \u00D710</button>\n" +
+        "  <button onclick=\"act('topup')\">\u6A21\u64EC\u5145\u503C</button>\n" +
+        "  <button onclick=\"act('clearbowls')\">\u6E05\u9664\u98EF\u76C6</button>\n" +
+        " </div>\n" +
+        "</div>\n" +
+        "<div class=\"card wide\"><div class=\"row\" style=\"justify-content:space-between\"><h2>\u8FD1\u671F\u8B8A\u52D5</h2><a href=\"/history.csv\">\u4E0B\u8F09 CSV</a></div><ul id=\"ev\"><li class=\"sub\">\u9084\u6C92\u6709\u8B8A\u52D5</li></ul></div>\n" +
+        "<div class=\"card wide\"><h2>\u57F7\u884C\u8A18\u9304\uFF08pet.log \u6700\u5F8C\u5E7E\u884C\uFF09</h2><pre id=\"log\"></pre></div>\n" +
+        "</main>\n" +
+        "<script>\n" +
+        "var hist=[],TOKEN='@@TOKEN@@';\n" +
+        "function $(i){return document.getElementById(i)}\n" +
+        "function act(n){fetch('/api/action?name='+n+'&token='+TOKEN,{method:'POST'}).then(function(){setTimeout(tick,300)})}\n" +
+        "function spark(){\n" +
+        " var s=$('spark');if(hist.length<2){s.innerHTML='';$('mn').textContent='';$('mx').textContent='';return}\n" +
+        " var mn=Math.min.apply(null,hist),mx=Math.max.apply(null,hist),r=(mx-mn)||1,p=[];\n" +
+        " for(var i=0;i<hist.length;i++){p.push((i/(hist.length-1)*300).toFixed(1)+','+(94-(hist[i]-mn)/r*88).toFixed(1))}\n" +
+        " s.innerHTML='<polyline fill=\"none\" stroke=\"var(--acc)\" stroke-width=\"2\" vector-effect=\"non-scaling-stroke\" points=\"'+p.join(' ')+'\"/>';\n" +
+        " $('mn').textContent='\u6700\u4F4E '+mn.toFixed(2);$('mx').textContent='\u6700\u9AD8 '+mx.toFixed(2);\n" +
+        "}\n" +
+        "function esc(t){return String(t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}\n" +
+        "function tick(){\n" +
+        " fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){\n" +
+        "  $('bal').textContent=s.balance===null?'--':s.balance.toFixed(2);\n" +
+        "  document.title=(s.balance===null?'--':s.balance.toFixed(2))+' \u00B7 VK-1';\n" +
+        "  $('cur').textContent=s.currency;\n" +
+        "  $('mode').textContent=s.mode==='sim'?'\u6A21\u64EC\u6A21\u5F0F':'API \u9918\u984D\u6A21\u5F0F \u00B7 '+s.provider;\n" +
+        "  $('mode').className='badge '+s.mode;\n" +
+        "  $('char').textContent=s.character;\n" +
+        "  $('info').textContent=(s.mode==='api'&&s.budget!==null)?('\u8D77\u59CB\u984D\u5EA6 '+s.budget.toFixed(2)+' \u00B7 \u8D77\u7B97 '+s.since):'';\n" +
+        "  $('dot').className='dot'+(s.connected?' on':'');\n" +
+        "  $('status').textContent=s.connected?'\u5DF2\u9023\u7DDA':('\u672A\u9023\u7DDA'+(s.error?'\uFF1A'+s.error:''));\n" +
+        "  $('upd').textContent=s.updated?('\u6700\u5F8C\u66F4\u65B0 '+s.updated):'';\n" +
+        "  $('used').textContent=s.todayUsed.toFixed(2);$('top').textContent=s.todayTopUp.toFixed(2);\n" +
+        "  $('bowls').textContent=s.bowls;$('cnt').textContent=s.events.length;\n" +
+        "  if(s.balance!==null){if(!hist.length||hist[hist.length-1]!==s.balance){hist.push(s.balance);if(hist.length>200)hist.shift()}}\n" +
+        "  spark();\n" +
+        "  var ul=$('ev');\n" +
+        "  if(s.events.length){var h='';for(var i=s.events.length-1;i>=0;i--){var e=s.events[i];\n" +
+        "   h+='<li><span>'+e.t+'</span><span class=\"'+(e.d<0?'neg':'pos')+'\">'+(e.d>0?'+':'')+e.d.toFixed(2)+'</span><span class=\"sub\">\u9918\u984D '+e.b.toFixed(2)+'</span></li>'}\n" +
+        "   ul.innerHTML=h}\n" +
+        "  $('log').innerHTML=esc(s.log.join('\\n'));\n" +
+        " }).catch(function(){$('status').textContent='\u8207\u684C\u5BF5\u5931\u53BB\u9023\u7DDA';$('dot').className='dot'});\n" +
+        "}\n" +
+        "setInterval(tick,1000);tick();\n" +
+        "</script></body></html>\n";
+
+
+
     string FetchBalance() {
         try {
             return FetchWithHttp();
@@ -11403,22 +12629,41 @@ public sealed class DshPet : Form {
     // the UI thread would visibly freeze the widget. The banked reading is
     // applied by OnTick, so the tablet still reacts within one frame of it
     // arriving. Only one request is ever in flight.
+    // Simulation: feeds a fake balance through the normal banked-reading path, so deduct cues,
+    // rice-bowl top-ups, spend tracking and "refresh now" all behave exactly as with a real key.
+    void SimulatePoll(bool snap) {
+        long now = Stopwatch.GetTimestamp();
+        if (_simNextTick == 0) {
+            _simNextTick = now + (long)(_simRng.Next(10000, 30001) / 1000.0 * Stopwatch.Frequency);
+        } else if (now >= _simNextTick) {
+            if (_simRng.Next(100) < 70) {
+                double d = Math.Round(0.01 + _simRng.NextDouble() * 0.09, 2);
+                _simBal = Math.Max(0, Math.Round(_simBal - d, 2));
+                Log("sim: auto deduct " + d.ToString("0.00", CultureInfo.InvariantCulture));
+            } else {
+                double a = Math.Round(1.00 + _simRng.NextDouble() * 4.00, 2);
+                _simBal = Math.Round(_simBal + a, 2);
+                Log("sim: auto top-up " + a.ToString("0.00", CultureInfo.InvariantCulture));
+            }
+            _simNextTick = now + (long)(_simRng.Next(10000, 30001) / 1000.0 * Stopwatch.Frequency);
+        }
+        lock (_hits) { _bankedBal = _simBal; _bankedSnap = snap; _bankedValid = true; }
+    }
+
     void PollNow(bool snap) {
-        if (string.IsNullOrEmpty(_apiKey)) {
-            _connected = false;
-            _status = S_NOKEY;
-            _lastPollResult = "no api key";
-            _dirty = true;
-            Log("poll skipped: no api key (menu: " + S_SETKEY + ")");
+        if (_simMode) { SimulatePoll(snap); return; }
+        if (string.IsNullOrEmpty(ActiveKey) && _prov != 3) {
+            if (_lastPollResult != "no api key") Fail("no api key");
             return;
         }
+        // The spend reports of OpenAI / Anthropic are heavy and rate limited: once a minute is plenty.
+        if (!snap && _prov != 0 && (DateTime.UtcNow - _lastRemote).TotalSeconds < 60) return;
         if (Interlocked.CompareExchange(ref _pollInFlight, 1, 0) != 0) return;
+        _lastRemote = DateTime.UtcNow;
         bool wantSnap = snap;
         ThreadPool.QueueUserWorkItem(delegate {
             try {
-                string body = FetchBalance();
-                double bal = ParseCny(body);
-                if (double.IsNaN(bal)) { Fail("cannot parse response: " + Trunc(body)); return; }
+                double bal = FetchProviderBalance();
                 lock (_hits) { _bankedBal = bal; _bankedSnap = wantSnap; _bankedValid = true; }
             } catch (Exception ex) {
                 Fail(ex.Message);
@@ -11441,6 +12686,7 @@ public sealed class DshPet : Form {
             bal = _bankedBal; snap = _bankedSnap; _bankedValid = false;
         }
         ApplyBalance(bal, snap);
+        WebNote(bal);
         Log("poll ok" + (snap ? " (snap)" : "") +
             ": balance=" + bal.ToString("0.00", CultureInfo.InvariantCulture) +
             " printed=" + DrawnText +
@@ -13654,7 +14900,7 @@ public sealed class DshPet : Form {
                 _rices[0].X = 1200; _rices[0].Y = radarY[ri];
                 _rices[0].VX = 0; _rices[0].VY = 0;
             }
-            SetBowlWaitForTest(9999);          // past BowlWaitSec -> the radar locks
+            SetBowlWaitForTest(9999);          // past _bowlWaitSec -> the radar locks
             _perfPhases = true;
             ResetPhases();
             PumpTicks(3);
@@ -14776,7 +16022,7 @@ public sealed class DshPet : Form {
     // User-specified rules under test:
     //   idle, no charge, no lock         -> happy  (the resting face)
     //   while a charge plays             -> nervous
-    //   bowl unclaimed for BowlWaitSec   -> aloof
+    //   bowl unclaimed for _bowlWaitSec   -> aloof
     //   feeding the bowl                 -> back to happy
     // Also guards the earlier defect where the grimace never ended.
     public void RunExpressionTest() {
@@ -14863,7 +16109,7 @@ public sealed class DshPet : Form {
         int untilLock = -1;
         for (int i = 0; i < 900; i++) {
             PumpTicks(1);
-            if (i == (int)(BowlWaitSec * 60) - 120) notYet = _expr == EXPR_HAPPY;
+            if (i == (int)(_bowlWaitSec * 60) - 120) notYet = _expr == EXPR_HAPPY;
             if (_expr == EXPR_ALOOF) { untilLock = i; break; }
         }
         Console.WriteLine("  locked  : " + ExprStateForTest() +
@@ -15032,7 +16278,7 @@ public sealed class DshPet : Form {
         // is wearing the aloof face, and a charge run outranks that face, so the bowl
         // froze mid-flight. It has to be finished before the lock engages.
         DropBowlForTest(3.00);
-        DemoCharge(0.10);                       // 10 cues, over well inside the 10 s wait
+        DemoCharge(0.10);                       // 10 cues, over well inside the the configured delay wait
         PumpTicks(4);
         int fedFrame = -1;
         for (int i = 0; i < 3000; i++) {
@@ -15090,7 +16336,7 @@ public sealed class DshPet : Form {
     // ---- no pulling while charging (offline) -------------------------------------
     // User rules under test:
     //   1. while a deduction is running, the bowl is NOT pulled in
-    //   2. the 10 s countdown starts only AFTER the charging has finished
+    //   2. the the configured delay countdown starts only AFTER the charging has finished
     //   3. a charge that lands during the pull waits until the bowl has been eaten
     //   4. feeding BY HAND during a charge keeps the grimace; the hearts still play
     public void RunChargeWaitTest() {
@@ -15110,10 +16356,10 @@ public sealed class DshPet : Form {
         Console.WriteLine("  charging: " + ExprStateForTest());
         bool nervousWhileCharging = _expr == EXPR_NERVOUS;
         double waitEarly = _bowlWait;
-        // Stay in the run well past the 10 s deadline. Nothing may be pulled in.
+        // Stay in the run well past the the configured delay deadline. Nothing may be pulled in.
         for (int i = 0; i < 400; i++) PumpTicks(1);
         bool stillCharging = _demoLeft > 0 || _pendingStep > 1e-9 || _hits.Count > 0;
-        bool notLockedYet = _bowlWait < BowlWaitSec;
+        bool notLockedYet = _bowlWait < _bowlWaitSec;
         bool notPulledYet = !_bowlBeingSucked && _rices.Count > 0 && !_rices[0].Fed;
         Console.WriteLine("  10s past: wait=" + _bowlWait.ToString("0.0") +
                           " stillCharging=" + stillCharging +
@@ -15164,10 +16410,10 @@ public sealed class DshPet : Form {
     // Menu -> "open fire-control radar". Rules under test:
     //   with a bowl waiting : the plate appears at once and the bowl is NOT pulled in
     //   with no bowl        : nothing happens
-    //   while it is up      : the automatic 10 s flow is untouched and still eats it
+    //   while it is up      : the automatic the configured delay flow is untouched and still eats it
     // ---- multi-target batch lock (offline) ---------------------------------------
     // User rule: however many bowls are out, the moment ANY ONE of them runs out its
-    // 10 s deadline, ALL of them are locked at once and pulled in together. A bowl
+    // the configured delay deadline, ALL of them are locked at once and pulled in together. A bowl
     // dropped two seconds ago does not get to wait its own ten seconds.
     public void RunMultiTargetTest() {
         GoOffline();
@@ -15200,7 +16446,7 @@ public sealed class DshPet : Form {
         // eaten (after its fade), so _rices[0] / _rices[1] stop meaning the same bowls
         // partway through and the second lookup throws.
         Rice b0 = _rices[0], b1 = _rices[1];
-        _bowlWait = BowlWaitSec - 0.5;
+        _bowlWait = _bowlWaitSec - 0.5;
         PumpTicks(4);
 
         int platesEarly = CountPlates();
@@ -15334,7 +16580,7 @@ public sealed class DshPet : Form {
 
         Console.WriteLine("  verdict: " + (ok
             ? "OK - manual lock shows readouts without feeding, closure reads 0 when still, "
-              + "and the 10 s flow is untouched"
+              + "and the the configured delay flow is untouched"
             : "FAIL - noOpWithoutBowl=" + noOpWithoutBowl + " onImmediately=" + onImmediately +
               " notPulled=" + notPulled + " stillLive=" + stillLive +
               " heldZero=" + heldZero + " movingReads=" + movingReads +
@@ -16956,7 +18202,7 @@ public sealed class DshPet : Form {
     //
     // 62 ms rather than a rounded 60: the number comes from the user's unit, and keeping it exact means
     // their "16" and this constant stay comparable.
-    const double PAT_FRAME_MS = 40.0;
+    const double PAT_FRAME_MS = 28.0;
     const double PAT_HOLD_MS = 200.0;
     // How far the pointer must travel ACROSS HER before the stroke counts as a pat, and how long a
     // pause ends it. Distance rather than time: a slow deliberate stroke crosses plenty of pixels, a
@@ -18766,6 +20012,23 @@ public sealed class DshPet : Form {
             if (_patActive) { _patActive = false; _patT = 0; }
             return;
         }
+        // Click-triggered pat: plays for a fixed time and ignores the hover/settle rules below.
+        // A new press (drag), a bowl grab or a pot on her head cancels it at once, so the hand
+        // never smears behind a moving window.
+        if (_clickPatMs > 0) {
+            if (HeadPotOn || _drag || _riceGrab != null) {
+                _clickPatMs = 0; _patActive = false; _patT = 0;
+            } else {
+                _clickPatMs -= dtMs;
+                if (!_patActive) { _patActive = true; _patT = 0; _patIdleMs = 0; }
+                _patT += dtMs;
+                if (_clickPatMs <= 0) {
+                    _clickPatMs = 0; _patActive = false; _patT = 0;
+                    _patBlocked = false; _patSettleMs = 0; _patMoveAccum = 0; _patMoveMs = 0;
+                }
+                return;
+            }
+        }
         bool onHer = have && PatOnHer(mx, my);
         // Any button down means a drag, a bowl grab or a menu click, never a hover.
         bool canHover = onHer && !buttonDown && !_drag && _riceGrab == null;
@@ -19441,7 +20704,7 @@ public sealed class DshPet : Form {
     }
     // Drops one rehearsal bowl on an otherwise quiet instance, for a real-mouse
     // throw test driven from outside the process.
-    // lockNow=true skips the 10 s wait so the radar nameplate can be inspected
+    // lockNow=true skips the the configured delay wait so the radar nameplate can be inspected
     // immediately (the wait itself is covered by --topup's timing assertions).
     public void PrimeBowlForLiveDrag() { PrimeBowlForLiveDrag(false); }
     // ---------------------------------------------------------------------------
@@ -20053,7 +21316,7 @@ public sealed class DshPet : Form {
                 bowl.Grounded = false;
                 double deepest = bowl.Y, maxDx = 0;
                 for (int i = 0; i < 120; i++) {
-                    // Keep the radar magnet out of it as well: once _bowlWait passes BowlWaitSec it
+                    // Keep the radar magnet out of it as well: once _bowlWait passes _bowlWaitSec it
                     // pulls the bowl in and OnRiceFed's it, which would end the fall after one frame.
                     _bowlWait = 0; _bowlLocked = false;
                     PumpTicks(1);
@@ -22723,7 +23986,7 @@ public sealed class DshPet : Form {
         ApplyBalancePublic(36.00, true);
         TestTopUp(3.00);
         if (lockNow) {
-            _bowlWait = BowlWaitSec;
+            _bowlWait = _bowlWaitSec;
             _blipWasOn = true;
             // Park the bowl HOVERING well inside the screen and keep it there.
             // A bowl that fell in from the right edge leaves no room for the

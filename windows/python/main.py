@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, random, sys, urllib.request, urllib.error
+import json, os, random, sys, urllib.request, urllib.error, urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -21,7 +21,7 @@ def fit_canvas(src:Path,dst:Path):
   im.thumbnail(CANVAS,Image.Resampling.LANCZOS); out=Image.new("RGBA",CANVAS,(0,0,0,0)); out.alpha_composite(im,((CANVAS[0]-im.width)//2,(CANVAS[1]-im.height)//2)); dst.parent.mkdir(parents=True,exist_ok=True); out.save(dst,"PNG")
 def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
 
-PROVIDERS=["DeepSeek","OpenAI","Anthropic","Ollama","OpenAI 相容自訂端點"]
+PROVIDERS=["DeepSeek","OpenAI","Google Gemini","Anthropic","Mistral","xAI","z.ai","GLM","Ollama","Kiwi","OpenCode","OpenAI 相容自訂端點"]
 
 def default_profiles():
  return [{"name":"DeepSeek 預設","provider":"DeepSeek","key":"","endpoint":"https://api.deepseek.com","model":"deepseek-chat"}]
@@ -33,18 +33,25 @@ def migrate_profiles(config):
  return profiles or default_profiles()
 
 def chat_request(profile,prompt):
- provider=profile.get("provider","DeepSeek"); key=profile.get("key",""); endpoint=profile.get("endpoint","").strip()
- if provider=="Anthropic":
-  url=(endpoint or "https://api.anthropic.com/v1").rstrip("/")+"/messages"; headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"}; body={"model":profile.get("model") or "claude-3-5-haiku-latest","max_tokens":160,"messages":[{"role":"user","content":prompt}]}
+ provider=profile.get("provider","DeepSeek"); key=profile.get("key",""); endpoint=profile.get("endpoint","").strip(); model=profile.get("model","")
+ if provider=="Google Gemini":
+  if not key: raise RuntimeError("Google Gemini 需要 API Key")
+  model=model or "gemini-2.5-flash"; base=endpoint or "https://generativelanguage.googleapis.com/v1beta"; url=base.rstrip("/")+f"/models/{model}:generateContent?key={urllib.parse.quote(key)}"; headers={"content-type":"application/json"}; body={"contents":[{"role":"user","parts":[{"text":prompt}]}],"generationConfig":{"maxOutputTokens":160}}
+ elif provider=="Anthropic":
+  url=(endpoint or "https://api.anthropic.com/v1").rstrip("/")+"/messages"; headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"}; body={"model":model or "claude-3-5-haiku-latest","max_tokens":160,"messages":[{"role":"user","content":prompt}]}
  else:
-  base=endpoint or {"DeepSeek":"https://api.deepseek.com","OpenAI":"https://api.openai.com/v1","Ollama":"http://localhost:11434/v1"}.get(provider,"")
-  if not base: raise RuntimeError("自訂端點不可為空")
+  bases={"DeepSeek":"https://api.deepseek.com","OpenAI":"https://api.openai.com/v1","Mistral":"https://api.mistral.ai/v1","xAI":"https://api.x.ai/v1","z.ai":"https://api.z.ai/api/paas/v4","GLM":"https://open.bigmodel.cn/api/paas/v4","Ollama":"http://localhost:11434/v1"}
+  base=endpoint or bases.get(provider,"")
+  if not base: raise RuntimeError(provider+" 沒有固定端點，請在 API 設定檔填入 OpenAI-compatible 端點")
   url=base.rstrip("/")+"/chat/completions"; headers={"content-type":"application/json"}
   if key: headers["Authorization"]="Bearer "+key
-  body={"model":profile.get("model") or ({"DeepSeek":"deepseek-chat","OpenAI":"gpt-4o-mini","Ollama":"llama3.2"}.get(provider,"gpt-4o-mini")),"messages":[{"role":"user","content":prompt}],"max_tokens":160}
+  defaults={"DeepSeek":"deepseek-chat","OpenAI":"gpt-4o-mini","Mistral":"mistral-small-latest","xAI":"grok-3-mini","z.ai":"glm-4.5-flash","GLM":"glm-4.5-flash","Ollama":"llama3.2"}; body={"model":model or defaults.get(provider,""),"messages":[{"role":"user","content":prompt}],"max_tokens":160}
  req=urllib.request.Request(url,data=json.dumps(body).encode(),headers=headers,method="POST")
  with urllib.request.urlopen(req,timeout=30) as r: data=json.loads(r.read().decode())
- return {"message":data["content"][0]["text"] if provider=="Anthropic" else data["choices"][0]["message"]["content"],"raw":data}
+ if provider=="Google Gemini": text=data["candidates"][0]["content"]["parts"][0]["text"]
+ elif provider=="Anthropic": text=data["content"][0]["text"]
+ else: text=data["choices"][0]["message"]["content"]
+ return {"message":text,"raw":data}
 
 class Worker(QThread):
  done=Signal(bool,dict)

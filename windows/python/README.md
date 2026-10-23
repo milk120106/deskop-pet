@@ -1,3 +1,7 @@
+# Python 安全依賴
+
+因應 2026 年 10 月 eMudhra／emSign CA 事件，請先執行 `update_python_security.bat`，再執行 `build_windows.bat`。專案安全下限為 `pip>=26.2.2`、`certifi>=2026.10.19`；啟動時會使用 certifi CA bundle。詳見 [SECURITY.md](SECURITY.md)。
+
 # Python Desktop Pet v4
 
 Windows Python 版本使用 PySide6 + Pillow，主角色採用 1536×1024 完整透明畫布，等比例縮放、不裁切尾巴與頭髮。

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, random, sys, urllib.request, urllib.error, urllib.parse
+import json, os, random, sys, ssl, urllib.request, urllib.error, urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -15,6 +15,12 @@ APP_NAME="Python Desktop Pet v4"; ROOT=Path(__file__).resolve().parent; ASSETS=R
 BUILTINS={"藍色大肥魚（DeepSeek）":"sprite.png","GPT 龍娘":"sprite-gpt.png","大小姐 Claude":"sprite-claude.png","北美貓娘 Gemini":"sprite-gemini.png"}
 EXPR={"GPT 龍娘":"gpt","大小姐 Claude":"claude","北美貓娘 Gemini":"gemini"}
 LINES=["今天也要記得休息一下。","我有看到你在努力喔。","要不要餵我一點飯？","目前沒有啟用 AI 對話，我先用隨機文句陪你。","桌面巡邏完成，暫時安全。","今天的狀態：可愛但有點餓。","別忘了喝水。","我會在這裡陪著你。"]
+
+def configure_tls():
+ try:
+  import certifi
+  ca=certifi.where(); os.environ.setdefault("SSL_CERT_FILE",ca); os.environ.setdefault("REQUESTS_CA_BUNDLE",ca)
+ except Exception: pass
 
 def fit_canvas(src:Path,dst:Path):
  with Image.open(src).convert("RGBA") as im:
@@ -268,5 +274,5 @@ class Pet(QMainWindow):
   if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))
 
 def main():
- os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING","1"); os.environ.setdefault("QT_SCALE_FACTOR_ROUNDING_POLICY","PassThrough"); app=QApplication(sys.argv); app.setApplicationName(APP_NAME); pet=Pet(); pet.snap(); return app.exec()
+ configure_tls(); os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING","1"); os.environ.setdefault("QT_SCALE_FACTOR_ROUNDING_POLICY","PassThrough"); app=QApplication(sys.argv); app.setApplicationName(APP_NAME); pet=Pet(); pet.snap(); return app.exec()
 if __name__=="__main__":sys.exit(main())

@@ -32,19 +32,34 @@ build_windows.bat
 
 完成後執行 `dist\PythonPetV4\PythonPetV4.exe`。發佈時請複製整個 `dist\PythonPetV4` 資料夾。
 
-## 多模型、Ollama 與自訂端點
+## 多模型、LiteLLM 與 API 供應商
 
-「API 設定檔／多模型管理」可以新增多組設定，每組包含名稱、供應商、API Key、端點 URL 與模型名稱。聊天框會在送出訊息前提供設定檔／模型選擇器。支援：
+聊天層使用 LiteLLM，將不同廠商統一成 `completion()` 呼叫；設定檔中的「模型」使用 LiteLLM provider prefix，而不是把所有廠商硬套成同一個 endpoint。聊天框仍可在多組設定檔之間切換。
 
-- DeepSeek、OpenAI、Google Gemini、Anthropic、Mistral、xAI、z.ai、GLM 原生或預設端點。
-- Ollama：預設 `http://localhost:11434/v1`，可不填 API Key，例如模型 `llama3.2`。
-- Kiwi、OpenCode：已加入供應商選單；若服務端點不是固定的 OpenAI-compatible URL，請在設定檔填入端點與模型。
-- OpenAI-compatible 自訂端點：可接公司內網 gateway、LocalAI、vLLM 或其他相容服務。
+目前供應商選單包含：
 
+- DeepSeek、OpenAI、Google Gemini、Anthropic、Mistral。
+- xAI / Grok、z.ai、GLM。
+- Ollama、Ollama Cloud。
+- OpenRouter、Cloudflare AI、Groq、Hugging Face。
+- Kiwi、OpenCode、OpenAI-compatible 自訂端點。
 
-Google Gemini 使用原生 REST `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={API_KEY}`；其餘相容供應商使用 `/chat/completions`。角色圖片仍只有四個，與 API 供應商數量完全無關。
+常見模型設定例子：
 
-目前沒有強制使用 LiteLLM。程式內建的 provider adapter 只處理聊天所需的少量差異，直接使用 `urllib.request`，因此打包檔較小、Ollama 不需要 Key，也能保留自訂端點。若未來需要路由、fallback、重試、token budget、更多供應商統一管理，再考慮加入 LiteLLM；目前加入它反而會增加依賴與 PyInstaller 收集複雜度。
+| 服務 | LiteLLM model 範例 | API Key / 端點 |
+| --- | --- | --- |
+| Gemini | `gemini/gemini-2.5-flash` | Gemini API Key |
+| OpenRouter | `openrouter/auto` 或 `openrouter/anthropic/claude-3.5-sonnet` | OpenRouter Key |
+| Groq | `groq/llama-3.3-70b-versatile` | Groq Key |
+| xAI / Grok | `xai/grok-3-mini` | xAI Key |
+| Ollama | `ollama/llama3.2` | 通常不需要 Key，可填 `http://localhost:11434` |
+| Ollama Cloud | `ollama_chat/llama3.2` | Ollama Cloud Key，可填官方 base URL |
+| Cloudflare AI | `cloudflare/@cf/meta/llama-3.1-8b-instruct` | Cloudflare 憑證／端點依 LiteLLM 設定 |
+| Hugging Face | `huggingface/meta-llama/Llama-3.1-8B-Instruct` | HF Token |
+
+Kiwi、OpenCode 或任何 LiteLLM 尚未涵蓋的服務，請在模型欄填入對應 provider prefix；只有真正的 OpenAI-compatible 服務才填 `openai/模型名` 加自訂 `api_base`。這樣可以保留各家不同的認證、URL 與回應格式，不再假設所有服務都支援相同 API。
+
+LiteLLM 已加入 `requirements.txt`，PyInstaller 會收集其 provider 子模組。餘額查詢仍由各家原生 endpoint 處理，因為 LiteLLM 統一的是模型呼叫，不是各平台的 billing／balance API。
 
 ## 角色對話
 

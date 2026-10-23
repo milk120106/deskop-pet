@@ -111,7 +111,6 @@ internal static class Native {
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
     // Diagnostics only: drives the window's real mouse handlers with posted messages, so a whole
     // drag-and-drop can be exercised without moving the user's cursor.
@@ -212,10 +211,6 @@ internal static class Native {
     public const int WS_EX_LAYERED = 0x00080000;
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_NOACTIVATE = 0x08000000;
-    public const int WS_EX_TRANSPARENT = 0x00000020;
-    public const int SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_FRAMECHANGED = 0x0020;
-    public const int MOD_ALT = 0x0001, MOD_CONTROL = 0x0002;
-    public const int VK_P = 0x50;
     public const int WM_NCHITTEST = 0x0084;
     public const int HTTRANSPARENT = -1;
     public const int HTCLIENT = 1;
@@ -4305,7 +4300,7 @@ public sealed class DshPet : Form {
     // Mood mapping (user-specified, do not reshuffle):
     //   idle / no charge / no lock        -> HAPPY   (expression_11, open smile)
     //   while a charge is being played    -> NERVOUS (expression_22, eyes shut)
-    //   bowl unclaimed for the configured delay (locked)  -> ALOOF   (expression_12, pout)
+    //   bowl unclaimed for 10 s (locked)  -> ALOOF   (expression_12, pout)
     //   iron pot worn on her head         -> CALM    (expression_21, flat face)
     //
     // CALM outranks a charge: the user's rule is that once the pot is on her head she
@@ -4333,7 +4328,7 @@ public sealed class DshPet : Form {
     // Expression state machine timers, all in seconds.
     //   _happyT   : set when a bowl is fed, so the smile is actually seen.
     //   _bowlWait : how long the current bowl has been lying uncollected; the pet
-    //               turns aloof and the radar lock appears once it passes _bowlWaitSec.
+    //               turns aloof and the radar lock appears once it passes BowlWaitSec.
     //
     // There is no nervous timer: the grimace lasts exactly as long as a cue is playing
     // (cueRunning in UpdateExpression). A run of charges still shows ONE grimace from the
@@ -4346,9 +4341,9 @@ public sealed class DshPet : Form {
     bool _bowlLocked;
     // Menu -> "open fire-control radar": show the nameplate on the current bowl
     // WITHOUT arming the magnet, purely so the readouts can be checked by hand. The
-    // automatic the configured delay flow is untouched and will still lock and pull the bowl in.
+    // automatic 10 s flow is untouched and will still lock and pull the bowl in.
     bool _radarManual;
-    // Set when the batch lock engages: ANY rice bowl whose the configured delay deadline has passed
+    // Set when the batch lock engages: ANY rice bowl whose 10 s deadline has passed
     // locks EVERY bowl on screen. Cleared only when no lockable bowl is left.
     bool _lockAll;
     // The little squash-and-stretch the girl does when the pot lands on her head and
@@ -4454,7 +4449,7 @@ public sealed class DshPet : Form {
     // (the cold face, the erase pass, the click-to-remove) reads this.
     bool HeadPotOn { get { for (int i = 0; i < _rices.Count; i++) if (_rices[i].OnHead) return true; return false; } }
     // ---- radar lock (War Thunder style target nameplate) ---------------------
-    // Shown only while the bowl is LOCKED (left unclaimed past _bowlWaitSec), not for
+    // Shown only while the bowl is LOCKED (left unclaimed past BowlWaitSec), not for
     // every bowl: an always-on frame would clutter the desktop.
     // Readouts are derived from the bowl's live physics; see UpdateRadar().
     // All three quantities are SCREEN PIXELS - see UpdateRadar for why they are no
@@ -4513,16 +4508,8 @@ public sealed class DshPet : Form {
     // cue is actually running, then left to decay - see UpdateExpression.
     //
     // How long a bowl may lie unclaimed before the pet turns aloof and locks on.
-    // User-specified: the configured delay without being fed switches her to the aloof art.
-    double _bowlWaitSec = 10.0;
-    int _opacityPercent = 88;
-    bool _fixedMode;
-    bool _clickThrough;
-    bool _walkEnabled = true;
-    bool _chibiMode;
-    double _walkT;
-    int _walkBaseX;
-    const int ClickThroughHotkeyId = 0xB0C;
+    // User-specified: 10 s without being fed switches her to the aloof art.
+    const double BowlWaitSec = 10.0;
     const double BowlAutoClearSec = 45.0;   // an untouched bowl is collected silently after this long
     // After the lock appears, how long before the bowl is dragged in magnetically.
     // User-specified: 1 s of lock, then the bowl is pulled toward her.
@@ -4936,40 +4923,19 @@ public sealed class DshPet : Form {
         return "\u89D2\u8272\uFF1A" + name + "\uFF08\u9EDE\u64CA\u9078\u64C7\uFF09";
     }
 
-    // Character changes stay in this process: release the old GDI+ surfaces, load the new
-    // sprite set, rebuild only the size-dependent caches, then repaint immediately.
+    // Art is baked into several caches, so the cleanest switch is a restart of the whole process.
     void SwitchCharacter(string id) {
         if (id == null || id == _charId) return;
-        string oldId = _charId;
+        try { File.WriteAllText(Path.Combine(_baseDir, "character.txt"), id, Encoding.UTF8); } catch { }
+        Log("character -> " + id + ", restarting");
+        string script = Path.Combine(_baseDir, "dsh_pet.ps1");
         try {
-            string dir = id == "deepseek" ? _baseDir : Path.Combine(Path.Combine(_baseDir, "chars"), id);
-            string sprite = Path.Combine(dir, "sprite.png");
-            if (!File.Exists(sprite)) throw new FileNotFoundException("sprite not found", sprite);
-            Bitmap oldFlat = _flat;
-            ReleaseExprCache();
-            for (int i = 0; i < _exprArt.Length; i++) {
-                if (_exprArt[i] != null && _exprArt[i] != oldFlat) _exprArt[i].Dispose();
-                _exprArt[i] = null;
-            }
-            if (oldFlat != null) oldFlat.Dispose();
-            _charId = id;
-            _flat = new Bitmap(sprite);
-            _hasExpressions = false; _expr = EXPR_HAPPY;
-            LoadExpressionArt(_baseDir);
-            LoadCustomQuad();
-            ApplyChibiArtIfEnabled();
-            _girlAlpha = null; _girlStampedOn = null; _panelCacheValid = false;
-            _exprPrewarmFor = -1;
-            Relayout();
-            _dirty = true;
-            RenderToCanvas(); PushLayer();
-            try { File.WriteAllText(Path.Combine(_baseDir, "character.txt"), id, Encoding.UTF8); } catch { }
-            if (_miChar != null) _miChar.Text = CharLabel();
-            Log("character -> " + id + " (in-process reload)");
-        } catch (Exception ex) {
-            Log("character switch failed: " + ex.Message);
-            _charId = oldId;
-        }
+            ProcessStartInfo psi = new ProcessStartInfo("powershell.exe",
+                "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + script + "\"");
+            psi.UseShellExecute = false; psi.CreateNoWindow = true; psi.WorkingDirectory = _baseDir;
+            Process.Start(psi);
+        } catch (Exception ex) { Log("restart failed: " + ex.Message); return; }
+        Quit();
     }
 
     void CycleCharacter() { PickCharacter(); }
@@ -5062,29 +5028,6 @@ public sealed class DshPet : Form {
     bool _askKeyOnFirstRun = false;  // first-run key prompt is off; simulation runs without a key
     double _bankedBal; bool _bankedSnap; bool _bankedValid;
 
-    Bitmap BuildCompactChibi(Bitmap src) {
-        Bitmap b = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
-        using (Graphics g = Graphics.FromImage(b)) {
-            g.Clear(Color.Transparent);
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            int w = (int)Math.Round(src.Width * 0.78), h = (int)Math.Round(src.Height * 0.78);
-            g.DrawImage(src, (src.Width - w) / 2, src.Height - h, w, h);
-        }
-        return b;
-    }
-    void ApplyChibiArtIfEnabled() {
-        if (!_chibiMode) return;
-        string p = Path.Combine(_baseDir, "chibi.png");
-        Bitmap b = null;
-        try { if (File.Exists(p)) b = new Bitmap(p); } catch { b = null; }
-        if (b == null) b = BuildCompactChibi(_flat);
-        if (_flat != null) _flat.Dispose();
-        _flat = b;
-        _hasExpressions = false;
-        ReleaseExprCache();
-        for (int i = 0; i < _exprArt.Length; i++) { if (_exprArt[i] != null) { _exprArt[i].Dispose(); _exprArt[i] = null; } }
-        Log("chibi artwork active (" + (File.Exists(p) ? "chibi.png" : "compact fallback") + ")");
-    }
     public DshPet(string baseDir, string[] args) {
         _baseDir = baseDir;
         // Console output as UTF-8. Without this the process writes with the system ANSI code page,
@@ -5220,13 +5163,11 @@ public sealed class DshPet : Form {
         Text = "DSH Balance Pet";
 
         ReadState();
-        ApplyChibiArtIfEnabled();
         // ReadState resolves the per-cue volumes, but the pools did not exist when it ran for the
         // cuevol keys it parsed... they DO now, so push them.
         ApplyAllCueVolumes();
         Relayout();
         SnapToCorner(true);
-        _walkBaseX = _offX;
         BuildMenu();
         if (!_diagRun) StartWeb();
 
@@ -5545,25 +5486,9 @@ public sealed class DshPet : Form {
         // SettingsWindow now, where the choices are visible side by side instead of behind another
         // popup and where a value can be shown in place.
         ToolStripMenuItem settingsRow = NewItem(IC_SIZE, S_SETTINGS);
+        settingsRow.Click += delegate { ShowSettingsUi(); };
         _menu.Items.Add(settingsRow);
-        ToolStripMenuItem opacity = NewItem(IC_SIZE, "Opacity: " + _opacityPercent + "%");
-        opacity.Click += delegate { SetOpacityUi(); };
-        _menu.Items.Add(opacity);
-        ToolStripMenuItem fixedRow = NewItem(IC_SIZE, "Fixed position: " + (_fixedMode ? "ON" : "OFF"));
-        fixedRow.Click += delegate { ToggleFixedUi(); };
-        _menu.Items.Add(fixedRow);
-        ToolStripMenuItem passRow = NewItem(IC_SIZE, "Mouse pass-through: " + (_clickThrough ? "ON" : "OFF"));
-        passRow.Click += delegate { ToggleThroughUi(); };
-        _menu.Items.Add(passRow);
-        ToolStripMenuItem walkRow = NewItem(IC_CASCADE, "Walk around: " + (_walkEnabled ? "ON" : "OFF"));
-        walkRow.Click += delegate { ToggleWalkUi(); };
-        _menu.Items.Add(walkRow);
-        ToolStripMenuItem chibiRow = NewItem(IC_SIZE, "Chibi appearance: " + (_chibiMode ? "ON" : "OFF"));
-        chibiRow.Click += delegate { ToggleChibiUi(); };
-        _menu.Items.Add(chibiRow);
-        ToolStripMenuItem fireRow = NewItem(IC_BOLT, "Fire-control delay: " + _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture) + " sec");
-        fireRow.Click += delegate { SetBowlWaitUi(); };
-        _menu.Items.Add(fireRow);
+
         // ---- sound settings ----
         //
         // NOT a second row: the settings window already covers sound, and two rows that open the
@@ -5599,18 +5524,6 @@ public sealed class DshPet : Form {
             RefreshMenuChecks();
             if (_miMode != null) _miMode.Text = ModeLabel();
             if (_miChar != null) _miChar.Text = CharLabel();
-            if (_menu.Items.Count > 0) {
-                for (int mi = 0; mi < _menu.Items.Count; mi++) {
-                    ToolStripMenuItem x = _menu.Items[mi] as ToolStripMenuItem;
-                    if (x == null) continue;
-                    if (x.Text.StartsWith("Opacity:")) x.Text = "Opacity: " + _opacityPercent + "%";
-                    else if (x.Text.StartsWith("Fixed position:")) x.Text = "Fixed position: " + (_fixedMode ? "ON" : "OFF");
-                    else if (x.Text.StartsWith("Mouse pass-through:")) x.Text = "Mouse pass-through: " + (_clickThrough ? "ON" : "OFF");
-                    else if (x.Text.StartsWith("Walk around:")) x.Text = "Walk around: " + (_walkEnabled ? "ON" : "OFF");
-                    else if (x.Text.StartsWith("Chibi appearance:")) x.Text = "Chibi appearance: " + (_chibiMode ? "ON" : "OFF");
-                    else if (x.Text.StartsWith("Fire-control delay:")) x.Text = "Fire-control delay: " + _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture) + " sec";
-                }
-            }
         };
         StyleMenu(_menu.Items);
         // The band markers were recorded while building; resolve them now that every item has
@@ -5682,7 +5595,7 @@ public sealed class DshPet : Form {
         ComputeBlip(bowl);          // fill the readouts now, not on the next tick
         _dirty = true;
         Log("manual radar: locked on, " + _blip.DistText + " / " + _blip.ClosureText +
-            " / " + _blip.AltText + " (display only; the the configured delay flow still runs)");
+            " / " + _blip.AltText + " (display only; the 10 s flow still runs)");
     }
 
     void SetSoundEnabled(bool on) {
@@ -6721,7 +6634,7 @@ public sealed class DshPet : Form {
             // alive, so the face never drops mid-run. The hold only ever added a second of
             // grimace on top of the END of the run, which reads as the pet being stuck.
             want = EXPR_NERVOUS;
-        } else if (_bowlWait >= _bowlWaitSec) {
+        } else if (_bowlWait >= BowlWaitSec) {
             want = EXPR_ALOOF;
         } else {
             want = EXPR_HAPPY;                            // the resting face
@@ -6872,7 +6785,7 @@ public sealed class DshPet : Form {
         // ---- multi-target, one plate per bowl -------------------------------------
         //
         // User rule (2026-10): EVERY bowl on screen gets a bracket, and they all get
-        // pulled in together. A bowl that has waited out the the configured delay deadline locks the
+        // pulled in together. A bowl that has waited out the 10 s deadline locks the
         // whole set - not just itself - so a bowl dropped two seconds ago is collected
         // at the same moment as the one that actually ran out of patience.
         //
@@ -6912,7 +6825,7 @@ public sealed class DshPet : Form {
         // Batch lock. _bowlWait is the unclaimed-bowl clock; it keeps running while
         // bowls are out, which is what lets a later bowl ride on an earlier one's
         // deadline.
-        if (_bowlWait >= _bowlWaitSec) _lockAll = true;
+        if (_bowlWait >= BowlWaitSec) _lockAll = true;
 
         // Manual display-only lock (menu -> "open fire-control radar"). It turns the
         // plates on WITHOUT setting _lockAll / _bowlLocked, because those freeze the
@@ -7307,8 +7220,7 @@ public sealed class DshPet : Form {
         // A stored pixel edge wins: that is what the cup presets and the custom
         // entry record, and it is monitor-independent. _cm is only the fallback
         // for a state.ini written by an older build.
-        int px = _sizePx > 0 ? _sizePx : 454;
-        if (_sizePx <= 0) _sizePx = px;
+        int px = _sizePx > 0 ? _sizePx : (int)Math.Round(_cm / 2.54 * dpiY);
         if (px < 40) px = 40;
         // _w/_h describe the WIDGET (and the canvas/scale derived from it), NOT the
         // window. The window is created SCREEN-SIZED and keeps that size forever: any
@@ -7596,7 +7508,7 @@ public sealed class DshPet : Form {
         // Only the ENTRY POINT and the drift sign are mirrored - the bowl is never flipped,
         // scaled or drawn backwards, so nothing on screen (least of all text) becomes
         // unreadable. Where it lands does not gate anything: the bowl is dragged to her by
-        // hand, and the the configured delay radar lock pulls it in from anywhere (the magnet steps toward her
+        // hand, and the 10 s radar lock pulls it in from anywhere (the magnet steps toward her
         // every frame with no range limit).
         // X/Y are SCREEN pixels; DrawRiceArt converts them into the canvas, which is why the
         // bowl can start far outside the widget. Extra bowls are nudged apart so a burst does
@@ -8913,18 +8825,6 @@ public sealed class DshPet : Form {
                     _sizePx = n;                       // presets / custom entry
                 else if (k == "cm" && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d >= 0.8)
                     _cm = d;                           // legacy, only used if px is absent
-                else if (k == "opacity" && int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out n) && n >= 15 && n <= 100)
-                    _opacityPercent = n;
-                else if (k == "fixed" && (v == "0" || v == "1"))
-                    _fixedMode = v == "1";
-                else if (k == "through" && (v == "0" || v == "1"))
-                    _clickThrough = v == "1";
-                else if (k == "walk" && (v == "0" || v == "1"))
-                    _walkEnabled = v == "1";
-                else if (k == "chibi" && (v == "0" || v == "1"))
-                    _chibiMode = v == "1";
-                else if (k == "bowlwait" && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d >= 0.5 && d <= 3600)
-                    _bowlWaitSec = d;
                 else if (k == "volume") {
                     // RETIRED, and deliberately not read. There is no master level any more, and
                     // the old code applied this key as the STARTING VALUE for all four cues -
@@ -9085,12 +8985,6 @@ public sealed class DshPet : Form {
             // older build could still read the file.
             sb.Append("px=").Append(_sizePx.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("cm=").Append(_cm.ToString("0.##", CultureInfo.InvariantCulture)).Append("\r\n");
-            sb.Append("opacity=").Append(_opacityPercent.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
-            sb.Append("fixed=").Append(_fixedMode ? "1" : "0").Append("\r\n");
-            sb.Append("through=").Append(_clickThrough ? "1" : "0").Append("\r\n");
-            sb.Append("walk=").Append(_walkEnabled ? "1" : "0").Append("\r\n");
-            sb.Append("chibi=").Append(_chibiMode ? "1" : "0").Append("\r\n");
-            sb.Append("bowlwait=").Append(_bowlWaitSec.ToString("0.##", CultureInfo.InvariantCulture)).Append("\r\n");
             // `volume=` is NOT written: there is no master level. A file that still has one is
             // read-and-ignored (see ReadState). Each cue's level is cuevolN below.
             sb.Append("sound=").Append(_soundEnabled ? "1" : "0").Append("\r\n");
@@ -9146,17 +9040,15 @@ public sealed class DshPet : Form {
         get {
             CreateParams cp = base.CreateParams;
             cp.ExStyle |= Native.WS_EX_LAYERED | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE;
-            if (_clickThrough) cp.ExStyle |= Native.WS_EX_TRANSPARENT;
             return cp;
         }
     }
 
     protected override void OnHandleCreated(EventArgs e) {
         base.OnHandleCreated(e);
+        _dirty = true;
         RenderToCanvas();
         PushLayer();
-        try { Native.RegisterHotKey(Handle, ClickThroughHotkeyId, Native.MOD_CONTROL | Native.MOD_ALT, Native.VK_P); } catch { }
-        ApplyClickThroughStyle();
     }
 
     // A persistent 32bpp DIB the size of the canvas, plus the DC that holds it.
@@ -9301,7 +9193,6 @@ public sealed class DshPet : Form {
 
     // Composite now, or wait for the next frame?
     bool PushDue() {
-        if (_patActive || _clickPatMs > 0 || _drag || _riceGrab != null) return true;
         if (_pushEvery <= 1) return true;
         double now = NowSec();
         if (_lastPushSec < 0.0 ||
@@ -9369,7 +9260,7 @@ public sealed class DshPet : Form {
             Native.POINT dst = new Native.POINT(); dst.X = Left; dst.Y = Top;
             Native.BLENDFUNCTION bf = new Native.BLENDFUNCTION();
             bf.BlendOp = Native.AC_SRC_OVER; bf.BlendFlags = 0;
-            bf.SourceConstantAlpha = (byte)Math.Max(1, Math.Min(255, (int)Math.Round(_opacityPercent * 2.55))); bf.AlphaFormat = Native.AC_SRC_ALPHA;
+            bf.SourceConstantAlpha = 255; bf.AlphaFormat = Native.AC_SRC_ALPHA;
             return Native.UpdateLayeredWindow(Handle, screenDc, ref dst, ref size, _memDc,
                                               ref src, 0, ref bf, Native.ULW_ALPHA);
         } finally {
@@ -9398,7 +9289,7 @@ public sealed class DshPet : Form {
             Native.POINT dst = new Native.POINT(); dst.X = Left; dst.Y = Top;
             Native.BLENDFUNCTION bf = new Native.BLENDFUNCTION();
             bf.BlendOp = Native.AC_SRC_OVER; bf.BlendFlags = 0;
-            bf.SourceConstantAlpha = (byte)Math.Max(1, Math.Min(255, (int)Math.Round(_opacityPercent * 2.55))); bf.AlphaFormat = Native.AC_SRC_ALPHA;
+            bf.SourceConstantAlpha = 255; bf.AlphaFormat = Native.AC_SRC_ALPHA;
             Native.UpdateLayeredWindow(Handle, screenDc, ref dst, ref size, memDc, ref src, 0, ref bf, Native.ULW_ALPHA);
         } finally {
             if (old != IntPtr.Zero) Native.SelectObject(memDc, old);
@@ -9569,10 +9460,6 @@ public sealed class DshPet : Form {
             DashCamDump("hotkey");
             return;
         }
-        if (m.Msg == Native.WM_HOTKEY && (int)m.WParam == ClickThroughHotkeyId) {
-            _clickThrough = !_clickThrough; ApplyClickThroughStyle(); SaveState();
-            return;
-        }
         if (m.Msg == Native.WM_NCHITTEST) {
             int lp = (int)m.LParam;
             int x = (short)(lp & 0xFFFF), y = (short)((lp >> 16) & 0xFFFF);
@@ -9638,7 +9525,6 @@ public sealed class DshPet : Form {
                 KnockPotOff();
                 return;
             }
-            if (_fixedMode) { base.OnMouseDown(e); return; }
             _drag = true;
             _snapping = false;
             _dragStart = Cursor.Position;
@@ -9798,7 +9684,7 @@ public sealed class DshPet : Form {
         } else if (_drag) {
             _drag = false;
             SyncSideToPosition();       // (already done during the drag; this is the safety net)
-            if (!_fixedMode) SnapToCorner(false);        // release -> fly home to the nearer bottom corner
+            SnapToCorner(false);        // release -> fly home to the nearer bottom corner
         }
         base.OnMouseUp(e);
     }
@@ -9850,7 +9736,6 @@ public sealed class DshPet : Form {
         if (_spendDirty) SaveUsage();     // one write, on the way out
         StopWeb();
         try { _timer.Stop(); _poll.Stop(); } catch { }
-        try { Native.UnregisterHotKey(Handle, ClickThroughHotkeyId); } catch { }
         if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         if (_sound != null) { try { _sound.Dispose(); } catch { } }
         SaveState();
@@ -10432,10 +10317,8 @@ public sealed class DshPet : Form {
                 g.PixelOffsetMode = PixelOffsetMode.Half;
                 DrawHearts(g);
             }
-            Rectangle hr = Rectangle.Intersect(new Rectangle(_offX - _w / 3, _offY - _h / 2, _w * 5 / 3, _h), CanvasRect());
-            _paintRects.Add(hr);
-            MarkDirty(hr);
         }
+
         BuildHitMap(ox + _offX, oy + _offY);
         if (_perfPhases) { _phHit += Ms(t0); }
         // Hand this frame's boxes to the next frame, which erases them.
@@ -11573,23 +11456,8 @@ public sealed class DshPet : Form {
         }
     }
 
-    void UpdateWalk(double dt) {
-        if (!_walkEnabled || _fixedMode || _rices.Count > 0 || _drag || _snapping) return;
-        if (_walkBaseX == 0) _walkBaseX = HomeX();
-        _walkT += dt;
-        double phase = Math.Sin(_walkT * 0.75);
-        Rectangle vs = SystemInformation.VirtualScreen;
-        Rectangle wa = Screen.PrimaryScreen.WorkingArea;
-        int travel = Math.Max(24, Math.Min(140, _w / 3));
-        int x = _walkBaseX + (int)Math.Round(phase * travel);
-        int min = wa.Left - vs.Left, max = wa.Right - vs.Left - _w;
-        if (x < min) x = min; if (x > max) x = max;
-        _offX = x;
-        bool right = InRightHalf();
-        if (right != _snapRight) { _snapRight = right; UpdateMirrorGeometry(); }
-        _dirty = true;
-    }
     // ---------------------------------------------------------------- tick ---
+
     void OnTick() {
         // Always stamped: LastTickMs feeds the runtime ledger, and leaving it 0 made
         // Ms(0) report "time since boot" - a 38,000,000 ms tick_avg in the log.
@@ -11619,7 +11487,6 @@ public sealed class DshPet : Form {
                 PushLayer();
             }
 
-            UpdateWalk(dt);
             _lastCueAmount = 0;              // diagnostics: what fired this frame
             DrainBankedBalance();            // apply any reading that arrived
             if (_perfPhases) { _phDrain += Ms(tPh0); tPh0 = Stopwatch.GetTimestamp(); }
@@ -12109,49 +11976,6 @@ public sealed class DshPet : Form {
         if (!sim && string.IsNullOrEmpty(ActiveKey)) AskKey();
     }
 
-    void ApplyClickThroughStyle() {
-        if (Handle == IntPtr.Zero) return;
-        int ex = Native.GetWindowLong(Handle, Native.GWL_EXSTYLE);
-        if (_clickThrough) ex |= Native.WS_EX_TRANSPARENT; else ex &= ~Native.WS_EX_TRANSPARENT;
-        Native.SetWindowLong(Handle, Native.GWL_EXSTYLE, ex);
-        Native.SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
-            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_FRAMECHANGED);
-    }
-    void SetOpacityUi() {
-        using (InputDialog d = new InputDialog("Opacity", "Enter 15-100", "%", _opacityPercent.ToString(CultureInfo.InvariantCulture))) {
-            if (d.ShowDialog(this) != DialogResult.OK) return;
-            int n;
-            if (int.TryParse(d.Value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out n) && n >= 15 && n <= 100) {
-                _opacityPercent = n; SaveState(); _dirty = true; RenderToCanvas(); PushLayer();
-            }
-        }
-    }
-    void SetBowlWaitUi() {
-        using (InputDialog d = new InputDialog("Fire-control delay", "Seconds before automatic radar", "sec", _bowlWaitSec.ToString("0.#", CultureInfo.InvariantCulture))) {
-            if (d.ShowDialog(this) != DialogResult.OK) return;
-            double n;
-            if (double.TryParse(d.Value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out n) && n >= 0.5 && n <= 3600) {
-                _bowlWaitSec = n; SaveState(); _dirty = true; Log("fire-control delay=" + n.ToString("0.#", CultureInfo.InvariantCulture) + "s");
-            }
-        }
-    }
-    void ToggleFixedUi() {
-        _fixedMode = !_fixedMode; if (_fixedMode) { _walkEnabled = false; _snapping = false; }
-        SaveState(); _dirty = true;
-    }
-    void ToggleThroughUi() {
-        _clickThrough = !_clickThrough; ApplyClickThroughStyle(); SaveState();
-        Log("mouse pass-through=" + (_clickThrough ? "on" : "off"));
-    }
-    void ToggleWalkUi() {
-        _walkEnabled = !_walkEnabled; if (_walkEnabled) { _fixedMode = false; _walkBaseX = HomeX(); _walkT = 0; }
-        SaveState(); _dirty = true;
-    }
-    void ToggleChibiUi() {
-        _chibiMode = !_chibiMode; SaveState();
-        Log("chibi=" + (_chibiMode ? "on (use chibi.png when present)" : "off"));
-        MessageBox.Show(this, _chibiMode ? "Chibi mode is on. Put chibi.png next to dsh_pet.ps1 for a custom chibi image; otherwise a compact fallback is used." : "Chibi mode is off.", "VK-1", MessageBoxButtons.OK, MessageBoxIcon.Information);
-    }
     public void ToggleModeUi() { SetMode(!_simMode); }
     public void CycleCharacterUi() { CycleCharacter(); }
     public void OpenWebUi() {
@@ -14900,7 +14724,7 @@ public sealed class DshPet : Form {
                 _rices[0].X = 1200; _rices[0].Y = radarY[ri];
                 _rices[0].VX = 0; _rices[0].VY = 0;
             }
-            SetBowlWaitForTest(9999);          // past _bowlWaitSec -> the radar locks
+            SetBowlWaitForTest(9999);          // past BowlWaitSec -> the radar locks
             _perfPhases = true;
             ResetPhases();
             PumpTicks(3);
@@ -16022,7 +15846,7 @@ public sealed class DshPet : Form {
     // User-specified rules under test:
     //   idle, no charge, no lock         -> happy  (the resting face)
     //   while a charge plays             -> nervous
-    //   bowl unclaimed for _bowlWaitSec   -> aloof
+    //   bowl unclaimed for BowlWaitSec   -> aloof
     //   feeding the bowl                 -> back to happy
     // Also guards the earlier defect where the grimace never ended.
     public void RunExpressionTest() {
@@ -16109,7 +15933,7 @@ public sealed class DshPet : Form {
         int untilLock = -1;
         for (int i = 0; i < 900; i++) {
             PumpTicks(1);
-            if (i == (int)(_bowlWaitSec * 60) - 120) notYet = _expr == EXPR_HAPPY;
+            if (i == (int)(BowlWaitSec * 60) - 120) notYet = _expr == EXPR_HAPPY;
             if (_expr == EXPR_ALOOF) { untilLock = i; break; }
         }
         Console.WriteLine("  locked  : " + ExprStateForTest() +
@@ -16278,7 +16102,7 @@ public sealed class DshPet : Form {
         // is wearing the aloof face, and a charge run outranks that face, so the bowl
         // froze mid-flight. It has to be finished before the lock engages.
         DropBowlForTest(3.00);
-        DemoCharge(0.10);                       // 10 cues, over well inside the the configured delay wait
+        DemoCharge(0.10);                       // 10 cues, over well inside the 10 s wait
         PumpTicks(4);
         int fedFrame = -1;
         for (int i = 0; i < 3000; i++) {
@@ -16336,7 +16160,7 @@ public sealed class DshPet : Form {
     // ---- no pulling while charging (offline) -------------------------------------
     // User rules under test:
     //   1. while a deduction is running, the bowl is NOT pulled in
-    //   2. the the configured delay countdown starts only AFTER the charging has finished
+    //   2. the 10 s countdown starts only AFTER the charging has finished
     //   3. a charge that lands during the pull waits until the bowl has been eaten
     //   4. feeding BY HAND during a charge keeps the grimace; the hearts still play
     public void RunChargeWaitTest() {
@@ -16356,10 +16180,10 @@ public sealed class DshPet : Form {
         Console.WriteLine("  charging: " + ExprStateForTest());
         bool nervousWhileCharging = _expr == EXPR_NERVOUS;
         double waitEarly = _bowlWait;
-        // Stay in the run well past the the configured delay deadline. Nothing may be pulled in.
+        // Stay in the run well past the 10 s deadline. Nothing may be pulled in.
         for (int i = 0; i < 400; i++) PumpTicks(1);
         bool stillCharging = _demoLeft > 0 || _pendingStep > 1e-9 || _hits.Count > 0;
-        bool notLockedYet = _bowlWait < _bowlWaitSec;
+        bool notLockedYet = _bowlWait < BowlWaitSec;
         bool notPulledYet = !_bowlBeingSucked && _rices.Count > 0 && !_rices[0].Fed;
         Console.WriteLine("  10s past: wait=" + _bowlWait.ToString("0.0") +
                           " stillCharging=" + stillCharging +
@@ -16410,10 +16234,10 @@ public sealed class DshPet : Form {
     // Menu -> "open fire-control radar". Rules under test:
     //   with a bowl waiting : the plate appears at once and the bowl is NOT pulled in
     //   with no bowl        : nothing happens
-    //   while it is up      : the automatic the configured delay flow is untouched and still eats it
+    //   while it is up      : the automatic 10 s flow is untouched and still eats it
     // ---- multi-target batch lock (offline) ---------------------------------------
     // User rule: however many bowls are out, the moment ANY ONE of them runs out its
-    // the configured delay deadline, ALL of them are locked at once and pulled in together. A bowl
+    // 10 s deadline, ALL of them are locked at once and pulled in together. A bowl
     // dropped two seconds ago does not get to wait its own ten seconds.
     public void RunMultiTargetTest() {
         GoOffline();
@@ -16446,7 +16270,7 @@ public sealed class DshPet : Form {
         // eaten (after its fade), so _rices[0] / _rices[1] stop meaning the same bowls
         // partway through and the second lookup throws.
         Rice b0 = _rices[0], b1 = _rices[1];
-        _bowlWait = _bowlWaitSec - 0.5;
+        _bowlWait = BowlWaitSec - 0.5;
         PumpTicks(4);
 
         int platesEarly = CountPlates();
@@ -16580,7 +16404,7 @@ public sealed class DshPet : Form {
 
         Console.WriteLine("  verdict: " + (ok
             ? "OK - manual lock shows readouts without feeding, closure reads 0 when still, "
-              + "and the the configured delay flow is untouched"
+              + "and the 10 s flow is untouched"
             : "FAIL - noOpWithoutBowl=" + noOpWithoutBowl + " onImmediately=" + onImmediately +
               " notPulled=" + notPulled + " stillLive=" + stillLive +
               " heldZero=" + heldZero + " movingReads=" + movingReads +
@@ -20704,7 +20528,7 @@ public sealed class DshPet : Form {
     }
     // Drops one rehearsal bowl on an otherwise quiet instance, for a real-mouse
     // throw test driven from outside the process.
-    // lockNow=true skips the the configured delay wait so the radar nameplate can be inspected
+    // lockNow=true skips the 10 s wait so the radar nameplate can be inspected
     // immediately (the wait itself is covered by --topup's timing assertions).
     public void PrimeBowlForLiveDrag() { PrimeBowlForLiveDrag(false); }
     // ---------------------------------------------------------------------------
@@ -21316,7 +21140,7 @@ public sealed class DshPet : Form {
                 bowl.Grounded = false;
                 double deepest = bowl.Y, maxDx = 0;
                 for (int i = 0; i < 120; i++) {
-                    // Keep the radar magnet out of it as well: once _bowlWait passes _bowlWaitSec it
+                    // Keep the radar magnet out of it as well: once _bowlWait passes BowlWaitSec it
                     // pulls the bowl in and OnRiceFed's it, which would end the fall after one frame.
                     _bowlWait = 0; _bowlLocked = false;
                     PumpTicks(1);
@@ -23986,7 +23810,7 @@ public sealed class DshPet : Form {
         ApplyBalancePublic(36.00, true);
         TestTopUp(3.00);
         if (lockNow) {
-            _bowlWait = _bowlWaitSec;
+            _bowlWait = BowlWaitSec;
             _blipWasOn = true;
             // Park the bowl HOVERING well inside the screen and keep it there.
             // A bowl that fell in from the right edge leaves no room for the

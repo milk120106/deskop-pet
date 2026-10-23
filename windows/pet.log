@@ -1,0 +1,1022 @@
+2026-10-23T16:56:08 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T16:56:08 pat hand loaded: 5 frames (446x392)
+2026-10-23T16:56:08 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T16:56:08 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T16:56:08 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T16:56:08 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T16:56:09 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:09 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T16:56:11 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:13 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:15 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:17 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:19 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:21 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:23 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:25 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T16:56:27 sim: auto deduct 0.09
+2026-10-23T16:56:27 poll ok: balance=49.91 printed=50.00 bookedAt=50 pending=0.09
+2026-10-23T16:56:29 poll ok: balance=49.91 printed=49.97 bookedAt=49.97 pending=0.06
+2026-10-23T16:56:30 demo charge: -0.1 ¥ -> 10 cue(s), 0.2s apart
+2026-10-23T16:56:31 poll ok: balance=49.91 printed=49.94 bookedAt=49.94 pending=0.03
+2026-10-23T16:56:33 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T16:56:35 poll ok: balance=49.91 printed=49.88 bookedAt=49.91 pending=0
+2026-10-23T16:56:37 poll ok: balance=49.91 printed=49.85 bookedAt=49.91 pending=0
+2026-10-23T16:56:39 poll ok: balance=49.91 printed=49.82 bookedAt=49.91 pending=0
+2026-10-23T16:56:41 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:43 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:45 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:47 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:49 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:51 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:53 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:55 poll ok: balance=49.91 printed=49.81 bookedAt=49.91 pending=0
+2026-10-23T16:56:56 sim: auto deduct 0.03
+2026-10-23T16:56:56 poll ok (snap): balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:56:57 poll ok: balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:56:58 test top-up: pretending the server went 49.88 -> 52.88 (local only; use refresh to re-sync)
+2026-10-23T16:56:58 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 1)
+2026-10-23T16:56:59 test top-up rolled back by a real poll: real=49.88 collected=False pendingBefore=0.00 creditBefore=3.00
+2026-10-23T16:56:59 poll ok: balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:57:00 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:57:01 poll ok: balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:57:03 test top-up: pretending the server went 49.88 -> 52.88 (local only; use refresh to re-sync)
+2026-10-23T16:57:03 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 2)
+2026-10-23T16:57:03 test top-up rolled back by a real poll: real=49.88 collected=False pendingBefore=0.00 creditBefore=6.00
+2026-10-23T16:57:03 poll ok: balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:57:04 bowl landing: y=923 floor=1024 bottomOnScreen=241 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:57:05 poll ok: balance=49.88 printed=49.88 bookedAt=49.88 pending=0
+2026-10-23T16:57:06 bowl thrown vx=2900 vy=-91 speed=2901
+2026-10-23T16:57:06 iron pot dropped at (1605,1016)
+2026-10-23T16:57:06 rice fed -> credited 3.00 of 3.00 pendingLeft=3.0000 real=49.8800 bookedBal=52.8800 bookedAt=52.8800 printed=52.88 bowls=3 grace=2s
+2026-10-23T16:57:06 bowl landing: y=1017 floor=988 bottomOnScreen=371 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:57:07 bowl removed (fed) bowlsLeft=2
+2026-10-23T16:57:07 poll ok: balance=49.88 printed=52.88 bookedAt=52.88 pending=0.4
+2026-10-23T16:57:08 bowl thrown vx=3996 vy=-22 speed=3996
+2026-10-23T16:57:09 poll ok: balance=49.88 printed=52.88 bookedAt=52.88 pending=0.4
+2026-10-23T16:57:09 iron pot dropped at (1589,1024)
+2026-10-23T16:57:09 rice fed -> credited 3.00 of 3.00 pendingLeft=0.0000 real=49.8800 bookedBal=55.8800 bookedAt=55.8800 printed=55.88 bowls=3 grace=2s
+2026-10-23T16:57:09 bowl landing: y=1025 floor=988 bottomOnScreen=379 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:57:10 bowl removed (fed) bowlsLeft=2
+2026-10-23T16:57:10 bowl thrown vx=-4200 vy=-649 speed=6676
+2026-10-23T16:57:11 bowl thrown vx=-4200 vy=-1700 speed=14352
+2026-10-23T16:57:11 poll ok: balance=49.88 printed=55.88 bookedAt=55.88 pending=0.4
+2026-10-23T16:57:13 poll ok: balance=49.88 printed=55.88 bookedAt=55.88 pending=0.4
+2026-10-23T16:57:14 iron pot landed on her head (stack index 0)
+2026-10-23T16:57:14 erase mask built for w=302 box=1024x565 at (0,0) set=256802 topRow=1024 beforeEdge=255467 x0=0 x1=1023 y0=0 y1=564
+2026-10-23T16:57:15 poll ok: balance=49.88 printed=55.88 bookedAt=55.88 pending=0.4
+2026-10-23T16:57:16 bowl thrown vx=65 vy=345 speed=351
+2026-10-23T16:57:16 iron pot landed on her head (stack index 0)
+2026-10-23T16:57:17 poll ok: balance=49.88 printed=55.86 bookedAt=55.86 pending=0.4
+2026-10-23T16:57:19 poll ok: balance=49.88 printed=55.83 bookedAt=55.83 pending=0.4
+2026-10-23T16:57:21 sim: auto deduct 0.09
+2026-10-23T16:57:21 poll ok: balance=49.79 printed=55.81 bookedAt=55.81 pending=0.4
+2026-10-23T16:57:23 poll ok: balance=49.79 printed=55.78 bookedAt=55.78 pending=0.4
+2026-10-23T16:57:25 poll ok: balance=49.79 printed=55.76 bookedAt=55.76 pending=0.4
+2026-10-23T16:57:27 poll ok: balance=49.79 printed=55.73 bookedAt=55.73 pending=0.4
+2026-10-23T16:57:29 poll ok: balance=49.79 printed=55.70 bookedAt=55.7 pending=0.4
+2026-10-23T16:57:31 poll ok: balance=49.79 printed=55.67 bookedAt=55.67 pending=0.4
+2026-10-23T16:57:33 poll ok: balance=49.79 printed=55.65 bookedAt=55.65 pending=0.4
+2026-10-23T16:57:35 poll ok: balance=49.79 printed=55.62 bookedAt=55.62 pending=0.4
+2026-10-23T16:57:37 poll ok: balance=49.79 printed=55.60 bookedAt=55.6 pending=0.4
+2026-10-23T16:57:39 poll ok: balance=49.79 printed=55.57 bookedAt=55.57 pending=0.4
+2026-10-23T16:57:41 poll ok: balance=49.79 printed=55.55 bookedAt=55.55 pending=0.4
+2026-10-23T16:57:43 poll ok: balance=49.79 printed=55.52 bookedAt=55.52 pending=0.4
+2026-10-23T16:57:45 sim: auto deduct 0.07
+2026-10-23T16:57:45 poll ok: balance=49.72 printed=55.50 bookedAt=55.5 pending=0.4
+2026-10-23T16:57:47 poll ok: balance=49.72 printed=55.47 bookedAt=55.47 pending=0.4
+2026-10-23T16:57:49 poll ok: balance=49.72 printed=55.45 bookedAt=55.45 pending=0.4
+2026-10-23T16:57:51 poll ok: balance=49.72 printed=55.42 bookedAt=55.42 pending=0.4
+2026-10-23T16:57:53 poll ok: balance=49.72 printed=55.39 bookedAt=55.39 pending=0.4
+2026-10-23T16:57:55 poll ok: balance=49.72 printed=55.37 bookedAt=55.37 pending=0.4
+2026-10-23T16:57:57 poll ok: balance=49.72 printed=55.34 bookedAt=55.34 pending=0.4
+2026-10-23T16:57:59 poll ok: balance=49.72 printed=55.32 bookedAt=55.32 pending=0.4
+2026-10-23T16:58:01 poll ok: balance=49.72 printed=55.30 bookedAt=55.3 pending=0.4
+2026-10-23T16:58:03 poll ok: balance=49.72 printed=55.27 bookedAt=55.27 pending=0.4
+2026-10-23T16:58:05 sim: auto top-up 4.95
+2026-10-23T16:58:05 top-up 4.95 -> rice bowl dropped from screen top-right (bowls now 3)
+2026-10-23T16:58:05 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.37
+2026-10-23T16:58:07 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:09 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:09 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:58:11 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:13 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:15 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:17 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:19 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:21 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:23 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:25 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:27 poll ok: balance=54.67 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:29 sim: auto deduct 0.06
+2026-10-23T16:58:29 spend while top-up pending: -0.63 left=4.32
+2026-10-23T16:58:29 poll ok: balance=54.61 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:31 poll ok: balance=54.61 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:32 bowl thrown vx=1937 vy=0 speed=1937
+2026-10-23T16:58:33 poll ok: balance=54.61 printed=55.24 bookedAt=55.24 pending=0.4
+2026-10-23T16:58:33 iron pot dropped at (1593,1024)
+2026-10-23T16:58:33 rice fed -> credited 4.32 of 4.95 pendingLeft=0.0000 real=54.6100 bookedBal=59.5600 bookedAt=59.5600 printed=59.56 bowls=4 grace=2s
+2026-10-23T16:58:34 bowl landing: y=1025 floor=988 bottomOnScreen=379 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T16:58:34 bowl removed (fed) bowlsLeft=3
+2026-10-23T16:58:35 bowl thrown vx=147 vy=-206 speed=253
+2026-10-23T16:58:35 poll ok: balance=54.61 printed=59.56 bookedAt=59.56 pending=0.4
+2026-10-23T16:58:35 iron pot landed on her head (stack index 2)
+2026-10-23T16:58:37 poll ok: balance=54.61 printed=59.56 bookedAt=59.56 pending=0.4
+2026-10-23T16:58:39 poll ok: balance=54.61 printed=59.56 bookedAt=59.56 pending=0.4
+2026-10-23T16:58:41 poll ok: balance=54.61 printed=59.55 bookedAt=59.55 pending=0.4
+2026-10-23T16:58:43 poll ok: balance=54.61 printed=59.53 bookedAt=59.53 pending=0.4
+2026-10-23T16:58:45 poll ok: balance=54.61 printed=59.50 bookedAt=59.5 pending=0.4
+2026-10-23T16:58:47 sim: auto deduct 0.03
+2026-10-23T16:58:47 poll ok: balance=54.58 printed=59.48 bookedAt=59.48 pending=0.4
+2026-10-23T16:58:49 poll ok: balance=54.58 printed=59.45 bookedAt=59.45 pending=0.4
+2026-10-23T16:58:51 poll ok: balance=54.58 printed=59.43 bookedAt=59.43 pending=0.4
+2026-10-23T16:58:53 poll ok: balance=54.58 printed=59.40 bookedAt=59.4 pending=0.4
+2026-10-23T16:58:55 poll ok: balance=54.58 printed=59.38 bookedAt=59.38 pending=0.4
+2026-10-23T16:58:57 poll ok: balance=54.58 printed=59.36 bookedAt=59.36 pending=0.4
+2026-10-23T16:58:59 sim: auto deduct 0.08
+2026-10-23T16:58:59 poll ok: balance=54.50 printed=59.35 bookedAt=59.35 pending=0.4
+2026-10-23T16:59:01 poll ok: balance=54.50 printed=59.33 bookedAt=59.33 pending=0.4
+2026-10-23T16:59:03 poll ok: balance=54.50 printed=59.30 bookedAt=59.3 pending=0.4
+2026-10-23T16:59:05 poll ok: balance=54.50 printed=59.28 bookedAt=59.28 pending=0.4
+2026-10-23T16:59:07 poll ok: balance=54.50 printed=59.25 bookedAt=59.25 pending=0.4
+2026-10-23T16:59:09 poll ok: balance=54.50 printed=59.23 bookedAt=59.23 pending=0.4
+2026-10-23T16:59:11 poll ok: balance=54.50 printed=59.20 bookedAt=59.2 pending=0.4
+2026-10-23T16:59:13 poll ok: balance=54.50 printed=59.18 bookedAt=59.18 pending=0.4
+2026-10-23T16:59:15 poll ok: balance=54.50 printed=59.16 bookedAt=59.16 pending=0.4
+2026-10-23T16:59:17 poll ok: balance=54.50 printed=59.14 bookedAt=59.14 pending=0.4
+2026-10-23T16:59:19 poll ok: balance=54.50 printed=59.12 bookedAt=59.12 pending=0.4
+2026-10-23T16:59:21 poll ok: balance=54.50 printed=59.10 bookedAt=59.1 pending=0.4
+2026-10-23T16:59:23 poll ok: balance=54.50 printed=59.09 bookedAt=59.09 pending=0.4
+2026-10-23T16:59:25 sim: auto deduct 0.08
+2026-10-23T16:59:25 poll ok: balance=54.42 printed=59.06 bookedAt=59.06 pending=0.4
+2026-10-23T16:59:27 poll ok: balance=54.42 printed=59.04 bookedAt=59.04 pending=0.4
+2026-10-23T16:59:29 poll ok: balance=54.42 printed=59.01 bookedAt=59.01 pending=0.4
+2026-10-23T16:59:31 poll ok: balance=54.42 printed=58.99 bookedAt=58.99 pending=0.4
+2026-10-23T16:59:33 poll ok: balance=54.42 printed=58.96 bookedAt=58.96 pending=0.4
+2026-10-23T16:59:35 poll ok: balance=54.42 printed=58.94 bookedAt=58.94 pending=0.4
+2026-10-23T16:59:37 poll ok: balance=54.42 printed=58.91 bookedAt=58.91 pending=0.4
+2026-10-23T16:59:39 poll ok: balance=54.42 printed=58.89 bookedAt=58.89 pending=0.4
+2026-10-23T16:59:41 poll ok: balance=54.42 printed=58.87 bookedAt=58.87 pending=0.4
+2026-10-23T16:59:43 poll ok: balance=54.42 printed=58.85 bookedAt=58.85 pending=0.4
+2026-10-23T16:59:45 poll ok: balance=54.42 printed=58.83 bookedAt=58.83 pending=0.4
+2026-10-23T16:59:47 poll ok: balance=54.42 printed=58.81 bookedAt=58.81 pending=0.4
+2026-10-23T17:38:16 mode=sim provider=deepseek
+2026-10-23T17:38:16 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:38:16 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:38:17 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:38:17 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:38:17 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:38:17 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:38:18 web: http://127.0.0.1:8765/
+2026-10-23T17:38:18 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:18 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:38:20 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:25 mode=sim provider=deepseek
+2026-10-23T17:38:25 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:38:25 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:38:25 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:38:26 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:38:26 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:38:26 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:38:26 web: http://127.0.0.1:8765/
+2026-10-23T17:38:26 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:27 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:38:28 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:30 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:40 mode=sim provider=deepseek
+2026-10-23T17:38:40 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:38:40 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:38:41 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:38:41 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:38:41 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:38:41 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:38:41 web: http://127.0.0.1:8765/
+2026-10-23T17:38:41 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:42 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:38:43 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:45 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:47 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:49 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:51 click pat (combo 1)
+2026-10-23T17:38:51 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:53 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:55 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:57 click pat (combo 1)
+2026-10-23T17:38:57 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:59 click pat (combo 1)
+2026-10-23T17:38:59 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:38:59 click pat (combo 2)
+2026-10-23T17:39:00 click pat (combo 3)
+2026-10-23T17:39:00 click pat (combo 4)
+2026-10-23T17:39:00 click pat (combo 5)
+2026-10-23T17:39:00 click pat (combo 6)
+2026-10-23T17:39:00 click pat (combo 7)
+2026-10-23T17:39:01 click pat (combo 8)
+2026-10-23T17:39:01 click pat (combo 9)
+2026-10-23T17:39:01 click pat (combo 10)
+2026-10-23T17:39:01 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:03 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:05 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:07 character -> gpt, restarting
+2026-10-23T17:39:09 mode=sim provider=deepseek
+2026-10-23T17:39:09 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:39:09 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:39:10 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:39:10 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:39:10 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:39:10 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:39:10 web: http://127.0.0.1:8766/
+2026-10-23T17:39:11 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:11 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:39:12 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:13 character -> claude, restarting
+2026-10-23T17:39:15 mode=sim provider=deepseek
+2026-10-23T17:39:15 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:39:15 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:39:15 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:39:15 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:39:15 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:39:16 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:39:16 web: http://127.0.0.1:8767/
+2026-10-23T17:39:16 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:16 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:39:18 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:20 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:22 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:24 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:26 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:28 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:30 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:32 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:34 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:36 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:38 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:40 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:42 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:39:44 sim: auto deduct 0.02
+2026-10-23T17:39:44 poll ok: balance=49.98 printed=50.00 bookedAt=50 pending=0.02
+2026-10-23T17:39:46 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:39:48 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:39:50 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:39:52 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:39:54 mode switched to api (deepseek)
+2026-10-23T17:39:54 poll FAILED: no api key
+2026-10-23T17:39:59 tablet: tariff readout on (double click on her)
+2026-10-23T17:40:01 click pat (combo 1)
+2026-10-23T17:40:02 click pat (combo 2)
+2026-10-23T17:40:03 click pat (combo 3)
+2026-10-23T17:40:04 mode switched to simulation
+2026-10-23T17:40:04 poll ok (snap): balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:40:04 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:40:06 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:40:08 click pat (combo 1)
+2026-10-23T17:40:08 poll ok: balance=49.98 printed=49.98 bookedAt=49.98 pending=0
+2026-10-23T17:40:10 sim: auto deduct 0.07
+2026-10-23T17:40:10 poll ok: balance=49.91 printed=49.98 bookedAt=49.98 pending=0.07
+2026-10-23T17:40:12 poll ok: balance=49.91 printed=49.95 bookedAt=49.95 pending=0.04
+2026-10-23T17:40:14 poll ok: balance=49.91 printed=49.92 bookedAt=49.92 pending=0.01
+2026-10-23T17:40:16 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:18 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:20 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:22 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:24 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:26 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:28 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:30 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:32 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:34 poll ok: balance=49.91 printed=49.91 bookedAt=49.91 pending=0
+2026-10-23T17:40:36 sim: auto deduct 0.02
+2026-10-23T17:40:36 poll ok: balance=49.89 printed=49.91 bookedAt=49.91 pending=0.02
+2026-10-23T17:40:38 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:39 poll ok (snap): balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:40 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:42 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:44 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:46 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:48 poll ok: balance=49.89 printed=49.89 bookedAt=49.89 pending=0
+2026-10-23T17:40:50 sim: auto deduct 0.04
+2026-10-23T17:40:50 poll ok: balance=49.85 printed=49.89 bookedAt=49.89 pending=0.04
+2026-10-23T17:40:52 poll ok: balance=49.85 printed=49.86 bookedAt=49.86 pending=0.01
+2026-10-23T17:40:54 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:40:56 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:40:58 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:00 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:02 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:04 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:06 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:08 poll ok: balance=49.85 printed=49.85 bookedAt=49.85 pending=0
+2026-10-23T17:41:10 sim: auto deduct 0.10
+2026-10-23T17:41:10 poll ok: balance=49.75 printed=49.85 bookedAt=49.85 pending=0.1
+2026-10-23T17:41:12 click pat (combo 1)
+2026-10-23T17:41:12 poll ok: balance=49.75 printed=49.82 bookedAt=49.82 pending=0.07
+2026-10-23T17:41:12 click pat (combo 2)
+2026-10-23T17:41:14 poll ok: balance=49.75 printed=49.80 bookedAt=49.8 pending=0.05
+2026-10-23T17:41:16 poll ok: balance=49.75 printed=49.78 bookedAt=49.78 pending=0.03
+2026-10-23T17:41:18 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:20 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:22 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:24 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:26 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:28 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:30 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:32 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:34 poll ok: balance=49.75 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:36 sim: auto top-up 2.16
+2026-10-23T17:41:36 top-up 2.16 -> rice bowl dropped from screen top-right (bowls now 1)
+2026-10-23T17:41:36 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:38 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:38 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:41:40 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:42 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:44 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:46 poll ok: balance=51.91 printed=49.75 bookedAt=49.75 pending=0
+2026-10-23T17:41:47 test top-up rollback removed 1 unclaimed bowl(s)
+2026-10-23T17:41:47 mode switched to api (deepseek)
+2026-10-23T17:41:47 poll FAILED: no api key
+2026-10-23T17:41:50 mode switched to simulation
+2026-10-23T17:41:50 poll ok (snap): balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:41:50 poll ok: balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:41:52 poll ok: balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:41:54 poll ok: balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:41:56 poll ok: balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:41:58 poll ok: balance=51.91 printed=51.91 bookedAt=51.91 pending=0
+2026-10-23T17:42:00 sim: auto deduct 0.06
+2026-10-23T17:42:00 poll ok: balance=51.85 printed=51.91 bookedAt=51.91 pending=0.06
+2026-10-23T17:42:02 poll ok: balance=51.85 printed=51.87 bookedAt=51.87 pending=0.02
+2026-10-23T17:42:04 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:06 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:08 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:10 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:12 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:14 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:16 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:18 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:20 poll ok: balance=51.85 printed=51.85 bookedAt=51.85 pending=0
+2026-10-23T17:42:22 sim: auto deduct 0.03
+2026-10-23T17:42:22 poll ok: balance=51.82 printed=51.85 bookedAt=51.85 pending=0.03
+2026-10-23T17:42:24 poll ok: balance=51.82 printed=51.82 bookedAt=51.82 pending=0
+2026-10-23T17:42:26 poll ok: balance=51.82 printed=51.82 bookedAt=51.82 pending=0
+2026-10-23T17:42:28 poll ok: balance=51.82 printed=51.82 bookedAt=51.82 pending=0
+2026-10-23T17:42:30 poll ok: balance=51.82 printed=51.82 bookedAt=51.82 pending=0
+2026-10-23T17:42:32 poll ok: balance=51.82 printed=51.82 bookedAt=51.82 pending=0
+2026-10-23T17:42:34 sim: auto deduct 0.02
+2026-10-23T17:42:34 poll ok: balance=51.80 printed=51.82 bookedAt=51.82 pending=0.02
+2026-10-23T17:42:36 poll ok: balance=51.80 printed=51.80 bookedAt=51.8 pending=0
+2026-10-23T17:42:36 character -> gemini, restarting
+2026-10-23T17:42:38 mode=sim provider=deepseek
+2026-10-23T17:42:38 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:42:38 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:42:39 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:42:39 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:42:39 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:42:39 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:42:39 web: http://127.0.0.1:8768/
+2026-10-23T17:42:40 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:40 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:42:41 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:43 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:45 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:47 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:49 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:51 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:53 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:55 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:57 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:42:59 sim: auto top-up 2.43
+2026-10-23T17:42:59 top-up 2.43 -> rice bowl dropped from screen top-right (bowls now 1)
+2026-10-23T17:42:59 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:01 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:01 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:43:03 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:05 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:07 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:09 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:11 poll ok: balance=52.43 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:13 sim: auto deduct 0.01
+2026-10-23T17:43:13 poll ok: balance=52.42 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:43:15 poll ok: balance=52.42 printed=50.00 bookedAt=50 pending=0.01
+2026-10-23T17:43:17 radar lock: pulling a bowl in (1 locked)
+2026-10-23T17:43:17 poll ok: balance=52.42 printed=50.00 bookedAt=50 pending=0.01
+2026-10-23T17:43:19 radar lock: bowl delivered at speed 1597
+2026-10-23T17:43:19 iron pot dropped at (1596,861)
+2026-10-23T17:43:19 rice fed -> credited 2.43 of 2.43 pendingLeft=0.0000 real=52.4200 bookedBal=52.4300 bookedAt=52.4300 printed=52.43 bowls=2 grace=2s
+2026-10-23T17:43:19 poll ok: balance=52.42 printed=52.43 bookedAt=52.43 pending=0.01
+2026-10-23T17:43:19 bowl landing: y=861 floor=988 bottomOnScreen=215 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:43:20 bowl removed (fed) bowlsLeft=1
+2026-10-23T17:43:21 poll ok: balance=52.42 printed=52.43 bookedAt=52.43 pending=0.01
+2026-10-23T17:43:23 poll ok: balance=52.42 printed=52.43 bookedAt=52.43 pending=0.01
+2026-10-23T17:43:25 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:27 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:29 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:31 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:33 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:35 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:37 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:39 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:41 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T17:43:43 sim: auto deduct 0.03
+2026-10-23T17:43:43 poll ok: balance=52.39 printed=52.42 bookedAt=52.42 pending=0.03
+2026-10-23T17:43:45 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:47 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:49 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:51 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:53 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:55 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:57 bowl thrown vx=8 vy=-144 speed=144
+2026-10-23T17:43:57 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:43:58 iron pot landed on her head (stack index 0)
+2026-10-23T17:43:58 erase mask built for w=302 box=1024x565 at (0,0) set=256802 topRow=1024 beforeEdge=255467 x0=0 x1=1023 y0=0 y1=564
+2026-10-23T17:44:00 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:00 iron pot knocked off (double click on her head)
+2026-10-23T17:44:02 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:03 iron pot removed (clicked off) bowlsLeft=0
+2026-10-23T17:44:03 click pat (combo 1)
+2026-10-23T17:44:03 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:04 click pat (combo 2)
+2026-10-23T17:44:05 click pat (combo 3)
+2026-10-23T17:44:05 click pat (combo 4)
+2026-10-23T17:44:05 click pat (combo 5)
+2026-10-23T17:44:06 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:06 click pat (combo 6)
+2026-10-23T17:44:06 click pat (combo 7)
+2026-10-23T17:44:06 click pat (combo 8)
+2026-10-23T17:44:06 click pat (combo 9)
+2026-10-23T17:44:07 click pat (combo 10)
+2026-10-23T17:44:08 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:09 click pat (combo 11)
+2026-10-23T17:44:09 click pat (combo 12)
+2026-10-23T17:44:09 click pat (combo 13)
+2026-10-23T17:44:09 click pat (combo 14)
+2026-10-23T17:44:09 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:10 click pat (combo 15)
+2026-10-23T17:44:10 click pat (combo 16)
+2026-10-23T17:44:11 poll ok: balance=52.39 printed=52.39 bookedAt=52.39 pending=0
+2026-10-23T17:44:13 sim: auto deduct 0.07
+2026-10-23T17:44:13 poll ok: balance=52.32 printed=52.39 bookedAt=52.39 pending=0.07
+2026-10-23T17:44:15 poll ok: balance=52.32 printed=52.36 bookedAt=52.36 pending=0.04
+2026-10-23T17:44:17 poll ok: balance=52.32 printed=52.34 bookedAt=52.34 pending=0.02
+2026-10-23T17:44:19 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:21 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:23 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:25 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:27 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:29 poll ok: balance=52.32 printed=52.32 bookedAt=52.32 pending=0
+2026-10-23T17:44:31 sim: auto deduct 0.05
+2026-10-23T17:44:31 poll ok: balance=52.27 printed=52.32 bookedAt=52.32 pending=0.05
+2026-10-23T17:44:33 poll ok: balance=52.27 printed=52.29 bookedAt=52.29 pending=0.02
+2026-10-23T17:44:35 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:37 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:39 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:41 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:43 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:45 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:47 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:49 poll ok: balance=52.27 printed=52.27 bookedAt=52.27 pending=0
+2026-10-23T17:44:51 sim: auto deduct 0.07
+2026-10-23T17:44:51 poll ok: balance=52.20 printed=52.27 bookedAt=52.27 pending=0.07
+2026-10-23T17:44:53 poll ok: balance=52.20 printed=52.24 bookedAt=52.24 pending=0.04
+2026-10-23T17:44:55 poll ok: balance=52.20 printed=52.22 bookedAt=52.22 pending=0.02
+2026-10-23T17:44:57 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:44:59 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:01 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:03 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:05 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:07 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:09 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:11 poll ok: balance=52.20 printed=52.20 bookedAt=52.2 pending=0
+2026-10-23T17:45:12 character -> deepseek, restarting
+2026-10-23T17:45:16 mode=sim provider=deepseek
+2026-10-23T17:45:16 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T17:45:16 pat hand loaded: 5 frames (446x392)
+2026-10-23T17:45:16 sound ready: D:\我的資料-2\程式設計\vk-1\windows\hit.mp3 volume=80
+2026-10-23T17:45:16 feed sound ready: D:\我的資料-2\程式設計\vk-1\windows\feed.mp3 volume=80
+2026-10-23T17:45:16 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T17:45:16 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T17:45:17 web: http://127.0.0.1:8769/
+2026-10-23T17:45:17 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:17 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T17:45:19 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:21 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:23 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:25 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:27 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:29 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:31 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:33 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:35 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:37 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:39 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:41 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:43 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:45 sim: auto top-up 4.84
+2026-10-23T17:45:45 top-up 4.84 -> rice bowl dropped from screen top-right (bowls now 1)
+2026-10-23T17:45:45 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:47 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:47 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=0 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:45:49 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:51 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:53 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:55 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:57 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:45:59 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:46:01 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:46:03 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:46:05 poll ok: balance=54.84 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:46:07 sim: auto deduct 0.07
+2026-10-23T17:46:07 poll ok: balance=54.77 printed=50.00 bookedAt=50 pending=0
+2026-10-23T17:46:09 poll ok: balance=54.77 printed=50.00 bookedAt=50 pending=0.07
+2026-10-23T17:46:11 poll ok: balance=54.77 printed=50.00 bookedAt=50 pending=0.07
+2026-10-23T17:46:11 radar lock: pulling a bowl in (1 locked)
+2026-10-23T17:46:13 poll ok: balance=54.77 printed=50.00 bookedAt=50 pending=0.07
+2026-10-23T17:46:15 poll ok: balance=54.77 printed=50.00 bookedAt=50 pending=0.07
+2026-10-23T17:46:15 radar lock: bowl delivered at speed 1613
+2026-10-23T17:46:15 iron pot dropped at (298,858)
+2026-10-23T17:46:15 rice fed -> credited 4.84 of 4.84 pendingLeft=0.0000 real=54.7700 bookedBal=54.8400 bookedAt=54.8400 printed=54.84 bowls=2 grace=2s
+2026-10-23T17:46:15 bowl landing: y=858 floor=988 bottomOnScreen=212 vsBottom=1080 vsTop=0 R=92 offX=0 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:46:15 bowl removed (fed) bowlsLeft=1
+2026-10-23T17:46:17 poll ok: balance=54.77 printed=54.84 bookedAt=54.84 pending=0.07
+2026-10-23T17:46:18 bowl placed (speed 0 < 12)
+2026-10-23T17:46:19 iron pot landed on her head (stack index 0)
+2026-10-23T17:46:19 erase mask built for w=302 box=1024x565 at (0,0) set=256802 topRow=1024 beforeEdge=255467 x0=0 x1=1023 y0=0 y1=564
+2026-10-23T17:46:19 poll ok: balance=54.77 printed=54.82 bookedAt=54.82 pending=0.05
+2026-10-23T17:46:21 poll ok: balance=54.77 printed=54.78 bookedAt=54.78 pending=0.01
+2026-10-23T17:46:23 sim: auto deduct 0.01
+2026-10-23T17:46:23 poll ok: balance=54.76 printed=54.77 bookedAt=54.77 pending=0.01
+2026-10-23T17:46:25 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:27 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:29 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:31 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:33 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:35 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:37 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:39 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:41 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:43 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:45 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:47 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:49 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:51 poll ok: balance=54.76 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:53 sim: auto top-up 3.37
+2026-10-23T17:46:53 top-up 3.37 -> rice bowl dropped from screen top-right (bowls now 2)
+2026-10-23T17:46:53 poll ok: balance=58.13 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:55 poll ok: balance=58.13 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:57 poll ok: balance=58.13 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:59 poll ok: balance=58.13 printed=54.76 bookedAt=54.76 pending=0
+2026-10-23T17:46:59 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=0 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:47:00 iron pot dropped at (1686,792)
+2026-10-23T17:47:00 rice fed -> credited 3.37 of 3.37 pendingLeft=0.0000 real=58.1300 bookedBal=58.1300 bookedAt=58.1300 printed=58.13 bowls=3 grace=2s
+2026-10-23T17:47:00 bowl landing: y=792 floor=988 bottomOnScreen=126 vsBottom=1080 vsTop=0 R=92 offX=1494 offY=758 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:47:00 iron pot landed on her head (stack index 1)
+2026-10-23T17:47:01 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:01 bowl removed (fed) bowlsLeft=2
+2026-10-23T17:47:03 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:05 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:06 poll ok (snap): balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:07 iron pot knocked off (double click on her head)
+2026-10-23T17:47:07 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:09 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:09 iron pot removed (clicked off) bowlsLeft=1
+2026-10-23T17:47:11 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:13 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:15 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:17 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:19 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:21 poll ok: balance=58.13 printed=58.13 bookedAt=58.13 pending=0
+2026-10-23T17:47:23 sim: auto deduct 0.09
+2026-10-23T17:47:23 poll ok: balance=58.04 printed=58.13 bookedAt=58.13 pending=0.09
+2026-10-23T17:47:25 poll ok: balance=58.04 printed=58.10 bookedAt=58.1 pending=0.06
+2026-10-23T17:47:27 poll ok: balance=58.04 printed=58.07 bookedAt=58.07 pending=0.03
+2026-10-23T17:47:29 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:31 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:33 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:35 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:37 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:39 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:41 poll ok: balance=58.04 printed=58.04 bookedAt=58.04 pending=0
+2026-10-23T17:47:43 sim: auto deduct 0.09
+2026-10-23T17:47:43 poll ok: balance=57.95 printed=58.04 bookedAt=58.04 pending=0.09
+2026-10-23T17:47:45 poll ok: balance=57.95 printed=58.01 bookedAt=58.01 pending=0.06
+2026-10-23T17:47:47 poll ok: balance=57.95 printed=57.98 bookedAt=57.98 pending=0.03
+2026-10-23T17:47:49 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:47:51 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:47:53 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:47:55 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:47:57 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:47:59 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:01 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:03 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:05 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:07 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:09 poll ok: balance=57.95 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:11 sim: auto top-up 3.46
+2026-10-23T17:48:11 top-up 3.46 -> rice bowl dropped from screen top-right (bowls now 2)
+2026-10-23T17:48:11 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:13 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:15 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:16 bowl thrown vx=617 vy=-657 speed=901
+2026-10-23T17:48:16 bowl landing: y=636 floor=1024 bottomOnScreen=-46 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:48:17 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:19 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:21 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:23 poll ok: balance=61.41 printed=57.95 bookedAt=57.95 pending=0
+2026-10-23T17:48:24 iron pot dropped at (1795,1010)
+2026-10-23T17:48:24 rice fed -> credited 3.46 of 3.46 pendingLeft=0.0000 real=61.4100 bookedBal=61.4100 bookedAt=61.4100 printed=61.41 bowls=3 grace=2s
+2026-10-23T17:48:24 bowl landing: y=1011 floor=988 bottomOnScreen=365 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:48:24 bowl removed (fed) bowlsLeft=2
+2026-10-23T17:48:25 poll ok: balance=61.41 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:27 poll ok: balance=61.41 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:29 poll ok: balance=61.41 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:31 poll ok: balance=61.41 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:33 sim: auto top-up 3.50
+2026-10-23T17:48:33 top-up 3.50 -> rice bowl dropped from screen top-right (bowls now 3)
+2026-10-23T17:48:33 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:35 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:37 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:37 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:48:39 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:41 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:43 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:45 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:47 poll ok: balance=64.91 printed=61.41 bookedAt=61.41 pending=0
+2026-10-23T17:48:47 iron pot dropped at (1841,1015)
+2026-10-23T17:48:47 rice fed -> credited 3.50 of 3.50 pendingLeft=0.0000 real=64.9100 bookedBal=64.9100 bookedAt=64.9100 printed=64.91 bowls=4 grace=2s
+2026-10-23T17:48:47 bowl landing: y=1035 floor=988 bottomOnScreen=389 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:48:48 bowl removed (fed) bowlsLeft=3
+2026-10-23T17:48:48 bowl thrown vx=402 vy=-1700 speed=2159
+2026-10-23T17:48:49 poll ok: balance=64.91 printed=64.91 bookedAt=64.91 pending=0
+2026-10-23T17:48:50 bowl thrown vx=98 vy=-1700 speed=3069
+2026-10-23T17:48:51 poll ok: balance=64.91 printed=64.91 bookedAt=64.91 pending=0
+2026-10-23T17:48:52 bowl thrown vx=261 vy=502 speed=566
+2026-10-23T17:48:53 poll ok: balance=64.91 printed=64.91 bookedAt=64.91 pending=0
+2026-10-23T17:48:53 iron pot landed on her head (stack index 1)
+2026-10-23T17:48:53 iron pot landed on her head (stack index 2)
+2026-10-23T17:48:55 sim: auto deduct 0.08
+2026-10-23T17:48:55 poll ok: balance=64.83 printed=64.91 bookedAt=64.91 pending=0.08
+2026-10-23T17:48:57 poll ok: balance=64.83 printed=64.88 bookedAt=64.88 pending=0.05
+2026-10-23T17:48:59 poll ok: balance=64.83 printed=64.86 bookedAt=64.86 pending=0.03
+2026-10-23T17:49:01 poll ok: balance=64.83 printed=64.84 bookedAt=64.84 pending=0.01
+2026-10-23T17:49:03 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:05 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:07 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:09 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:11 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:13 poll ok: balance=64.83 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:15 sim: auto top-up 3.91
+2026-10-23T17:49:15 top-up 3.91 -> rice bowl dropped from screen top-right (bowls now 4)
+2026-10-23T17:49:15 poll ok: balance=68.74 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:17 poll ok: balance=68.74 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:19 poll ok: balance=68.74 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:19 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:21 poll ok: balance=68.74 printed=64.83 bookedAt=64.83 pending=0
+2026-10-23T17:49:22 iron pot dropped at (1719,742)
+2026-10-23T17:49:22 rice fed -> credited 3.91 of 3.91 pendingLeft=0.0000 real=68.7400 bookedBal=68.7400 bookedAt=68.7400 printed=68.74 bowls=5 grace=2s
+2026-10-23T17:49:22 bowl landing: y=743 floor=988 bottomOnScreen=97 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:23 iron pot landed on her head (stack index 3)
+2026-10-23T17:49:23 bowl removed (fed) bowlsLeft=4
+2026-10-23T17:49:23 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:25 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:27 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:29 test top-up: pretending the server went 68.74 -> 71.74 (local only; use refresh to re-sync)
+2026-10-23T17:49:29 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 5)
+2026-10-23T17:49:29 test top-up rolled back by a real poll: real=68.74 collected=False pendingBefore=0.00 creditBefore=3.00
+2026-10-23T17:49:29 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:31 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:31 test top-up: pretending the server went 68.74 -> 71.74 (local only; use refresh to re-sync)
+2026-10-23T17:49:31 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 6)
+2026-10-23T17:49:33 test top-up rolled back by a real poll: real=68.74 collected=False pendingBefore=0.00 creditBefore=6.00
+2026-10-23T17:49:33 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:34 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:35 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:35 manual radar: locked on, 1.5 kpx / -287 px/s / -159 px (display only; the 10 s flow still runs)
+2026-10-23T17:49:36 bowl landing: y=938 floor=1024 bottomOnScreen=256 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:37 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:39 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:41 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:42 test top-up: pretending the server went 68.74 -> 10000068.74 (local only; use refresh to re-sync)
+2026-10-23T17:49:42 top-up 10000000.00 -> rice bowl dropped from screen top-right (bowls now 7)
+2026-10-23T17:49:43 test top-up rolled back by a real poll: real=68.74 collected=False pendingBefore=0.00 creditBefore=10000006.00
+2026-10-23T17:49:43 poll ok: balance=68.74 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:45 sim: auto top-up 2.37
+2026-10-23T17:49:45 top-up 2.37 -> rice bowl dropped from screen top-right (bowls now 8)
+2026-10-23T17:49:45 poll ok: balance=71.11 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:47 poll ok: balance=71.11 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:48 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:48 manual radar: locked on, 1.4 kpx / 346 px/s / 231 px (display only; the 10 s flow still runs)
+2026-10-23T17:49:49 poll ok: balance=71.11 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:51 poll ok: balance=71.11 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:51 bowl landing: y=946 floor=1024 bottomOnScreen=264 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:49:53 poll ok: balance=71.11 printed=68.74 bookedAt=68.74 pending=0
+2026-10-23T17:49:54 test top-up: pretending the server went 71.11 -> 74.11 (local only; use refresh to re-sync)
+2026-10-23T17:49:54 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 9)
+2026-10-23T17:49:55 test top-up rolled back by a real poll: real=71.11 collected=False pendingBefore=0.00 creditBefore=10000011.37
+2026-10-23T17:49:55 poll ok: balance=71.11 printed=68.74 bookedAt=71.11 pending=0
+2026-10-23T17:49:57 poll ok: balance=71.11 printed=68.74 bookedAt=71.11 pending=0
+2026-10-23T17:49:59 poll ok: balance=71.11 printed=68.74 bookedAt=71.11 pending=0
+2026-10-23T17:49:59 test top-up: pretending the server went 71.11 -> 74.11 (local only; use refresh to re-sync)
+2026-10-23T17:49:59 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 10)
+2026-10-23T17:50:01 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:01 test top-up rolled back by a real poll: real=71.11 collected=False pendingBefore=0.00 creditBefore=10000014.37
+2026-10-23T17:50:01 poll ok: balance=71.11 printed=68.74 bookedAt=71.11 pending=0
+2026-10-23T17:50:02 test top-up: pretending the server went 71.11 -> 74.11 (local only; use refresh to re-sync)
+2026-10-23T17:50:02 top-up 3.00 -> rice bowl dropped from screen top-right (bowls now 11)
+2026-10-23T17:50:03 test top-up rolled back by a real poll: real=71.11 collected=False pendingBefore=0.00 creditBefore=10000017.37
+2026-10-23T17:50:03 poll ok: balance=71.11 printed=68.74 bookedAt=71.11 pending=0
+2026-10-23T17:50:04 bowl landing: y=901 floor=1024 bottomOnScreen=219 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:05 iron pot dropped at (1689,1058)
+2026-10-23T17:50:05 rice fed -> credited 10000000.00 of 10000000.00 pendingLeft=17.3700 real=71.1100 bookedBal=10000068.7400 bookedAt=10000071.1100 printed=10000068.74 bowls=12 grace=2s
+2026-10-23T17:50:05 bowl landing: y=1058 floor=988 bottomOnScreen=412 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:05 poll ok: balance=71.11 printed=10000068.74 bookedAt=10000071.11 pending=0.4
+2026-10-23T17:50:06 bowl removed (fed) bowlsLeft=11
+2026-10-23T17:50:06 iron pot dropped at (1893,1025)
+2026-10-23T17:50:06 rice fed -> credited 3.00 of 3.00 pendingLeft=14.3700 real=71.1100 bookedBal=10000071.7400 bookedAt=10000074.1100 printed=10000071.74 bowls=12 grace=2s
+2026-10-23T17:50:06 bowl landing: y=1026 floor=988 bottomOnScreen=380 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:06 bowl removed (fed) bowlsLeft=11
+2026-10-23T17:50:07 bowl thrown vx=688 vy=-1267 speed=1442
+2026-10-23T17:50:07 bowl landing: y=902 floor=1024 bottomOnScreen=220 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:07 poll ok: balance=71.11 printed=10000071.74 bookedAt=10000074.11 pending=0.4
+2026-10-23T17:50:07 bowl thrown vx=-477 vy=-1565 speed=1636
+2026-10-23T17:50:09 poll ok: balance=71.11 printed=10000071.74 bookedAt=10000074.11 pending=0.4
+2026-10-23T17:50:09 bowl placed (speed 0 < 12)
+2026-10-23T17:50:11 iron pot landed on her head (stack index 4)
+2026-10-23T17:50:11 poll ok: balance=71.11 printed=10000071.74 bookedAt=10000074.11 pending=0.4
+2026-10-23T17:50:13 iron pot dropped at (1670,803)
+2026-10-23T17:50:13 rice fed -> credited 3.00 of 3.00 pendingLeft=11.3700 real=71.1100 bookedBal=10000074.7400 bookedAt=10000077.1100 printed=10000074.74 bowls=12 grace=2s
+2026-10-23T17:50:13 bowl landing: y=804 floor=988 bottomOnScreen=158 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:13 sim: auto top-up 4.60
+2026-10-23T17:50:13 top-up 4.60 -> rice bowl dropped from screen top-right (bowls now 13)
+2026-10-23T17:50:13 poll ok: balance=75.71 printed=10000074.74 bookedAt=10000077.11 pending=0.4
+2026-10-23T17:50:13 bowl removed (fed) bowlsLeft=12
+2026-10-23T17:50:14 bowl thrown vx=1726 vy=270 speed=1747
+2026-10-23T17:50:14 iron pot landed on her head (stack index 5)
+2026-10-23T17:50:14 bowl placed (speed 0 < 12)
+2026-10-23T17:50:15 radar lock: pulling a bowl in (5 locked)
+2026-10-23T17:50:15 radar lock: pulling a bowl in (5 locked)
+2026-10-23T17:50:15 radar lock: pulling a bowl in (5 locked)
+2026-10-23T17:50:15 radar lock: pulling a bowl in (5 locked)
+2026-10-23T17:50:15 radar lock: pulling a bowl in (5 locked)
+2026-10-23T17:50:15 poll ok: balance=75.71 printed=10000074.74 bookedAt=10000077.11 pending=0.4
+2026-10-23T17:50:15 bowl placed (speed 0 < 12)
+2026-10-23T17:50:16 iron pot landed on her head (stack index 6)
+2026-10-23T17:50:17 bowl thrown vx=4200 vy=-1053 speed=6518
+2026-10-23T17:50:17 iron pot dropped at (1650,888)
+2026-10-23T17:50:17 rice fed -> credited 3.00 of 3.00 pendingLeft=12.9700 real=75.7100 bookedBal=10000077.7400 bookedAt=10000080.1100 printed=10000077.74 bowls=13 grace=2s
+2026-10-23T17:50:17 poll ok: balance=75.71 printed=10000077.74 bookedAt=10000080.11 pending=0.4
+2026-10-23T17:50:17 bowl landing: y=888 floor=988 bottomOnScreen=242 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:18 bowl removed (fed) bowlsLeft=12
+2026-10-23T17:50:19 poll ok: balance=75.71 printed=10000077.74 bookedAt=10000080.11 pending=0.4
+2026-10-23T17:50:21 poll ok: balance=75.71 printed=10000077.74 bookedAt=10000080.11 pending=0.4
+2026-10-23T17:50:22 bowl thrown vx=23 vy=-82 speed=85
+2026-10-23T17:50:22 iron pot landed on her head (stack index 7)
+2026-10-23T17:50:23 poll ok: balance=75.71 printed=10000077.74 bookedAt=10000080.11 pending=0.4
+2026-10-23T17:50:25 radar lock: bowl delivered at speed 1582
+2026-10-23T17:50:25 iron pot dropped at (1631,875)
+2026-10-23T17:50:25 rice fed -> credited 3.00 of 3.00 pendingLeft=9.9700 real=75.7100 bookedBal=10000080.7400 bookedAt=10000083.1100 printed=10000080.74 bowls=13 grace=2s
+2026-10-23T17:50:25 bowl landing: y=875 floor=988 bottomOnScreen=229 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:25 sim: auto top-up 4.61
+2026-10-23T17:50:25 top-up 4.61 -> rice bowl dropped from screen top-right (bowls now 14)
+2026-10-23T17:50:25 poll ok: balance=80.32 printed=10000080.74 bookedAt=10000083.11 pending=0.4
+2026-10-23T17:50:25 radar lock: pulling a bowl in (4 locked)
+2026-10-23T17:50:25 radar lock: bowl delivered at speed 1644
+2026-10-23T17:50:25 iron pot dropped at (1684,810)
+2026-10-23T17:50:25 rice fed -> credited 4.60 of 4.60 pendingLeft=9.9800 real=80.3200 bookedBal=10000085.3400 bookedAt=10000087.7100 printed=10000085.34 bowls=15 grace=2s
+2026-10-23T17:50:25 bowl landing: y=811 floor=988 bottomOnScreen=165 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:25 iron pot landed on her head (stack index 8)
+2026-10-23T17:50:25 radar lock: bowl delivered at speed 1674
+2026-10-23T17:50:25 iron pot dropped at (1635,854)
+2026-10-23T17:50:25 rice fed -> credited 2.37 of 2.37 pendingLeft=7.6100 real=80.3200 bookedBal=10000087.7100 bookedAt=10000090.0800 printed=10000087.71 bowls=16 grace=2s
+2026-10-23T17:50:25 bowl landing: y=854 floor=988 bottomOnScreen=208 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:26 bowl removed (fed) bowlsLeft=15
+2026-10-23T17:50:26 iron pot landed on her head (stack index 9)
+2026-10-23T17:50:26 radar lock: bowl delivered at speed 1766
+2026-10-23T17:50:26 iron pot dropped at (1644,854)
+2026-10-23T17:50:26 rice fed -> credited 3.00 of 3.00 pendingLeft=4.6100 real=80.3200 bookedBal=10000090.7100 bookedAt=10000093.0800 printed=10000090.71 bowls=16 grace=2s
+2026-10-23T17:50:26 bowl landing: y=854 floor=988 bottomOnScreen=208 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:26 bowl removed (fed) bowlsLeft=15
+2026-10-23T17:50:26 bowl removed (fed) bowlsLeft=14
+2026-10-23T17:50:27 bowl removed (fed) bowlsLeft=13
+2026-10-23T17:50:27 poll ok: balance=80.32 printed=10000090.71 bookedAt=10000093.08 pending=0.4
+2026-10-23T17:50:28 bowl thrown vx=49 vy=-638 speed=640
+2026-10-23T17:50:29 poll ok: balance=80.32 printed=10000090.71 bookedAt=10000093.08 pending=0.4
+2026-10-23T17:50:29 bowl placed (speed 0 < 12)
+2026-10-23T17:50:30 iron pot landed on her head (stack index 10)
+2026-10-23T17:50:31 poll ok: balance=80.32 printed=10000090.71 bookedAt=10000093.08 pending=0.4
+2026-10-23T17:50:31 bowl thrown vx=-72 vy=0 speed=72
+2026-10-23T17:50:32 iron pot landed on her head (stack index 8)
+2026-10-23T17:50:33 poll ok: balance=80.32 printed=10000090.71 bookedAt=10000093.08 pending=0.4
+2026-10-23T17:50:34 radar lock: bowl delivered at speed 1659
+2026-10-23T17:50:34 iron pot dropped at (1665,813)
+2026-10-23T17:50:34 rice fed -> credited 4.61 of 4.61 pendingLeft=0.0000 real=80.3200 bookedBal=10000095.3200 bookedAt=10000097.6900 printed=10000095.32 bowls=14 grace=2s
+2026-10-23T17:50:34 bowl landing: y=814 floor=988 bottomOnScreen=168 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:50:35 bowl removed (fed) bowlsLeft=13
+2026-10-23T17:50:35 poll ok: balance=80.32 printed=10000095.32 bookedAt=10000097.69 pending=0.4
+2026-10-23T17:50:36 bowl placed (speed 0 < 12)
+2026-10-23T17:50:36 iron pot landed on her head (stack index 12)
+2026-10-23T17:50:37 poll ok: balance=80.32 printed=10000095.32 bookedAt=10000097.69 pending=0.4
+2026-10-23T17:50:39 poll ok: balance=80.32 printed=10000095.32 bookedAt=10000097.69 pending=0.4
+2026-10-23T17:50:41 poll ok: balance=80.32 printed=10000095.32 bookedAt=10000097.69 pending=0.4
+2026-10-23T17:50:43 poll ok: balance=80.32 printed=10000095.32 bookedAt=10000097.69 pending=0.4
+2026-10-23T17:50:45 poll ok: balance=80.32 printed=10000095.31 bookedAt=10000097.68 pending=0.4
+2026-10-23T17:50:47 poll ok: balance=80.32 printed=10000095.30 bookedAt=10000097.67 pending=0.4
+2026-10-23T17:50:49 poll ok: balance=80.32 printed=10000095.28 bookedAt=10000097.65 pending=0.4
+2026-10-23T17:50:51 poll ok: balance=80.32 printed=10000095.26 bookedAt=10000097.63 pending=0.4
+2026-10-23T17:50:53 sim: auto deduct 0.01
+2026-10-23T17:50:53 poll ok: balance=80.31 printed=10000095.25 bookedAt=10000097.62 pending=0.4
+2026-10-23T17:50:55 poll ok: balance=80.31 printed=10000095.23 bookedAt=10000097.6 pending=0.4
+2026-10-23T17:50:57 poll ok: balance=80.31 printed=10000095.21 bookedAt=10000097.58 pending=0.4
+2026-10-23T17:50:59 poll ok: balance=80.31 printed=10000095.20 bookedAt=10000097.57 pending=0.4
+2026-10-23T17:51:01 poll ok: balance=80.31 printed=10000095.18 bookedAt=10000097.55 pending=0.4
+2026-10-23T17:51:03 poll ok: balance=80.31 printed=10000095.16 bookedAt=10000097.53 pending=0.4
+2026-10-23T17:51:05 poll ok: balance=80.31 printed=10000095.14 bookedAt=10000097.51 pending=0.4
+2026-10-23T17:51:07 poll ok: balance=80.31 printed=10000095.13 bookedAt=10000097.5 pending=0.4
+2026-10-23T17:51:09 poll ok: balance=80.31 printed=10000095.11 bookedAt=10000097.48 pending=0.4
+2026-10-23T17:51:11 sim: auto deduct 0.07
+2026-10-23T17:51:11 poll ok: balance=80.24 printed=10000095.09 bookedAt=10000097.46 pending=0.4
+2026-10-23T17:51:13 poll ok: balance=80.24 printed=10000095.07 bookedAt=10000097.44 pending=0.4
+2026-10-23T17:51:15 poll ok: balance=80.24 printed=10000095.06 bookedAt=10000097.43 pending=0.4
+2026-10-23T17:51:17 poll ok: balance=80.24 printed=10000095.04 bookedAt=10000097.41 pending=0.4
+2026-10-23T17:51:19 poll ok: balance=80.24 printed=10000095.02 bookedAt=10000097.39 pending=0.4
+2026-10-23T17:51:21 poll ok: balance=80.24 printed=10000095.01 bookedAt=10000097.38 pending=0.4
+2026-10-23T17:51:23 poll ok: balance=80.24 printed=10000094.99 bookedAt=10000097.36 pending=0.4
+2026-10-23T17:51:25 poll ok: balance=80.24 printed=10000094.98 bookedAt=10000097.35 pending=0.4
+2026-10-23T17:51:27 poll ok: balance=80.24 printed=10000094.97 bookedAt=10000097.34 pending=0.4
+2026-10-23T17:51:29 poll ok: balance=80.24 printed=10000094.96 bookedAt=10000097.33 pending=0.4
+2026-10-23T17:51:31 sim: auto top-up 2.69
+2026-10-23T17:51:31 top-up 2.69 -> rice bowl dropped from screen top-right (bowls now 14)
+2026-10-23T17:51:31 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.39
+2026-10-23T17:51:33 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:35 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:37 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:39 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:41 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:42 bowl landing: y=794 floor=1024 bottomOnScreen=112 vsBottom=1080 vsTop=0 R=56 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:51:43 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:45 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:47 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:49 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:51 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:53 poll ok: balance=82.93 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:55 sim: auto deduct 0.08
+2026-10-23T17:51:55 spend while top-up pending: -10000012.10 left=0.00
+2026-10-23T17:51:55 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:57 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:51:59 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:01 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:03 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:05 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:07 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:09 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:11 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:13 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:15 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:17 poll ok: balance=82.85 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:19 sim: auto deduct 0.07
+2026-10-23T17:52:19 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:21 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:23 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:25 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:27 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:29 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:31 poll ok: balance=82.78 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:33 sim: auto deduct 0.09
+2026-10-23T17:52:33 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:35 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:36 bowl thrown vx=62 vy=12 speed=63
+2026-10-23T17:52:37 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:38 radar lock: pulling a bowl in (1 locked)
+2026-10-23T17:52:39 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:41 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:42 bowl placed (speed 0 < 12)
+2026-10-23T17:52:43 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:44 bowl thrown vx=-736 vy=-241 speed=774
+2026-10-23T17:52:45 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:47 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:49 poll ok: balance=82.69 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:50 radar lock: bowl delivered at speed 1966
+2026-10-23T17:52:50 iron pot dropped at (1676,829)
+2026-10-23T17:52:50 rice fed -> credited 0.00 of 2.69 pendingLeft=0.0000 real=82.6900 bookedBal=10000094.9500 bookedAt=10000097.3200 printed=10000094.95 bowls=15 grace=2s
+2026-10-23T17:52:50 bowl landing: y=829 floor=988 bottomOnScreen=183 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T17:52:50 iron pot landed on her head (stack index 13)
+2026-10-23T17:52:51 sim: auto deduct 0.07
+2026-10-23T17:52:51 poll ok: balance=82.62 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T17:52:51 bowl removed (fed) bowlsLeft=14
+2026-10-23T17:52:53 poll ok: balance=82.62 printed=10000094.95 bookedAt=10000097.32 pending=0.4
+2026-10-23T19:23:46 mode=sim provider=deepseek
+2026-10-23T19:23:46 expressions loaded: 4 moods (resting face = happy)
+2026-10-23T19:23:46 pat hand loaded: 5 frames (446x392)
+2026-10-23T19:23:47 sound ready: D:\我的資料-2\程式設計\deskop-pet\windows\hit.mp3 volume=80
+2026-10-23T19:23:47 feed sound ready: D:\我的資料-2\程式設計\deskop-pet\windows\feed.mp3 volume=80
+2026-10-23T19:23:47 cue ready: pot_land.mp3 volume=80 tag=dsphland
+2026-10-23T19:23:47 cue ready: pot_off.mp3 volume=80 tag=dsphoff
+2026-10-23T19:23:47 web: http://127.0.0.1:8765/
+2026-10-23T19:23:47 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:48 holidays: 2026 has no published days yet - weekday rule applies
+2026-10-23T19:23:49 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:51 click pat (combo 1)
+2026-10-23T19:23:51 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:53 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:55 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:57 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:23:59 click pat (combo 1)
+2026-10-23T19:23:59 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:00 click pat (combo 2)
+2026-10-23T19:24:00 click pat (combo 3)
+2026-10-23T19:24:00 click pat (combo 4)
+2026-10-23T19:24:01 click pat (combo 5)
+2026-10-23T19:24:01 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:03 poll ok: balance=50.00 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:05 sim: auto top-up 2.45
+2026-10-23T19:24:05 top-up 2.45 -> rice bowl dropped from screen top-right (bowls now 1)
+2026-10-23T19:24:05 poll ok: balance=52.45 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:07 poll ok: balance=52.45 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:09 poll ok: balance=52.45 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:09 bowl landing: y=805 floor=1042 bottomOnScreen=106 vsBottom=1080 vsTop=0 R=38 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T19:24:11 poll ok: balance=52.45 printed=50.00 bookedAt=50 pending=0
+2026-10-23T19:24:12 bowl thrown vx=2967 vy=-161 speed=2971
+2026-10-23T19:24:12 iron pot dropped at (1613,1017)
+2026-10-23T19:24:12 rice fed -> credited 2.45 of 2.45 pendingLeft=0.0000 real=52.4500 bookedBal=52.4500 bookedAt=52.4500 printed=52.45 bowls=2 grace=2s
+2026-10-23T19:24:12 bowl landing: y=1017 floor=988 bottomOnScreen=371 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T19:24:12 bowl removed (fed) bowlsLeft=1
+2026-10-23T19:24:13 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:13 bowl thrown vx=859 vy=-1246 speed=1513
+2026-10-23T19:24:15 bowl thrown vx=507 vy=1320 speed=1414
+2026-10-23T19:24:15 iron pot landed on her head (stack index 0)
+2026-10-23T19:24:15 erase mask built for w=302 box=1024x565 at (0,0) set=256802 topRow=1024 beforeEdge=255467 x0=0 x1=1023 y0=0 y1=564
+2026-10-23T19:24:15 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:17 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:19 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:21 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:23 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:25 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:27 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:29 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:31 poll ok: balance=52.45 printed=52.45 bookedAt=52.45 pending=0
+2026-10-23T19:24:33 sim: auto deduct 0.03
+2026-10-23T19:24:33 poll ok: balance=52.42 printed=52.45 bookedAt=52.45 pending=0.03
+2026-10-23T19:24:35 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:37 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:39 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:41 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:43 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:45 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:47 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:49 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:51 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:53 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:55 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:57 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:24:59 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:25:01 poll ok: balance=52.42 printed=52.42 bookedAt=52.42 pending=0
+2026-10-23T19:25:03 sim: auto deduct 0.07
+2026-10-23T19:25:03 poll ok: balance=52.35 printed=52.42 bookedAt=52.42 pending=0.07
+2026-10-23T19:25:05 poll ok: balance=52.35 printed=52.39 bookedAt=52.39 pending=0.04
+2026-10-23T19:25:07 poll ok: balance=52.35 printed=52.36 bookedAt=52.36 pending=0.01
+2026-10-23T19:25:09 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:11 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:13 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:15 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:17 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:19 poll ok: balance=52.35 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:21 sim: auto top-up 1.63
+2026-10-23T19:25:21 top-up 1.63 -> rice bowl dropped from screen top-right (bowls now 2)
+2026-10-23T19:25:21 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:23 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:25 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:25 bowl landing: y=805 floor=1042 bottomOnScreen=106 vsBottom=1080 vsTop=0 R=38 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T19:25:27 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:29 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:31 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:33 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:35 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:37 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:39 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:41 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:43 poll ok: balance=53.98 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:45 sim: auto deduct 0.03
+2026-10-23T19:25:45 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0
+2026-10-23T19:25:47 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:49 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:51 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:53 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:55 poll ok: balance=53.95 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:57 sim: auto deduct 0.02
+2026-10-23T19:25:57 poll ok: balance=53.93 printed=52.35 bookedAt=52.35 pending=0.03
+2026-10-23T19:25:58 iron pot knocked off (double click on her head)
+2026-10-23T19:25:59 radar lock: pulling a bowl in (1 locked)
+2026-10-23T19:25:59 poll ok: balance=53.93 printed=52.35 bookedAt=52.35 pending=0.05
+2026-10-23T19:26:00 iron pot removed (clicked off) bowlsLeft=1
+2026-10-23T19:26:01 click pat (combo 1)
+2026-10-23T19:26:01 click pat (combo 2)
+2026-10-23T19:26:01 click pat (combo 3)
+2026-10-23T19:26:01 poll ok: balance=53.93 printed=52.35 bookedAt=52.35 pending=0.05
+2026-10-23T19:26:01 click pat (combo 4)
+2026-10-23T19:26:03 poll ok: balance=53.93 printed=52.35 bookedAt=52.35 pending=0.05
+2026-10-23T19:26:05 poll ok: balance=53.93 printed=52.35 bookedAt=52.35 pending=0.05
+2026-10-23T19:26:06 radar lock: bowl delivered at speed 1628
+2026-10-23T19:26:06 iron pot dropped at (1646,856)
+2026-10-23T19:26:06 rice fed -> credited 1.63 of 1.63 pendingLeft=0.0000 real=53.9300 bookedBal=53.9800 bookedAt=53.9800 printed=53.98 bowls=2 grace=2s
+2026-10-23T19:26:06 bowl landing: y=856 floor=988 bottomOnScreen=210 vsBottom=1080 vsTop=0 R=92 offX=1618 offY=738 canvasH=1080 winTop=0 clientH=1080 widgetH=302
+2026-10-23T19:26:06 bowl removed (fed) bowlsLeft=1
+2026-10-23T19:26:07 poll ok: balance=53.93 printed=53.98 bookedAt=53.98 pending=0.05
+2026-10-23T19:26:09 bowl thrown vx=0 vy=62 speed=62
+2026-10-23T19:26:09 poll ok: balance=53.93 printed=53.98 bookedAt=53.98 pending=0.05
+2026-10-23T19:26:11 poll ok: balance=53.93 printed=53.97 bookedAt=53.97 pending=0.04

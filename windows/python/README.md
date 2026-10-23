@@ -32,6 +32,16 @@ build_windows.bat
 
 完成後執行 `dist\PythonPetV4\PythonPetV4.exe`。發佈時請複製整個 `dist\PythonPetV4` 資料夾。
 
+## 多模型、Ollama 與自訂端點
+
+「API 設定檔／多模型管理」可以新增多組設定，每組包含名稱、供應商、API Key、端點 URL 與模型名稱。聊天框會在送出訊息前提供設定檔／模型選擇器。支援：
+
+- DeepSeek、OpenAI、Anthropic 原生端點。
+- Ollama：預設 `http://localhost:11434/v1`，可不填 API Key，例如模型 `llama3.2`。
+- OpenAI-compatible 自訂端點：可接公司內網 gateway、LocalAI、vLLM 或其他相容服務。
+
+目前沒有強制使用 LiteLLM。程式內建的 provider adapter 只處理聊天所需的少量差異，直接使用 `urllib.request`，因此打包檔較小、Ollama 不需要 Key，也能保留自訂端點。若未來需要路由、fallback、重試、token budget、更多供應商統一管理，再考慮加入 LiteLLM；目前加入它反而會增加依賴與 PyInstaller 收集複雜度。
+
 ## 角色對話
 
 右鍵選單選擇「與角色對話」會開啟貼近角色的聊天框。送出訊息後：

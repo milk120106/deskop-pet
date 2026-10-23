@@ -12,44 +12,50 @@ from PySide6.QtWidgets import (QApplication,QCheckBox,QComboBox,QDialog,QDialogB
  QTextEdit,QVBoxLayout,QWidget,QStyle,QInputDialog)
 
 APP_NAME="Python Desktop Pet v4"; ROOT=Path(__file__).resolve().parent; ASSETS=ROOT/"assets"; CUSTOM=ROOT/"custom_characters"; CONFIG=ROOT/"pet_config.json"; CANVAS=(1536,1024); MAX_EXTRA=4
-BUILTINS={"藍色大肥魚（DeepSeek）":"sprite.png","GPT 龍娘":"sprite-gpt.png","大小姐 Claude":"sprite-claude.png","北美貓娘 Gemini":"sprite-gemini.png","DeepSeek 離線抱盆":"sprite-deepseek-offline.png"}
+BUILTINS={"藍色大肥魚（DeepSeek）":"sprite.png","GPT 龍娘":"sprite-gpt.png","大小姐 Claude":"sprite-claude.png","北美貓娘 Gemini":"sprite-gemini.png"}
 EXPR={"GPT 龍娘":"gpt","大小姐 Claude":"claude","北美貓娘 Gemini":"gemini"}
 LINES=["今天也要記得休息一下。","我有看到你在努力喔。","要不要餵我一點飯？","目前沒有啟用 AI 對話，我先用隨機文句陪你。","桌面巡邏完成，暫時安全。","今天的狀態：可愛但有點餓。","別忘了喝水。","我會在這裡陪著你。"]
 
 def fit_canvas(src:Path,dst:Path):
  with Image.open(src).convert("RGBA") as im:
   im.thumbnail(CANVAS,Image.Resampling.LANCZOS); out=Image.new("RGBA",CANVAS,(0,0,0,0)); out.alpha_composite(im,((CANVAS[0]-im.width)//2,(CANVAS[1]-im.height)//2)); dst.parent.mkdir(parents=True,exist_ok=True); out.save(dst,"PNG")
-def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"provider":"DeepSeek","ai_chat_enabled":False,"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
+def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
 
-def api_request(provider,key,chat=None):
- if provider=="DeepSeek": base="https://api.deepseek.com"; headers={"Authorization":f"Bearer {key}"}
- elif provider=="OpenAI": base="https://api.openai.com/v1"; headers={"Authorization":f"Bearer {key}"}
- elif provider=="Anthropic": base="https://api.anthropic.com/v1"; headers={"x-api-key":key,"anthropic-version":"2023-06-01"}
- else: raise RuntimeError("目前只支援 DeepSeek、OpenAI、Anthropic 的 API 模式")
- if chat:
-  if provider=="Anthropic": body={"model":"claude-3-5-haiku-latest","max_tokens":80,"messages":[{"role":"user","content":chat}]}; headers["content-type"]="application/json"; url=base+"/messages"
-  else: body={"model":"deepseek-chat" if provider=="DeepSeek" else "gpt-4o-mini","messages":[{"role":"user","content":chat}],"max_tokens":80}; headers["content-type"]="application/json"; url=base+"/chat/completions"
-  req=urllib.request.Request(url,data=json.dumps(body).encode(),headers=headers,method="POST")
-  with urllib.request.urlopen(req,timeout=20) as r: data=json.loads(r.read().decode())
-  text=data["content"][0]["text"] if provider=="Anthropic" else data["choices"][0]["message"]["content"]
-  return {"message":text,"raw":data}
- if provider=="DeepSeek":
-  req=urllib.request.Request(base+"/user/balance",headers={**headers,"Accept":"application/json"})
-  with urllib.request.urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
-  bs=data.get("balance_infos",[]); amount=next((b.get("total_balance") for b in bs if b.get("currency")=="CNY"),None)
-  if amount is None and bs: amount=bs[0].get("total_balance")
-  return {"balance":float(amount or 0),"raw":data,"source":"DeepSeek /user/balance"}
- if provider=="OpenAI":
-  req=urllib.request.Request(base+"/organization/costs?limit=1",headers=headers)
-  with urllib.request.urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
-  total=sum(float(x.get("amount",{}).get("value",0)) for x in data.get("data",[])); return {"balance":-total,"raw":data,"source":"OpenAI organization costs (admin key)"}
- raise RuntimeError("Anthropic API 需要組織管理權限；請使用官方 cost report endpoint 或切換 DeepSeek/OpenAI")
+PROVIDERS=["DeepSeek","OpenAI","Anthropic","Ollama","OpenAI 相容自訂端點"]
+
+def default_profiles():
+ return [{"name":"DeepSeek 預設","provider":"DeepSeek","key":"","endpoint":"https://api.deepseek.com","model":"deepseek-chat"}]
+
+def migrate_profiles(config):
+ if config.get("api_profiles") is not None: return config["api_profiles"]
+ profiles=[]
+ for provider,key in config.get("api_keys",{}).items(): profiles.append({"name":provider+" 預設","provider":provider,"key":key,"endpoint":"","model":""})
+ return profiles or default_profiles()
+
+def chat_request(profile,prompt):
+ provider=profile.get("provider","DeepSeek"); key=profile.get("key",""); endpoint=profile.get("endpoint","").strip()
+ if provider=="Anthropic":
+  url=(endpoint or "https://api.anthropic.com/v1").rstrip("/")+"/messages"; headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"}; body={"model":profile.get("model") or "claude-3-5-haiku-latest","max_tokens":160,"messages":[{"role":"user","content":prompt}]}
+ else:
+  base=endpoint or {"DeepSeek":"https://api.deepseek.com","OpenAI":"https://api.openai.com/v1","Ollama":"http://localhost:11434/v1"}.get(provider,"")
+  if not base: raise RuntimeError("自訂端點不可為空")
+  url=base.rstrip("/")+"/chat/completions"; headers={"content-type":"application/json"}
+  if key: headers["Authorization"]="Bearer "+key
+  body={"model":profile.get("model") or ({"DeepSeek":"deepseek-chat","OpenAI":"gpt-4o-mini","Ollama":"llama3.2"}.get(provider,"gpt-4o-mini")),"messages":[{"role":"user","content":prompt}],"max_tokens":160}
+ req=urllib.request.Request(url,data=json.dumps(body).encode(),headers=headers,method="POST")
+ with urllib.request.urlopen(req,timeout=30) as r: data=json.loads(r.read().decode())
+ return {"message":data["content"][0]["text"] if provider=="Anthropic" else data["choices"][0]["message"]["content"],"raw":data}
 
 class Worker(QThread):
  done=Signal(bool,dict)
- def __init__(self,provider,key,chat=None,parent=None): super().__init__(parent); self.provider=provider; self.key=key; self.chat=chat
+ def __init__(self,provider_or_profile,key_or_chat=None,chat=None,parent=None):
+  super().__init__(parent); self.legacy=not isinstance(provider_or_profile,dict)
+  if self.legacy: self.provider=provider_or_profile; self.key=key_or_chat; self.chat=chat; self.profile={"provider":self.provider,"key":self.key}
+  else: self.profile=provider_or_profile; self.chat=key_or_chat
  def run(self):
-  try:self.done.emit(True,api_request(self.provider,self.key,self.chat))
+  try:
+   data=api_request(self.provider,self.key,self.chat) if self.legacy else chat_request(self.profile,self.chat)
+   self.done.emit(True,data)
   except Exception as e:self.done.emit(False,{"error":str(e)})
 
 class SpeechBubble(QLabel):
@@ -60,15 +66,18 @@ class SpeechBubble(QLabel):
 
 class ChatDialog(QDialog):
  def __init__(self,pet):
-  super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setWindowTitle("角色對話"); self.setMinimumSize(360,300); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
-  root=QVBoxLayout(self); title=QLabel("角色聊天（對話框會顯示在角色頭頂）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close)
-  self.input.setFocus()
- def showEvent(self,e):
-  super().showEvent(e); self.move(self.pet.x()+max(0,(self.pet.width()-self.width())//2),self.pet.y()+max(20,self.pet.height()//3))
+  super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setWindowTitle("角色對話"); self.setMinimumSize(390,330); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit,QComboBox{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
+  root=QVBoxLayout(self); title=QLabel("角色聊天（可選擇模型）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.profile=QComboBox(); self.reload_profiles(); root.addWidget(self.profile); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); manage=QPushButton("管理 API 設定檔"); manage.clicked.connect(self.manage_profiles); root.addWidget(manage); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close); self.input.setFocus()
+ def reload_profiles(self):
+  self.profile.clear(); items=self.pet.config.get("api_profiles",default_profiles()); self.profile.addItems([f"{x.get('name','未命名')}｜{x.get('provider','')}｜{x.get('model') or '預設模型'}" for x in items]); self.profile.setCurrentIndex(max(0,min(self.pet.config.get("active_profile",0),len(items)-1)) if items else -1)
+ def showEvent(self,e): super().showEvent(e); self.move(self.pet.x()+max(0,(self.pet.width()-self.width())//2),self.pet.y()+max(20,self.pet.height()//3))
  def add_message(self,who,text): self.history.append(f"<b>{who}：</b>{text}")
+ def manage_profiles(self):
+  d=KeyDialog(self.pet)
+  if d.exec()==QDialog.Accepted:self.reload_profiles()
  def send(self):
   text=self.input.text().strip()
-  if text: self.input.clear(); self.pet.handle_chat(text,self)
+  if text: self.input.clear(); self.pet.handle_chat(text,self,self.profile.currentIndex())
 
 class Bowl(QLabel):
  fed=Signal()
@@ -117,9 +126,21 @@ class Walker(QWidget):
 
 class KeyDialog(QDialog):
  def __init__(self,pet):
-  super().__init__(pet); self.pet=pet; self.setWindowTitle("API Key 管理"); f=QFormLayout(self); self.provider=QComboBox(); self.provider.addItems(["DeepSeek","OpenAI","Anthropic"]); self.provider.setCurrentText(pet.config.get("provider","DeepSeek")); f.addRow("供應商",self.provider); self.key=QLineEdit(pet.config.get("api_keys",{}).get(self.provider.currentText(),"")); self.key.setEchoMode(QLineEdit.Password); f.addRow("API Key",self.key); self.provider.currentTextChanged.connect(lambda p:self.key.setText(pet.config.get("api_keys",{}).get(p,""))); self.chat=QCheckBox("啟用 AI 對話模式（未勾選時使用隨機文句）"); self.chat.setChecked(pet.config.get("ai_chat_enabled",False)); f.addRow(self.chat); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); f.addRow(b)
+  super().__init__(pet); self.pet=pet; self.setWindowTitle("API 設定檔管理"); self.resize(620,420); self.items=[dict(x) for x in pet.config.get("api_profiles",default_profiles())]; root=QVBoxLayout(self); row=QHBoxLayout(); self.list=QListWidget(); row.addWidget(self.list,1); form=QFormLayout(); self.name=QLineEdit(); self.provider=QComboBox(); self.provider.addItems(PROVIDERS); self.key=QLineEdit(); self.key.setEchoMode(QLineEdit.Password); self.endpoint=QLineEdit(); self.model=QLineEdit(); form.addRow("設定檔名稱",self.name); form.addRow("供應商",self.provider); form.addRow("API Key",self.key); form.addRow("端點 URL",self.endpoint); form.addRow("模型",self.model); row.addLayout(form,2); root.addLayout(row); buttons=QHBoxLayout(); add=QPushButton("新增設定檔"); add.clicked.connect(self.add); remove=QPushButton("刪除選取"); remove.clicked.connect(self.remove); buttons.addWidget(add); buttons.addWidget(remove); root.addLayout(buttons); note=QLabel("Ollama 預設端點為 http://localhost:11434/v1，可不填 Key；自訂端點需提供 OpenAI-compatible /chat/completions。多個設定檔會出現在聊天框的模型選擇器。"); note.setWordWrap(True); root.addWidget(note); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); root.addWidget(b); self.list.currentRowChanged.connect(self.load_item); self.refresh_list(); self.list.setCurrentRow(0)
+ def refresh_list(self): self.list.clear(); self.list.addItems([x.get("name",x.get("provider","未命名")) for x in self.items])
+ def load_item(self,row):
+  if 0<=row<len(self.items):
+   x=self.items[row]; self.name.setText(x.get("name","")); self.provider.setCurrentText(x.get("provider","DeepSeek")); self.key.setText(x.get("key","")); self.endpoint.setText(x.get("endpoint","")); self.model.setText(x.get("model",""))
+ def current(self): return {"name":self.name.text().strip() or "未命名","provider":self.provider.currentText(),"key":self.key.text().strip(),"endpoint":self.endpoint.text().strip(),"model":self.model.text().strip()}
+ def store_current(self):
+  row=self.list.currentRow()
+  if 0<=row<len(self.items): self.items[row]=self.current()
+ def add(self): self.store_current(); self.items.append({"name":"新設定檔","provider":"OpenAI","key":"","endpoint":"","model":"gpt-4o-mini"}); self.refresh_list(); self.list.setCurrentRow(len(self.items)-1)
+ def remove(self):
+  row=self.list.currentRow()
+  if 0<=row<len(self.items): self.items.pop(row); self.refresh_list(); self.list.setCurrentRow(max(0,row-1))
  def save(self):
-  p=self.provider.currentText(); keys=dict(self.pet.config.get("api_keys",{})); keys[p]=self.key.text().strip(); self.pet.config.update({"api_keys":keys,"provider":p,"ai_chat_enabled":self.chat.isChecked()}); self.pet.save(); self.accept()
+  self.store_current(); self.pet.config["api_profiles"]=self.items; self.pet.config["active_profile"]=max(0,min(int(self.pet.config.get("active_profile",0)),len(self.items)-1)) if self.items else 0; self.pet.save(); self.accept()
 
 class SimulationDialog(QDialog):
  def __init__(self,pet):
@@ -154,15 +175,18 @@ class Pet(QMainWindow):
  def __init__(self):
   super().__init__(); self.config=self.load(); self.current=Path(self.config.get("character",ASSETS/"sprite.png")); self.drag=None; self.bowl=None; self.walkers=[]; self.worker=None; self.panel=None; self.label=QLabel(self); self.label.setStyleSheet("background:transparent"); self.setCentralWidget(self.label); self.setWindowTitle(APP_NAME); self.setAttribute(Qt.WA_TranslucentBackground); self.apply(); self.tray=QSystemTrayIcon(self); self.tray.setIcon(QIcon(str(ASSETS/"cursor.ico"))); self.tray.setContextMenu(self.menu()); self.tray.show(); self.sim_timer=QTimer(self); self.sim_timer.timeout.connect(self.simulate); self.sim_timer.setInterval(int(self.config.get("simulation_interval",30)*1000)); self.sim_timer.start(); self.cleanup=QTimer(self); self.cleanup.timeout.connect(self.cleanup_bowl); self.cleanup.start(5000); self.render()
  def load(self):
-  try:c=json.loads(CONFIG.read_text(encoding="utf-8")); d=cfg_default(); d.update(c); return d
-  except Exception:return cfg_default()
+  try:c=json.loads(CONFIG.read_text(encoding="utf-8")); d=cfg_default(); d.update(c); d["api_profiles"]=migrate_profiles(d); return d
+  except Exception:
+   d=cfg_default(); d["api_profiles"]=migrate_profiles(d); return d
  def save(self): CONFIG.write_text(json.dumps(self.config,ensure_ascii=False,indent=2),encoding="utf-8")
  def update(self,values): self.config.update(values); self.save(); self.apply(); self.render()
  def apply(self):
   w=int(self.config.get("size",520)); self.resize(w,max(220,round(w*CANVAS[1]/CANVAS[0]))); self.setWindowOpacity(int(self.config.get("opacity",100))/100); flags=Qt.FramelessWindowHint|Qt.Tool|(Qt.WindowStaysOnTopHint if self.config.get("always_on_top",True) else Qt.WindowType(0)); self.setWindowFlags(flags); self.setAttribute(Qt.WA_TransparentForMouseEvents,bool(self.config.get("click_through",False))); self.show()
  def render(self):
+  role=next((k for k,v in BUILTINS.items() if v==self.current.name),"")
   p=self.current
-  n=self.config.get("expression","default"); role=next((k for k,v in BUILTINS.items() if v==p.name),""); folder=EXPR.get(role); ep=ASSETS/"legacy_chars"/folder/"sprites"/f"{n}.png" if folder and n!="default" else None; p=ep if ep and ep.exists() else p; pix=QPixmap(str(p)); self.label.setPixmap(pix.scaled(self.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
+  if p.name=="sprite.png" and self.config.get("deepseek_dark") and (ASSETS/"sprite-deepseek-dark.png").exists(): p=ASSETS/"sprite-deepseek-dark.png"
+  n=self.config.get("expression","default"); folder=EXPR.get(role); ep=ASSETS/"legacy_chars"/folder/"sprites"/f"{n}.png" if folder and n!="default" else None; p=ep if ep and ep.exists() else p; pix=QPixmap(str(p)); self.label.setPixmap(pix.scaled(self.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
  def resizeEvent(self,e): super().resizeEvent(e); self.render()
  def mousePressEvent(self,e):
   if e.button()==Qt.LeftButton:self.drag=e.globalPosition().toPoint()-self.frameGeometry().topLeft()
@@ -174,13 +198,17 @@ class Pet(QMainWindow):
   for w in self.walkers:
    if self.geometry().intersects(w.geometry()): w.move(w.x(),w.y()-20)
  def menu(self):
-  m=QMenu(self); a=m.addAction("開啟控制面板"); a.triggered.connect(self.open_panel); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
+  m=QMenu(self); a=m.addAction("開啟控制面板"); a.triggered.connect(self.open_panel); profiles=m.addAction("API 設定檔／多模型管理"); profiles.triggered.connect(lambda:KeyDialog(self).exec()); chatmode=m.addAction("AI 對話模式："+ ("開啟" if self.config.get("ai_chat_enabled") else "關閉")); chatmode.triggered.connect(lambda: self.update({"ai_chat_enabled":not self.config.get("ai_chat_enabled",False)})); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("隨機表情").triggered.connect(self.random_expression); dark=m.addAction("DeepSeek："+ ("切換正常版" if self.config.get("deepseek_dark") else "切換黑化版")); dark.setEnabled(self.current.name in ("sprite.png","sprite-deepseek-dark.png")); dark.triggered.connect(self.toggle_deepseek_dark); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
  def open_panel(self):
   if not self.panel:self.panel=Panel(self)
   self.panel.show(); self.panel.raise_(); self.panel.activateWindow()
  def set_mode(self,mode): self.update({"mode":mode}); self.tray.showMessage(APP_NAME,"已切換到"+mode)
  def select(self,name): self.current=ASSETS/name; self.update({"character":str(self.current)}); self.render()
  def set_expression(self,name): self.update({"expression":name})
+ def random_expression(self):
+  self.set_expression(random.choice(["default","expression_11","expression_12","expression_21","expression_22"]))
+ def toggle_deepseek_dark(self):
+  if self.current.name=="sprite.png" or self.current.name=="sprite-deepseek-dark.png": self.update({"deepseek_dark":not self.config.get("deepseek_dark",False)})
  def import_character(self):
   src,_=QFileDialog.getOpenFileName(self,"選擇角色圖片","","圖片 (*.png *.jpg *.jpeg *.webp)");
   if not src:return
@@ -217,8 +245,8 @@ class Pet(QMainWindow):
   if not debit:self.spawn_bowl()
   self.save()
  def refresh_api(self):
-  provider=self.config.get("provider","DeepSeek"); key=self.config.get("api_keys",{}).get(provider,"")
-  if not key: QMessageBox.warning(self,"缺少 API Key","請先開啟 API Key 管理輸入 Key。"); return
+  profiles=self.config.get("api_profiles",default_profiles()); idx=max(0,min(int(self.config.get("active_profile",0)),len(profiles)-1)) if profiles else -1; profile=profiles[idx] if idx>=0 else {}; provider=profile.get("provider",self.config.get("provider","DeepSeek")); key=profile.get("key",self.config.get("api_keys",{}).get(provider,""))
+  if provider not in ("DeepSeek","OpenAI") or not key: QMessageBox.warning(self,"無法查詢餘額","目前餘額查詢需要 DeepSeek 或 OpenAI Admin API Key 設定檔。"); return
   self.worker=Worker(provider,key,None,self); self.worker.done.connect(self.api_done); self.worker.start()
  def api_done(self,ok,data):
   if ok:self.config["api_balance"]=data.get("balance"); self.config["last_event"]=f"API 查詢成功：{data.get('balance')}（{data.get('source','')}）"; self.add_log(self.config["last_event"]); self.save(); QMessageBox.information(self,"API 查詢成功",self.config["last_event"])
@@ -229,13 +257,13 @@ class Pet(QMainWindow):
  def show_bubble(self,text,thought=False):
   if not hasattr(self,"bubble"): self.bubble=SpeechBubble(self)
   self.bubble.show_message(text,thought)
- def handle_chat(self,text,dialog):
-  dialog.add_message("你",text); self.show_bubble("思考中…",True)
-  provider=self.config.get("provider","DeepSeek"); key=self.config.get("api_keys",{}).get(provider,"")
-  if not self.config.get("ai_chat_enabled",False) or not key:
+ def handle_chat(self,text,dialog,index=0):
+  dialog.add_message("你",text); self.show_bubble("思考中…",True); profiles=self.config.get("api_profiles",default_profiles()); index=max(0,min(index,len(profiles)-1)) if profiles else -1
+  self.config["active_profile"]=index; self.save(); profile=profiles[index] if index>=0 else {}
+  if not self.config.get("ai_chat_enabled",False) or (profile.get("provider")!="Ollama" and not profile.get("key")):
    QTimer.singleShot(450,lambda:self.chat_result(dialog,True,{"message":random.choice(LINES)})); return
   prompt="你是桌面上的可愛角色。請用繁體中文、簡短自然地回應使用者，不要輸出思考過程。使用者說："+text
-  self.chat_worker=Worker(provider,key,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
+  self.chat_worker=Worker(profile,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
  def chat_result(self,dialog,ok,data):
   reply=data.get("message") if ok else random.choice(LINES); self.show_bubble(reply,False); dialog.add_message("角色",reply)
   if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))

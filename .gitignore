@@ -28,3 +28,5 @@ integration/*-test-report.json
 integration/__pycache__/
 node_modules/
 *-balance.json
+
+pet_config.json

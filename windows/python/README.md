@@ -32,6 +32,26 @@ build_windows.bat
 
 完成後執行 `dist\PythonPetV4\PythonPetV4.exe`。發佈時請複製整個 `dist\PythonPetV4` 資料夾。
 
+## 角色對話
+
+右鍵選單選擇「與角色對話」會開啟貼近角色的聊天框。送出訊息後：
+
+1. 角色頭頂顯示「思考中…」的視覺泡泡；這只是 UI 狀態，不代表 API 思考鏈，也不會顯示或儲存模型的 hidden reasoning。
+2. 回覆完成後，思考泡泡會換成角色對話泡泡；聊天記錄仍保留在聊天框內。
+3. 沒有 API Key，或 API Key 存在但「AI 對話模式」未啟用時，只使用內建隨機文句，不會發出網路請求。
+
+## AI API 呼叫方式
+
+API Key 只存於本機 `pet_config.json`，程式使用 Python 標準庫 `urllib.request`，在背景 QThread 中發送 HTTPS 請求，避免卡住 GUI：
+
+- **DeepSeek**：`POST https://api.deepseek.com/chat/completions`，Bearer API Key，模型 `deepseek-chat`。
+- **OpenAI**：`POST https://api.openai.com/v1/chat/completions`，Bearer API Key，模型 `gpt-4o-mini`。
+- **Anthropic**：`POST https://api.anthropic.com/v1/messages`，使用 `x-api-key` 與 `anthropic-version: 2023-06-01`，模型 `claude-3-5-haiku-latest`。
+
+送出的內容是角色提示詞加上使用者訊息，要求模型以繁體中文簡短回覆，並明確要求不要輸出思考過程。程式只取回覆文字顯示在泡泡中，不會把 API Key 寫入事件紀錄。
+
+餘額查詢與聊天是兩條獨立流程：DeepSeek 餘額使用官方 `GET https://api.deepseek.com/user/balance`；聊天使用上述 chat endpoint。OpenAI 組織成本查詢需要 Admin API Key；Anthropic 成本查詢需要組織管理權限，因此目前聊天可用，但餘額頁會提示權限限制。
+
 ## 資產目錄
 
 - `assets/sprite*.png`：完整 1536×1024 角色圖。

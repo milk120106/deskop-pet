@@ -52,6 +52,24 @@ class Worker(QThread):
   try:self.done.emit(True,api_request(self.provider,self.key,self.chat))
   except Exception as e:self.done.emit(False,{"error":str(e)})
 
+class SpeechBubble(QLabel):
+ def __init__(self,pet):
+  super().__init__(pet); self.pet=pet; self.setWordWrap(True); self.setAlignment(Qt.AlignCenter); self.setAttribute(Qt.WA_TransparentForMouseEvents); self.hide()
+ def show_message(self,text,thought=False):
+  self.setText(text); self.setStyleSheet("QLabel{color:#222;background:%s;border:2px solid #555;border-radius:16px;padding:8px 12px;font-size:15px;}" % ("#e8e8e8" if thought else "#fffdf2")); self.setMaximumWidth(max(180,min(360,self.pet.width()-20))); self.adjustSize(); self.resize(min(360,max(180,self.sizeHint().width())),max(44,self.sizeHint().height())); self.move(max(5,(self.pet.width()-self.width())//2),8); self.raise_(); self.show(); QTimer.singleShot(6500,self.hide)
+
+class ChatDialog(QDialog):
+ def __init__(self,pet):
+  super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setWindowTitle("角色對話"); self.setMinimumSize(360,300); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
+  root=QVBoxLayout(self); title=QLabel("角色聊天（對話框會顯示在角色頭頂）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close)
+  self.input.setFocus()
+ def showEvent(self,e):
+  super().showEvent(e); self.move(self.pet.x()+max(0,(self.pet.width()-self.width())//2),self.pet.y()+max(20,self.pet.height()//3))
+ def add_message(self,who,text): self.history.append(f"<b>{who}：</b>{text}")
+ def send(self):
+  text=self.input.text().strip()
+  if text: self.input.clear(); self.pet.handle_chat(text,self)
+
 class Bowl(QLabel):
  fed=Signal()
  def __init__(self,parent):
@@ -206,10 +224,21 @@ class Pet(QMainWindow):
   if ok:self.config["api_balance"]=data.get("balance"); self.config["last_event"]=f"API 查詢成功：{data.get('balance')}（{data.get('source','')}）"; self.add_log(self.config["last_event"]); self.save(); QMessageBox.information(self,"API 查詢成功",self.config["last_event"])
   else: QMessageBox.warning(self,"API 查詢失敗",data.get("error","未知錯誤"))
  def chat(self):
-  if not self.config.get("ai_chat_enabled",False): QMessageBox.information(self,"角色對話",random.choice(LINES)); return
-  p=self.config.get("provider","DeepSeek"); key=self.config.get("api_keys",{}).get(p,"")
-  if not key: QMessageBox.information(self,"角色對話",random.choice(LINES)); return
-  self.worker=Worker(p,key,"請用一句繁體中文可愛地回應桌面主人。",self); self.worker.done.connect(lambda ok,d:QMessageBox.information(self,"角色對話",d.get("message",random.choice(LINES)) if ok else random.choice(LINES))); self.worker.start()
+  if getattr(self,"chat_dialog",None) and self.chat_dialog.isVisible(): self.chat_dialog.raise_(); self.chat_dialog.activateWindow(); return
+  self.chat_dialog=ChatDialog(self); self.chat_dialog.finished.connect(lambda _: setattr(self,"chat_dialog",None)); self.chat_dialog.show(); self.chat_dialog.raise_(); self.chat_dialog.activateWindow()
+ def show_bubble(self,text,thought=False):
+  if not hasattr(self,"bubble"): self.bubble=SpeechBubble(self)
+  self.bubble.show_message(text,thought)
+ def handle_chat(self,text,dialog):
+  dialog.add_message("你",text); self.show_bubble("思考中…",True)
+  provider=self.config.get("provider","DeepSeek"); key=self.config.get("api_keys",{}).get(provider,"")
+  if not self.config.get("ai_chat_enabled",False) or not key:
+   QTimer.singleShot(450,lambda:self.chat_result(dialog,True,{"message":random.choice(LINES)})); return
+  prompt="你是桌面上的可愛角色。請用繁體中文、簡短自然地回應使用者，不要輸出思考過程。使用者說："+text
+  self.chat_worker=Worker(provider,key,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
+ def chat_result(self,dialog,ok,data):
+  reply=data.get("message") if ok else random.choice(LINES); self.show_bubble(reply,False); dialog.add_message("角色",reply)
+  if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))
 
 def main():
  os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING","1"); os.environ.setdefault("QT_SCALE_FACTOR_ROUNDING_POLICY","PassThrough"); app=QApplication(sys.argv); app.setApplicationName(APP_NAME); pet=Pet(); pet.snap(); return app.exec()

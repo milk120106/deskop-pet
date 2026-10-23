@@ -26,7 +26,7 @@ def configure_tls():
 def fit_canvas(src:Path,dst:Path):
  with Image.open(src).convert("RGBA") as im:
   im.thumbnail(CANVAS,Image.Resampling.LANCZOS); out=Image.new("RGBA",CANVAS,(0,0,0,0)); out.alpha_composite(im,((CANVAS[0]-im.width)//2,(CANVAS[1]-im.height)//2)); dst.parent.mkdir(parents=True,exist_ok=True); out.save(dst,"PNG")
-def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
+def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"short_memory_limit":20,"short_memory":[],"long_memory":[],"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
 
 PROVIDERS=["DeepSeek","OpenAI","Google Gemini","Anthropic","Mistral","xAI / Grok","z.ai","GLM","Ollama","Ollama Cloud","OpenRouter","Cloudflare AI","Groq","Hugging Face","Kiwi","OpenCode","OpenAI 相容自訂端點"]
 
@@ -78,10 +78,16 @@ class SpeechBubble(QLabel):
  def restore_dark(self):
   if self.isVisible() and self.pet.is_deepseek_dark(): self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if getattr(self,"_thought",False) else "#35111b"))
 
+class MemoryDialog(QDialog):
+ def __init__(self,pet):
+  super().__init__(pet); self.pet=pet; self.setWindowTitle("角色記憶管理"); self.resize(560,420); root=QVBoxLayout(self); root.addWidget(QLabel("長期記憶（每行一條，會持續提供給 AI）")); self.long=QTextEdit(); self.long.setPlainText("\n".join(pet.config.get("long_memory",[]))); self.long.setPlaceholderText("例如：\n主人喜歡喝熱茶。\n角色名字是小藍。\n不要忘記上次約定的事情。"); root.addWidget(self.long); form=QFormLayout(); self.limit=QSpinBox(); self.limit.setRange(1,100); self.limit.setValue(int(pet.config.get("short_memory_limit",20))); form.addRow("短期記憶對話次數",self.limit); root.addLayout(form); clear=QPushButton("清除短期記憶"); clear.clicked.connect(lambda:self.pet.config.update({"short_memory":[]})); root.addWidget(clear); note=QLabel("短期記憶預設保留最近 20 次完整對話（最多 40 則 user/assistant 訊息）；長期記憶不會自動淘汰。"); note.setWordWrap(True); root.addWidget(note); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); root.addWidget(b)
+ def save(self):
+  self.pet.config["long_memory"]=[x.strip() for x in self.long.toPlainText().splitlines() if x.strip()]; self.pet.config["short_memory_limit"]=self.limit.value(); self.pet.save(); self.accept()
+
 class ChatDialog(QDialog):
  def __init__(self,pet):
   super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setWindowTitle("角色對話"); self.setMinimumSize(390,330); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit,QComboBox{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
-  root=QVBoxLayout(self); title=QLabel("角色聊天（可選擇模型）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.profile=QComboBox(); self.reload_profiles(); root.addWidget(self.profile); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); manage=QPushButton("管理 API 設定檔"); manage.clicked.connect(self.manage_profiles); root.addWidget(manage); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close); self.input.setFocus()
+  root=QVBoxLayout(self); title=QLabel("角色聊天（可選擇模型）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.profile=QComboBox(); self.reload_profiles(); root.addWidget(self.profile); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); manage=QPushButton("管理 API 設定檔"); manage.clicked.connect(self.manage_profiles); root.addWidget(manage); memory=QPushButton("記憶管理（短期／長期）"); memory.clicked.connect(self.manage_memory); root.addWidget(memory); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close); self.input.setFocus()
  def reload_profiles(self):
   self.profile.clear(); items=self.pet.config.get("api_profiles",default_profiles()); self.profile.addItems([f"{x.get('name','未命名')}｜{x.get('provider','')}｜{x.get('model') or '預設模型'}" for x in items]); self.profile.setCurrentIndex(max(0,min(self.pet.config.get("active_profile",0),len(items)-1)) if items else -1)
  def showEvent(self,e): super().showEvent(e); self.move(self.pet.x()+max(0,(self.pet.width()-self.width())//2),self.pet.y()+max(20,self.pet.height()//3))
@@ -89,6 +95,9 @@ class ChatDialog(QDialog):
  def manage_profiles(self):
   d=KeyDialog(self.pet)
   if d.exec()==QDialog.Accepted:self.reload_profiles()
+ def manage_memory(self):
+  d=MemoryDialog(self.pet)
+  if d.exec()==QDialog.Accepted: self.add_message("系統","記憶設定已更新。")
  def send(self):
   text=self.input.text().strip()
   if text: self.input.clear(); self.pet.handle_chat(text,self,self.profile.currentIndex())
@@ -273,15 +282,22 @@ class Pet(QMainWindow):
  def show_bubble(self,text,thought=False):
   if not hasattr(self,"bubble"): self.bubble=SpeechBubble(self)
   self.bubble.show_message(text,thought)
+ def remember(self,role,content):
+  items=self.config.setdefault("short_memory",[]); items.append({"role":role,"content":content,"time":datetime.now().isoformat(timespec="seconds")}); limit=max(1,int(self.config.get("short_memory_limit",20))); self.config["short_memory"]=items[-limit*2:]; self.save()
+ def memory_prompt(self):
+  long=self.config.get("long_memory",[]); short=self.config.get("short_memory",[]); parts=["你是桌面上的可愛角色。請用繁體中文、簡短自然地回應使用者，不要輸出思考過程。"]
+  if long: parts.append("長期記憶（請在相關時使用，不要逐條念出）：\n"+"\n".join("- "+x for x in long))
+  if short: parts.append("最近對話記憶（由新到舊以前的對話）：\n"+"\n".join(("使用者：" if x.get("role")=="user" else "角色：")+x.get("content","") for x in short))
+  return "\n\n".join(parts)
  def handle_chat(self,text,dialog,index=0):
-  dialog.add_message("你",text); self.show_bubble("思考中…",True); profiles=self.config.get("api_profiles",default_profiles()); index=max(0,min(index,len(profiles)-1)) if profiles else -1
+  dialog.add_message("你",text); self.remember("user",text); self.show_bubble("思考中…",True); profiles=self.config.get("api_profiles",default_profiles()); index=max(0,min(index,len(profiles)-1)) if profiles else -1
   self.config["active_profile"]=index; self.save(); profile=profiles[index] if index>=0 else {}
   if not self.config.get("ai_chat_enabled",False) or (profile.get("provider")!="Ollama" and not profile.get("key")):
    QTimer.singleShot(450,lambda:self.chat_result(dialog,True,{"message":random.choice(LINES)})); return
-  prompt="你是桌面上的可愛角色。請用繁體中文、簡短自然地回應使用者，不要輸出思考過程。使用者說："+text
+  prompt=self.memory_prompt()+"\n\n請回應最近一則使用者訊息。"
   self.chat_worker=Worker(profile,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
  def chat_result(self,dialog,ok,data):
-  reply=data.get("message") if ok else random.choice(LINES); self.show_bubble(reply,False); dialog.add_message("角色",reply); self.play("hit.mp3") if self.is_deepseek_dark() else None
+  reply=data.get("message") if ok else random.choice(LINES); self.remember("assistant",reply); self.show_bubble(reply,False); dialog.add_message("角色",reply); self.play("hit.mp3") if self.is_deepseek_dark() else None
   if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))
 
 def main():

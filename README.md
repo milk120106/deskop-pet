@@ -1,72 +1,75 @@
-# VK-1 桌面寵物
+# Desktop Pet（deskop-pet）
 
-VK-1 是跨平台桌面寵物專案，包含 macOS 原生版本、Windows 舊版 PowerShell 實作、Windows 新版 Python + PySide6 實作，以及獨立網頁整合版本。
+桌面寵物程式，使用 Python + PySide6 製作。本倉庫是 **VK-1** 的 fork，分支名稱為 `deskop-pet`。
 
-## 版本與目錄
+## 功能
 
-| 版本 | 目錄 | 技術棧 | 狀態 |
-| --- | --- | --- | --- |
-| Windows Python v4 | [`windows/python/`](windows/python) | Python + PySide6 + Pillow | 目前主要開發版本 |
-| Windows PowerShell | [`windows/powershell/`](windows/powershell) | PowerShell 5.1 + 內嵌 C# / WinForms | 舊版完整保留 |
-| macOS | [`dsh-balance-pet-macos/`](dsh-balance-pet-macos) | Swift + AppKit | macOS 原生版本 |
-| 網頁整合 | [`integration/`](integration) | JavaScript / 可選 Python 服務 | 網頁嵌入版本 |
+- **桌面角色**：透明無邊框、置頂、可拖曳、可調透明度與大小、自動貼邊、滑鼠穿透。
+- **內建角色**：藍色大肥魚（DeepSeek，含黑化版與專屬表情）、GPT 龍娘、大小姐 Claude、北美貓娘 Gemini；可匯入自訂圖片角色。
+- **額外行走角色**：最多 4 個 DeepSeek 三方向（正面／側面／背面）角色在桌面巡邏。
+- **模擬模式**：隨機扣款／充值事件，充值時掉落飯盆，拖到角色身上即餵食。
+- **API 模式**：DeepSeek 餘額查詢（`/user/balance`）。
+- **AI 對話**：透過 LiteLLM 支援 DeepSeek、OpenAI、Google Gemini、Anthropic、Mistral、xAI、Groq、OpenRouter、Ollama、z.ai／GLM 與任意 OpenAI 相容端點；多組 API 設定檔、遠端模型列表查詢。
+- **記憶**：短期記憶（預設最近 20 次對話）與長期記憶（手動編輯，不自動淘汰）。
+- **語音**：Vosk 本機中文辨識、AI 語音辨識、pyttsx3／AI TTS、Gemini Live 純語音模式。
+- **介面**：淺色／深色主題、系統匣選單、控制中心。
 
-## Windows Python v4
+## 系統需求
 
-Python 版是目前建議的新 Windows 實作，使用透明 PySide6 桌面視窗，不依賴 PowerShell 的 `Add-Type` 或內嵌 C# 編譯流程。
+- Windows 10/11
+- Python 3.11 以上 3.14 以下 (核心依賴 PySide6 目前不支持 3.14)
+- 麥克風（僅語音功能需要）
 
-功能包括：
-
-- 1536×1024 RGBA 角色圖，等比例顯示，不裁切尾巴、頭髮或透明邊界。
-- PySide6 控制面板：角色、外觀、位置、火控／飯盆、模擬模式與 API Key 管理。
-- 右鍵快捷操作：控制面板、角色切換、模式切換、掉飯盆、清除飯盆、滑鼠穿透、回到左下角與退出。
-- 模擬模式與 API 模式分開切換；模擬模式可設定餘額、扣款／充值範圍與事件間隔。
-- 最多 5 個角色同時在場，額外角色以獨立透明視窗行走。
-- 自動貼邊預設開啟，可以從右鍵選單或控制面板關閉。
-- 正常與黑化 DeepSeek 三方向角色：前方、側面、後方；行走時使用側面，到達邊緣時切換視角。
-- Pillow 自訂角色匯入，將圖片等比例置中到 1536×1024 透明畫布。
-- PyInstaller Windows 打包，使用者不需要另外安裝 Python。
-
-### 開發模式
-
-Windows 上安裝 Python 3.10 或更新版本後，在 `windows/python/` 執行：
+## 快速開始
 
 ```bat
-py -m pip install -r requirements.txt
-start_pet_debug.bat
+cd windows\python
+setup_venv.bat      :: 建立 .venv 並安裝依賴
+start_pet.bat       :: 啟動（除錯用 start_pet_debug.bat）
 ```
 
-一般啟動可使用 `start_pet.bat`。除錯時使用 `start_pet_debug.bat` 查看主控台錯誤。
-
-### 打包免安裝版本
+使用 `traditional` 語音輸入前，先下載本機中文模型：
 
 ```bat
-build_windows.bat
+download_voice_model.bat
 ```
 
-完成後執行檔位於 `dist\PythonPetV4\PythonPetV4.exe`。請將整個 `dist\PythonPetV4` 資料夾一起複製到其他 Windows 電腦。
+## 使用方式
 
-### Python 資產
+- **右鍵角色**或使用系統匣圖示開啟選單。
+- **控制中心**：角色與表情、外觀、模擬與事件紀錄、API 與對話。
+- **API 設定檔**：填入供應商、Key、端點與模型 ID；可按「刷新模型列表」取得清單，也可手動輸入。
+- **AI 對話**：需在選單開啟「AI 對話模式」，且設定檔有 Key（Ollama 除外）；否則改用隨機文句。
+- **純語音（Gemini Live）**：使用 Google Gemini 設定檔的 Key；模型與聲音可在「語音與 TTS 設定」修改。
 
-- `windows/python/assets/sprite*.png`：1536×1024 內建角色圖。
-- `windows/python/assets/deepseek_*_directions.webp`：正常／黑化 DeepSeek 原始三方向圖。
-- `windows/python/assets/deepseek_{front,side,back}.png`：正常版透明三方向圖。
-- `windows/python/assets/deepseek_dark_{front,side,back}.png`：黑化版透明三方向圖。
-- `windows/python/assets/legacy_chars/`：從舊 Windows 資產提取的 Claude、Gemini、GPT 角色與表情圖片。
-- `windows/python/custom_characters/`：使用者匯入的自訂角色，預設為空資料夾。
+## 打包
 
-## Windows PowerShell 舊版
+```bat
+build_windows.bat        :: 輸出 dist\PythonPetV4\PythonPetV4.exe
+package_portable.bat     :: 另外壓縮成 release\PythonPetV4-portable.zip
+```
 
-舊版沒有刪除，只是完整遷移到 [`windows/powershell/`](windows/powershell)。其中保留原有的 PowerShell、VBScript、音效、角色圖、說明文件與 sprites。若仍需要舊版行為，可直接進入該目錄使用原本的啟動腳本。
+## 專案結構
 
-Python 版與 PowerShell 版互相獨立，設定檔與執行檔不共用。新功能優先在 Python 版維護，PowerShell 版作為相容與歷史保留版本。
+```
+windows/python/
+├─ main.py                  主程式（視窗、對話、語音、設定）
+├─ model_catalog.py         各供應商模型列表查詢
+├─ requirements.txt         依賴
+├─ assets/                  角色圖片、圖示、音效
+├─ docs/GEMINI_LIVE.md      Gemini Live 實作說明
+└─ *.bat                    安裝、啟動、打包腳本
+```
 
-## macOS 與網頁版本
+執行後會在程式目錄產生：`pet_config.json`（設定）、`voice_cache/`（錄音與語音輸出）、`custom_characters/`（匯入角色）。
 
-macOS 原生版本位於 [`dsh-balance-pet-macos/`](dsh-balance-pet-macos)，使用 Swift + AppKit，包含角色切換、飯盆、鐵盆、火控雷達與摸頭互動。完整建置說明請查看 [`dsh-balance-pet-macos/README.md`](dsh-balance-pet-macos/README.md)。
+## 注意事項
 
-網頁嵌入版本位於 [`integration/`](integration)，適合放入網站或本機監控面板；它不會像桌面版本一樣跨應用程式浮在系統桌面上。建置與部署方式請查看 [`integration/README.md`](integration/README.md)。
+- `pet_config.json` 以**明文**儲存 API Key 與對話記憶，請勿提交或分享（已列入 `.gitignore`）。
+- Gemini Live 預設模型名稱與各供應商預設模型可能隨時間下架，若報錯請在設定中改成目前可用的模型 ID。
+- 餘額查詢目前僅支援 DeepSeek。
+- Claude／Gemini／GPT 角色沒有行走用圖片，不支援額外行走角色。
 
-## 資產來源與授權注意
+## 授權與來源
 
-macOS Resources 與部分角色資產保留原專案的來源說明，請參閱 [`dsh-balance-pet-macos/Resources/README.md`](dsh-balance-pet-macos/Resources/README.md)。外部圖片與角色素材的授權狀態可能不同；若要重新發布或商用，請先確認各素材原作者的授權條款。
+本專案 fork 自 VK-1，授權條款請參照原專案與本倉庫的 LICENSE 檔案。

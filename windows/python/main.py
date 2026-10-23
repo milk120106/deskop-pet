@@ -4,8 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from PIL import Image
-from PySide6.QtCore import QPoint, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QPoint, QThread, QTimer, Qt, Signal, QUrl
 from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (QApplication,QCheckBox,QComboBox,QDialog,QDialogButtonBox,
  QFileDialog,QDoubleSpinBox,QFormLayout,QHBoxLayout,QLabel,QLineEdit,QListWidget,
  QMainWindow,QMenu,QMessageBox,QPushButton,QSpinBox,QSystemTrayIcon,QTabWidget,
@@ -15,6 +16,7 @@ APP_NAME="Python Desktop Pet v4"; ROOT=Path(__file__).resolve().parent; ASSETS=R
 BUILTINS={"藍色大肥魚（DeepSeek）":"sprite.png","GPT 龍娘":"sprite-gpt.png","大小姐 Claude":"sprite-claude.png","北美貓娘 Gemini":"sprite-gemini.png"}
 EXPR={"GPT 龍娘":"gpt","大小姐 Claude":"claude","北美貓娘 Gemini":"gemini"}
 DARK_EXPRESSIONS={"default":"sprite-deepseek-dark.png","dark_anger":"sprite-deepseek-dark-anger.png","dark_smirk":"sprite-deepseek-dark-smirk.png","dark_glow":"sprite-deepseek-dark-glow.png","dark_void":"sprite-deepseek-dark-void.png"}
+MODERN_QSS="""QDialog,QWidget{background:#111827;color:#e5e7eb;} QLabel{color:#dbeafe;} QLineEdit,QTextEdit,QComboBox,QSpinBox,QDoubleSpinBox{background:#1f2937;color:#f9fafb;border:1px solid #374151;border-radius:9px;padding:7px;} QPushButton{background:#2563eb;color:white;border:0;border-radius:9px;padding:8px 14px;} QPushButton:hover{background:#3b82f6;} QPushButton:checked{background:#dc2626;} QTabBar::tab{background:#1f2937;color:#cbd5e1;padding:9px 16px;border-radius:7px;margin:2px;} QTabBar::tab:selected{background:#2563eb;color:white;} QListWidget{background:#0f172a;border:1px solid #374151;border-radius:9px;color:#e5e7eb;}"""
 LINES=["今天也要記得休息一下。","我有看到你在努力喔。","要不要餵我一點飯？","目前沒有啟用 AI 對話，我先用隨機文句陪你。","桌面巡邏完成，暫時安全。","今天的狀態：可愛但有點餓。","別忘了喝水。","我會在這裡陪著你。"]
 
 def configure_tls():
@@ -26,7 +28,7 @@ def configure_tls():
 def fit_canvas(src:Path,dst:Path):
  with Image.open(src).convert("RGBA") as im:
   im.thumbnail(CANVAS,Image.Resampling.LANCZOS); out=Image.new("RGBA",CANVAS,(0,0,0,0)); out.alpha_composite(im,((CANVAS[0]-im.width)//2,(CANVAS[1]-im.height)//2)); dst.parent.mkdir(parents=True,exist_ok=True); out.save(dst,"PNG")
-def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"short_memory_limit":20,"short_memory":[],"long_memory":[],"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
+def cfg_default(): return {"opacity":100,"size":520,"always_on_top":True,"click_through":False,"auto_snap":True,"auto_feed":True,"interval":30,"mode":"simulation","simulation_enabled":True,"simulation_interval":30,"sim_balance":50.0,"debit_min":.01,"debit_max":.10,"credit_min":1.0,"credit_max":5.0,"api_keys":{},"api_profiles":default_profiles(),"active_profile":0,"provider":"DeepSeek","ai_chat_enabled":False,"deepseek_dark":False,"short_memory_limit":20,"short_memory":[],"long_memory":[],"voice_input_mode":"traditional","voice_auto_send":True,"stt_model":"whisper-1","tts_mode":"off","tts_model":"openai/tts-1","tts_voice":"alloy","dynamic_effects":True,"pet_profiles":{},"character":str(ASSETS/"sprite.png"),"expression":"default","event_log":[]}
 
 PROVIDERS=["DeepSeek","OpenAI","Google Gemini","Anthropic","Mistral","xAI / Grok","z.ai","GLM","Ollama","Ollama Cloud","OpenRouter","Cloudflare AI","Groq","Hugging Face","Kiwi","OpenCode","OpenAI 相容自訂端點"]
 
@@ -52,6 +54,63 @@ def chat_request(profile,prompt):
  response=completion(**kwargs)
  return {"message":response.choices[0].message.content,"raw":response}
 
+VOICE_DIR=ROOT/"voice_cache"; VOSK_MODEL=ROOT/"models"/"vosk-model-small-cn-0.22"
+
+class VoiceRecorder(QThread):
+ finished=Signal(str); partial=Signal(str); level=Signal(int); failed=Signal(str)
+ def __init__(self,traditional=False,parent=None): super().__init__(parent); self.traditional=traditional; self.stop_event=__import__('threading').Event(); self.frames=[]
+ def run(self):
+  try:
+   import sounddevice as sd, soundfile as sf, numpy as np
+   recognizer=None; _json=None
+   if self.traditional and VOSK_MODEL.exists():
+    import json as _json, vosk; recognizer=vosk.KaldiRecognizer(vosk.Model(str(VOSK_MODEL)),16000)
+   VOICE_DIR.mkdir(exist_ok=True); path=VOICE_DIR/("recording_"+datetime.now().strftime("%Y%m%d_%H%M%S")+".wav")
+   def callback(indata,frames,time,status):
+    if status: pass
+    self.frames.append(indata.copy()); self.level.emit(min(100,int(float(np.abs(indata).mean())*900)))
+    if recognizer:
+     recognizer.AcceptWaveform((indata[:,0]*32767).astype(np.int16).tobytes()); partial=_json.loads(recognizer.PartialResult()).get("partial","")
+     if partial: self.partial.emit(partial)
+   with sd.InputStream(samplerate=16000,channels=1,dtype="float32",callback=callback):
+    while not self.stop_event.wait(.05): pass
+   sf.write(str(path),np.concatenate(self.frames,axis=0) if self.frames else np.zeros((1,1),dtype="float32"),16000,subtype="PCM_16"); self.finished.emit(str(path))
+  except Exception as e:self.failed.emit(str(e))
+ def stop(self): self.stop_event.set()
+
+class VoiceTranscriber(QThread):
+ finished=Signal(bool,str)
+ def __init__(self,path,mode,profile,parent=None): super().__init__(parent); self.path=path; self.mode=mode; self.profile=profile
+ def run(self):
+  try:
+   if self.mode=="traditional":
+    if not VOSK_MODEL.exists(): raise RuntimeError("找不到本機 Vosk 中文模型，請先執行 download_voice_model.bat")
+    import json as _json, wave, vosk
+    model=vosk.Model(str(VOSK_MODEL)); wf=wave.open(self.path,"rb"); rec=vosk.KaldiRecognizer(model,wf.getframerate())
+    while True:
+     data=wf.readframes(4000)
+     if not data: break
+     rec.AcceptWaveform(data)
+    text=_json.loads(rec.FinalResult()).get("text","")
+   else:
+    from litellm import transcription
+    with open(self.path,"rb") as f: result=transcription(model=self.profile.get("stt_model") or "whisper-1",file=f,api_key=self.profile.get("key") or None,api_base=self.profile.get("endpoint") or None)
+    text=getattr(result,"text","") or (result.get("text","") if isinstance(result,dict) else "")
+   self.finished.emit(True,text.strip())
+  except Exception as e:self.finished.emit(False,str(e))
+
+class TTSWorker(QThread):
+ finished=Signal(bool,str)
+ def __init__(self,text,mode,profile,parent=None): super().__init__(parent); self.text=text; self.mode=mode; self.profile=profile
+ def run(self):
+  try:
+   if self.mode=="traditional":
+    import pyttsx3; engine=pyttsx3.init(); engine.say(self.text); engine.runAndWait(); self.finished.emit(True,"")
+   else:
+    from litellm import speech
+    VOICE_DIR.mkdir(exist_ok=True); path=VOICE_DIR/("tts_"+datetime.now().strftime("%Y%m%d_%H%M%S")+".mp3"); result=speech(model=self.profile.get("tts_model") or "openai/tts-1",voice=self.profile.get("voice") or "alloy",input=self.text,api_key=self.profile.get("key") or None,api_base=self.profile.get("endpoint") or None); result.stream_to_file(path); self.finished.emit(True,str(path))
+  except Exception as e:self.finished.emit(False,str(e))
+
 class Worker(QThread):
  done=Signal(bool,dict)
  def __init__(self,provider_or_profile,key_or_chat=None,chat=None,parent=None):
@@ -70,7 +129,7 @@ class SpeechBubble(QLabel):
  def show_message(self,text,thought=False):
   dark=self.pet.is_deepseek_dark(); self._thought=thought; self.setText(text);
   if dark:
-   self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if thought else "#35111b")); QTimer.singleShot(180,self.dark_flash)
+   self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if thought else "#35111b")); (QTimer.singleShot(180,self.dark_flash) if self.pet.config.get("dynamic_effects",True) else None)
   else:self.setStyleSheet("QLabel{color:#222;background:%s;border:2px solid #555;border-radius:16px;padding:8px 12px;font-size:15px;}" % ("#e8e8e8" if thought else "#fffdf2"))
   self.setMaximumWidth(max(180,min(360,self.pet.width()-20))); self.adjustSize(); self.resize(min(360,max(180,self.sizeHint().width())),max(44,self.sizeHint().height())); self.move(max(5,(self.pet.width()-self.width())//2),8); self.raise_(); self.show(); QTimer.singleShot(6500,self.hide)
  def dark_flash(self):
@@ -78,16 +137,28 @@ class SpeechBubble(QLabel):
  def restore_dark(self):
   if self.isVisible() and self.pet.is_deepseek_dark(): self.setStyleSheet("QLabel{color:#ffe8ed;background:%s;border:2px solid #b51f3a;border-radius:16px;padding:8px 12px;font-size:15px;font-weight:bold;}" % ("#211017" if getattr(self,"_thought",False) else "#35111b"))
 
+class VoiceSettingsDialog(QDialog):
+ def __init__(self,pet):
+  super().__init__(pet); self.pet=pet; self.setStyleSheet(MODERN_QSS); self.setWindowTitle("語音與 TTS 設定"); self.resize(560,360); f=QFormLayout(self); self.input_mode=QComboBox(); self.input_mode.addItems(["traditional","ai"]); self.input_mode.setCurrentText(pet.config.get("voice_input_mode","traditional")); f.addRow("語音輸入模式",self.input_mode); self.auto_send=QCheckBox("辨識完成後自動送出"); self.auto_send.setChecked(pet.config.get("voice_auto_send",True)); f.addRow(self.auto_send); self.stt=QLineEdit(pet.config.get("stt_model","whisper-1")); f.addRow("AI 語音模型",self.stt); self.tts=QComboBox(); self.tts.addItems(["off","traditional","ai"]); self.tts.setCurrentText(pet.config.get("tts_mode","off")); f.addRow("文字轉聲音模式",self.tts); self.tts_model=QLineEdit(pet.config.get("tts_model","openai/tts-1")); f.addRow("AI TTS 模型",self.tts_model); self.voice=QLineEdit(pet.config.get("tts_voice","alloy")); f.addRow("AI 聲音",self.voice); self.anim=QCheckBox("啟用語音錄音／回覆動態效果"); self.anim.setChecked(pet.config.get("dynamic_effects",True)); f.addRow(self.anim); note=QLabel("traditional 需要 models\\vosk-model-small-cn-0.22；ai 會使用目前選定 API 設定檔的 Key 與端點。AI TTS 也需要支援 speech 的模型。"); note.setWordWrap(True); f.addRow(note); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); f.addRow(b)
+ def save(self):
+  self.pet.config.update({"voice_input_mode":self.input_mode.currentText(),"voice_auto_send":self.auto_send.isChecked(),"stt_model":self.stt.text().strip(),"tts_mode":self.tts.currentText(),"tts_model":self.tts_model.text().strip(),"tts_voice":self.voice.text().strip(),"dynamic_effects":self.anim.isChecked()}); self.pet.save(); self.accept()
+
+class PetSettingsDialog(QDialog):
+ def __init__(self,pet):
+  super().__init__(pet); self.pet=pet; self.setStyleSheet(MODERN_QSS); self.setWindowTitle("目前寵物設定"); self.resize(420,250); f=QFormLayout(self); self.opacity=QSpinBox(); self.opacity.setRange(20,100); self.opacity.setValue(int(pet.config.get("opacity",100))); f.addRow("透明度 %",self.opacity); self.size=QSpinBox(); self.size.setRange(180,1000); self.size.setValue(int(pet.config.get("size",520))); f.addRow("大小寬度 px（比例固定）",self.size); self.snap=QCheckBox("自動貼邊"); self.snap.setChecked(pet.config.get("auto_snap",True)); f.addRow(self.snap); self.dynamic=QCheckBox("啟用動畫／動態效果"); self.dynamic.setChecked(pet.config.get("dynamic_effects",True)); f.addRow(self.dynamic); key=QLabel("設定檔："+pet.current.name); f.addRow(key); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); f.addRow(b)
+ def save(self):
+  values={"opacity":self.opacity.value(),"size":self.size.value(),"auto_snap":self.snap.isChecked(),"dynamic_effects":self.dynamic.isChecked()}; self.pet.save_pet_profile(values); self.pet.update(values); self.accept()
+
 class MemoryDialog(QDialog):
  def __init__(self,pet):
-  super().__init__(pet); self.pet=pet; self.setWindowTitle("角色記憶管理"); self.resize(560,420); root=QVBoxLayout(self); root.addWidget(QLabel("長期記憶（每行一條，會持續提供給 AI）")); self.long=QTextEdit(); self.long.setPlainText("\n".join(pet.config.get("long_memory",[]))); self.long.setPlaceholderText("例如：\n主人喜歡喝熱茶。\n角色名字是小藍。\n不要忘記上次約定的事情。"); root.addWidget(self.long); form=QFormLayout(); self.limit=QSpinBox(); self.limit.setRange(1,100); self.limit.setValue(int(pet.config.get("short_memory_limit",20))); form.addRow("短期記憶對話次數",self.limit); root.addLayout(form); clear=QPushButton("清除短期記憶"); clear.clicked.connect(lambda:self.pet.config.update({"short_memory":[]})); root.addWidget(clear); note=QLabel("短期記憶預設保留最近 20 次完整對話（最多 40 則 user/assistant 訊息）；長期記憶不會自動淘汰。"); note.setWordWrap(True); root.addWidget(note); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); root.addWidget(b)
+  super().__init__(pet); self.pet=pet; self.setStyleSheet(MODERN_QSS); self.setWindowTitle("角色記憶管理"); self.resize(560,420); root=QVBoxLayout(self); root.addWidget(QLabel("長期記憶（每行一條，會持續提供給 AI）")); self.long=QTextEdit(); self.long.setPlainText("\n".join(pet.config.get("long_memory",[]))); self.long.setPlaceholderText("例如：\n主人喜歡喝熱茶。\n角色名字是小藍。\n不要忘記上次約定的事情。"); root.addWidget(self.long); form=QFormLayout(); self.limit=QSpinBox(); self.limit.setRange(1,100); self.limit.setValue(int(pet.config.get("short_memory_limit",20))); form.addRow("短期記憶對話次數",self.limit); root.addLayout(form); clear=QPushButton("清除短期記憶"); clear.clicked.connect(lambda:self.pet.config.update({"short_memory":[]})); root.addWidget(clear); note=QLabel("短期記憶預設保留最近 20 次完整對話（最多 40 則 user/assistant 訊息）；長期記憶不會自動淘汰。"); note.setWordWrap(True); root.addWidget(note); b=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel); b.accepted.connect(self.save); b.rejected.connect(self.reject); root.addWidget(b)
  def save(self):
   self.pet.config["long_memory"]=[x.strip() for x in self.long.toPlainText().splitlines() if x.strip()]; self.pet.config["short_memory_limit"]=self.limit.value(); self.pet.save(); self.accept()
 
 class ChatDialog(QDialog):
  def __init__(self,pet):
-  super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setWindowTitle("角色對話"); self.setMinimumSize(390,330); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit,QComboBox{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
-  root=QVBoxLayout(self); title=QLabel("角色聊天（可選擇模型）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.profile=QComboBox(); self.reload_profiles(); root.addWidget(self.profile); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); manage=QPushButton("管理 API 設定檔"); manage.clicked.connect(self.manage_profiles); root.addWidget(manage); memory=QPushButton("記憶管理（短期／長期）"); memory.clicked.connect(self.manage_memory); root.addWidget(memory); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close); self.input.setFocus()
+  super().__init__(None,Qt.FramelessWindowHint|Qt.Tool); self.pet=pet; self.setStyleSheet(MODERN_QSS); self.setWindowTitle("角色對話"); self.setMinimumSize(390,330); self.setStyleSheet("QDialog{background:#fff8e8;border:2px solid #7b6650;border-radius:14px;} QLabel{color:#4b3b2a;} QLineEdit,QTextEdit,QComboBox{background:#fffdf8;border:1px solid #c9b79f;border-radius:8px;padding:5px;}")
+  root=QVBoxLayout(self); title=QLabel("角色聊天（可選擇模型）"); title.setStyleSheet("font-weight:bold;font-size:16px;"); root.addWidget(title); self.profile=QComboBox(); self.reload_profiles(); root.addWidget(self.profile); self.history=QTextEdit(); self.history.setReadOnly(True); root.addWidget(self.history); row=QHBoxLayout(); self.input=QLineEdit(); self.input.setPlaceholderText("輸入訊息…"); self.input.returnPressed.connect(self.send); row.addWidget(self.input); self.mic=QPushButton("麥克風"); self.mic.setCheckable(True); self.mic.clicked.connect(lambda:self.pet.toggle_voice(self)); row.addWidget(self.mic); send=QPushButton("送出"); send.clicked.connect(self.send); row.addWidget(send); root.addLayout(row); self.voice_status=QLabel("語音："+self.pet.config.get("voice_input_mode","traditional")); root.addWidget(self.voice_status); manage=QPushButton("管理 API 設定檔"); manage.clicked.connect(self.manage_profiles); root.addWidget(manage); memory=QPushButton("記憶管理（短期／長期）"); memory.clicked.connect(self.manage_memory); root.addWidget(memory); close=QPushButton("收起聊天框"); close.clicked.connect(self.close); root.addWidget(close); self.input.setFocus()
  def reload_profiles(self):
   self.profile.clear(); items=self.pet.config.get("api_profiles",default_profiles()); self.profile.addItems([f"{x.get('name','未命名')}｜{x.get('provider','')}｜{x.get('model') or '預設模型'}" for x in items]); self.profile.setCurrentIndex(max(0,min(self.pet.config.get("active_profile",0),len(items)-1)) if items else -1)
  def showEvent(self,e): super().showEvent(e); self.move(self.pet.x()+max(0,(self.pet.width()-self.width())//2),self.pet.y()+max(20,self.pet.height()//3))
@@ -176,31 +247,35 @@ class SimulationDialog(QDialog):
 
 class Panel(QDialog):
  def __init__(self,pet):
-  super().__init__(pet); self.pet=pet; self.setWindowTitle("Python Desktop Pet v4｜控制面板"); self.resize(720,600); root=QVBoxLayout(self); tabs=QTabWidget(); root.addWidget(tabs)
+  super().__init__(pet); self.pet=pet; self.setStyleSheet(MODERN_QSS); self.setWindowTitle("Python Desktop Pet v4｜控制中心"); self.resize(720,600); root=QVBoxLayout(self); tabs=QTabWidget(); root.addWidget(tabs)
   tab=QWidget(); h=QHBoxLayout(tab); self.list=QListWidget(); self.paths=[]
   for label,name in BUILTINS.items(): self.list.addItem(label); self.paths.append(ASSETS/name)
   self.list.currentRowChanged.connect(self.preview); h.addWidget(self.list); col=QVBoxLayout(); self.pic=QLabel(); self.pic.setMinimumSize(350,250); self.pic.setAlignment(Qt.AlignCenter); col.addWidget(self.pic); use=QPushButton("套用角色"); use.clicked.connect(self.use); col.addWidget(use); imp=QPushButton("匯入自訂角色"); imp.clicked.connect(pet.import_character); col.addWidget(imp); h.addLayout(col); tabs.addTab(tab,"角色與表情"); self.list.setCurrentRow(0)
   exp=QWidget(); ef=QFormLayout(exp); self.expr=QComboBox(); self.expr.addItems(["default","expression_11","expression_12","expression_21","expression_22","dark_anger","dark_smirk","dark_glow","dark_void"]); self.expr.setCurrentText(pet.config.get("expression","default")); ef.addRow("舊表情差分",self.expr); applye=QPushButton("套用表情"); applye.clicked.connect(lambda:pet.set_expression(self.expr.currentText())); ef.addRow(applye); self.expr_note=QLabel("Claude、Gemini、GPT 的舊表情已接入；黑化 DeepSeek 另有 anger／smirk／glow／void 專屬表情；沒有 walking sprite 的角色不會自動行走。"); self.expr_note.setWordWrap(True); ef.addRow(self.expr_note); tabs.addTab(exp,"表情差分")
-  ap=QWidget(); af=QFormLayout(ap); self.opacity=QSpinBox(); self.opacity.setRange(20,100); self.opacity.setValue(pet.config.get("opacity",100)); af.addRow("透明度 %",self.opacity); self.size=QSpinBox(); self.size.setRange(180,1000); self.size.setValue(pet.config.get("size",520)); af.addRow("寬度 px",self.size); self.snap=QCheckBox("自動貼邊"); self.snap.setChecked(pet.config.get("auto_snap",True)); af.addRow(self.snap); applya=QPushButton("套用外觀"); applya.clicked.connect(self.apply_appearance); af.addRow(applya); tabs.addTab(ap,"外觀與 DPI")
+  ap=QWidget(); af=QFormLayout(ap); self.opacity=QSpinBox(); self.opacity.setRange(20,100); self.opacity.setValue(pet.config.get("opacity",100)); af.addRow("透明度 %",self.opacity); self.size=QSpinBox(); self.size.setRange(180,1000); self.size.setValue(pet.config.get("size",520)); af.addRow("寬度 px",self.size); self.snap=QCheckBox("自動貼邊"); self.snap.setChecked(pet.config.get("auto_snap",True)); af.addRow(self.snap); applya=QPushButton("套用目前寵物外觀"); applya.clicked.connect(self.apply_appearance); af.addRow(applya); profile=QPushButton("開啟目前寵物設定檔"); profile.clicked.connect(lambda:PetSettingsDialog(pet).exec()); af.addRow(profile); tabs.addTab(ap,"外觀與 DPI")
   sim=QWidget(); sf=QVBoxLayout(sim); self.status=QLabel(); self.status.setWordWrap(True); sf.addWidget(self.status); b=QPushButton("模擬模式設定"); b.clicked.connect(lambda:(SimulationDialog(pet).exec(),self.refresh())); sf.addWidget(b); b=QPushButton("立即模擬事件"); b.clicked.connect(lambda:(pet.simulate(),self.refresh())); sf.addWidget(b); self.log=QTextEdit(); self.log.setReadOnly(True); sf.addWidget(self.log); tabs.addTab(sim,"模擬與事件紀錄"); self.refresh()
-  api=QWidget(); q=QVBoxLayout(api); self.api_status=QLabel("API 模式會使用目前供應商的實際查詢；DeepSeek 使用官方 /user/balance。"); self.api_status.setWordWrap(True); q.addWidget(self.api_status); k=QPushButton("API Key 與 AI 對話設定"); k.clicked.connect(lambda:KeyDialog(pet).exec()); q.addWidget(k); r=QPushButton("立即查詢 API 餘額"); r.clicked.connect(pet.refresh_api); q.addWidget(r); chat=QPushButton("與角色對話"); chat.clicked.connect(pet.chat); q.addWidget(chat); q.addStretch(); tabs.addTab(api,"API 與對話")
+  api=QWidget(); q=QVBoxLayout(api); self.api_status=QLabel("API 模式會使用目前供應商的實際查詢；DeepSeek 使用官方 /user/balance。"); self.api_status.setWordWrap(True); q.addWidget(self.api_status); k=QPushButton("API Key 與 AI 對話設定"); k.clicked.connect(lambda:KeyDialog(pet).exec()); q.addWidget(k); r=QPushButton("立即查詢 API 餘額"); r.clicked.connect(pet.refresh_api); q.addWidget(r); chat=QPushButton("與角色對話"); chat.clicked.connect(pet.chat); q.addWidget(chat); voice=QPushButton("語音與 TTS 設定"); voice.clicked.connect(lambda:VoiceSettingsDialog(pet).exec()); q.addWidget(voice); q.addStretch(); tabs.addTab(api,"API 與對話")
   close=QPushButton("關閉"); close.clicked.connect(self.close); root.addWidget(close)
  def preview(self,row):
   if 0<=row<len(self.paths): self.pic.setPixmap(QPixmap(str(self.paths[row])).scaled(self.pic.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
  def use(self):
   row=self.list.currentRow()
   if 0<=row<len(self.paths): self.pet.select(self.paths[row].name)
- def apply_appearance(self): self.pet.update({"opacity":self.opacity.value(),"size":self.size.value(),"auto_snap":self.snap.isChecked()})
+ def apply_appearance(self): self.pet.save_pet_profile({"opacity":self.opacity.value(),"size":self.size.value(),"auto_snap":self.snap.isChecked()}); self.pet.update({"opacity":self.opacity.value(),"size":self.size.value(),"auto_snap":self.snap.isChecked()})
  def refresh(self):
   self.status.setText(f"模式：{self.pet.config.get('mode')}\n模擬餘額：{float(self.pet.config.get('sim_balance',0)):.2f}\n最後事件：{self.pet.config.get('last_event','尚未發生')}"); self.log.setPlainText("\n".join(self.pet.config.get("event_log",[])))
 
 class Pet(QMainWindow):
  def __init__(self):
-  super().__init__(); self.config=self.load(); self.current=Path(self.config.get("character",ASSETS/"sprite.png")); self.drag=None; self.bowl=None; self.walkers=[]; self.worker=None; self.panel=None; self.label=QLabel(self); self.label.setStyleSheet("background:transparent"); self.setCentralWidget(self.label); self.setWindowTitle(APP_NAME); self.setAttribute(Qt.WA_TranslucentBackground); self.apply(); self.tray=QSystemTrayIcon(self); self.tray.setIcon(QIcon(str(ASSETS/"cursor.ico"))); self.tray.setContextMenu(self.menu()); self.tray.show(); self.sim_timer=QTimer(self); self.sim_timer.timeout.connect(self.simulate); self.sim_timer.setInterval(int(self.config.get("simulation_interval",30)*1000)); self.sim_timer.start(); self.cleanup=QTimer(self); self.cleanup.timeout.connect(self.cleanup_bowl); self.cleanup.start(5000); self.render()
+  super().__init__(); self.config=self.load(); self.current=Path(self.config.get("character",ASSETS/"sprite.png")); self.load_pet_profile(); self.drag=None; self.bowl=None; self.walkers=[]; self.worker=None; self.panel=None; self.label=QLabel(self); self.label.setStyleSheet("background:transparent"); self.setCentralWidget(self.label); self.setWindowTitle(APP_NAME); self.setAttribute(Qt.WA_TranslucentBackground); self.apply(); self.tray=QSystemTrayIcon(self); self.tray.setIcon(QIcon(str(ASSETS/"cursor.ico"))); self.tray.setContextMenu(self.menu()); self.tray.show(); self.sim_timer=QTimer(self); self.sim_timer.timeout.connect(self.simulate); self.sim_timer.setInterval(int(self.config.get("simulation_interval",30)*1000)); self.sim_timer.start(); self.cleanup=QTimer(self); self.cleanup.timeout.connect(self.cleanup_bowl); self.cleanup.start(5000); self.render()
  def load(self):
   try:c=json.loads(CONFIG.read_text(encoding="utf-8")); d=cfg_default(); d.update(c); d["api_profiles"]=migrate_profiles(d); return d
   except Exception:
    d=cfg_default(); d["api_profiles"]=migrate_profiles(d); return d
+ def save_pet_profile(self,values=None):
+  profiles=self.config.setdefault("pet_profiles",{}); key=self.current.name; profile=profiles.setdefault(key,{}); profile.update(values or {k:self.config.get(k) for k in ("opacity","size","auto_snap","dynamic_effects")}); self.save()
+ def load_pet_profile(self):
+  profile=self.config.get("pet_profiles",{}).get(self.current.name,{}); self.config.update(profile)
  def save(self): CONFIG.write_text(json.dumps(self.config,ensure_ascii=False,indent=2),encoding="utf-8")
  def update(self,values): self.config.update(values); self.save(); self.apply(); self.render()
  def apply(self):
@@ -222,12 +297,12 @@ class Pet(QMainWindow):
   for w in self.walkers:
    if self.geometry().intersects(w.geometry()): w.move(w.x(),w.y()-20)
  def menu(self):
-  m=QMenu(self); a=m.addAction("開啟控制面板"); a.triggered.connect(self.open_panel); profiles=m.addAction("API 設定檔／多模型管理"); profiles.triggered.connect(lambda:KeyDialog(self).exec()); chatmode=m.addAction("AI 對話模式："+ ("開啟" if self.config.get("ai_chat_enabled") else "關閉")); chatmode.triggered.connect(lambda: self.update({"ai_chat_enabled":not self.config.get("ai_chat_enabled",False)})); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("隨機表情").triggered.connect(self.random_expression); darkexpr=m.addMenu("黑化專屬表情"); darkexpr.setEnabled(self.is_deepseek_dark()); [darkexpr.addAction(label).triggered.connect(lambda checked=False,n=name:self.set_expression(n)) for name,label in [("dark_anger","狂怒"),("dark_smirk","冷笑"),("dark_glow","幽光"),("dark_void","虛無")]]; dark=m.addAction("DeepSeek："+ ("切換正常版" if self.config.get("deepseek_dark") else "切換黑化版")); dark.setEnabled(self.current.name in ("sprite.png","sprite-deepseek-dark.png")); dark.triggered.connect(self.toggle_deepseek_dark); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
+  m=QMenu(self); a=m.addAction("開啟控制中心"); a.triggered.connect(self.open_panel); ps=m.addAction("目前寵物設定"); ps.triggered.connect(lambda:PetSettingsDialog(self).exec()); profiles=m.addAction("API 設定檔／多模型管理"); profiles.triggered.connect(lambda:KeyDialog(self).exec()); chatmode=m.addAction("AI 對話模式："+ ("開啟" if self.config.get("ai_chat_enabled") else "關閉")); chatmode.triggered.connect(lambda: self.update({"ai_chat_enabled":not self.config.get("ai_chat_enabled",False)})); mode=m.addAction("切換到 API 模式" if self.config.get("mode")=="simulation" else "切換到模擬模式"); mode.triggered.connect(lambda:self.set_mode("api" if self.config.get("mode")=="simulation" else "simulation")); k=m.addAction("API Key／AI 對話設定"); k.triggered.connect(lambda:KeyDialog(self).exec()); vs=m.addAction("語音與 TTS 設定"); vs.triggered.connect(lambda:VoiceSettingsDialog(self).exec()); c=m.addAction("與角色對話"); c.triggered.connect(self.chat); m.addSeparator(); actors=m.addMenu(f"可動角色（{len(self.walkers)}/{MAX_EXTRA}）"); actors.addAction("新增正常 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek")); actors.addAction("新增黑化 DeepSeek 三方向").triggered.connect(lambda:self.add_walker("deepseek_dark")); disabled=actors.addAction("Claude/Gemini/GPT：沒有 walking sprite，禁止自動行走"); disabled.setEnabled(False); actors.addAction("移除所有額外角色").triggered.connect(self.remove_walkers); m.addAction("隨機表情").triggered.connect(self.random_expression); darkexpr=m.addMenu("黑化專屬表情"); darkexpr.setEnabled(self.is_deepseek_dark()); [darkexpr.addAction(label).triggered.connect(lambda checked=False,n=name:self.set_expression(n)) for name,label in [("dark_anger","狂怒"),("dark_smirk","冷笑"),("dark_glow","幽光"),("dark_void","虛無")]]; dark=m.addAction("DeepSeek："+ ("切換正常版" if self.config.get("deepseek_dark") else "切換黑化版")); dark.setEnabled(self.current.name in ("sprite.png","sprite-deepseek-dark.png")); dark.triggered.connect(self.toggle_deepseek_dark); m.addAction("匯入自訂角色").triggered.connect(self.import_character); m.addAction("立即掉落飯盆").triggered.connect(self.spawn_bowl); m.addAction("清除飯盆").triggered.connect(self.clear_bowl); m.addAction("切換滑鼠穿透").triggered.connect(lambda:self.update({"click_through":not self.config.get("click_through",False)})); m.addAction("回到左下角").triggered.connect(self.snap); m.addSeparator(); m.addAction("退出").triggered.connect(QApplication.quit); return m
  def open_panel(self):
   if not self.panel:self.panel=Panel(self)
   self.panel.show(); self.panel.raise_(); self.panel.activateWindow()
  def set_mode(self,mode): self.update({"mode":mode}); self.tray.showMessage(APP_NAME,"已切換到"+mode)
- def select(self,name): self.current=ASSETS/name; self.update({"character":str(self.current)}); self.render()
+ def select(self,name): self.save_pet_profile(); self.current=ASSETS/name; self.load_pet_profile(); self.update({"character":str(self.current)}); self.render()
  def set_expression(self,name): self.update({"expression":name})
  def is_deepseek_dark(self): return self.current.name=="sprite.png" and bool(self.config.get("deepseek_dark"))
  def random_expression(self):
@@ -276,6 +351,29 @@ class Pet(QMainWindow):
  def api_done(self,ok,data):
   if ok:self.config["api_balance"]=data.get("balance"); self.config["last_event"]=f"API 查詢成功：{data.get('balance')}（{data.get('source','')}）"; self.add_log(self.config["last_event"]); self.save(); QMessageBox.information(self,"API 查詢成功",self.config["last_event"])
   else: QMessageBox.warning(self,"API 查詢失敗",data.get("error","未知錯誤"))
+ def voice_profile(self):
+  profiles=self.config.get("api_profiles",default_profiles()); idx=max(0,min(int(self.config.get("active_profile",0)),len(profiles)-1)) if profiles else -1; return profiles[idx] if idx>=0 else {}
+ def toggle_voice(self,dialog):
+  if getattr(self,"voice_recorder",None) and self.voice_recorder.isRunning(): self.voice_recorder.stop(); dialog.mic.setText("處理中…"); return
+  self.voice_dialog=dialog; self.voice_recorder=VoiceRecorder(self.config.get("voice_input_mode","traditional")=="traditional",self); self.voice_recorder.partial.connect(lambda text:dialog.input.setText(text)); self.voice_recorder.level.connect(lambda n:dialog.voice_status.setText(f"錄音中… 音量 {n}%")); self.voice_recorder.finished.connect(lambda path:self.on_recorded(path,dialog)); self.voice_recorder.failed.connect(lambda e:self.voice_failed(e,dialog)); self.voice_recorder.start(); dialog.mic.setChecked(True); dialog.mic.setText("結束錄音"); dialog.voice_status.setText("錄音中…")
+ def voice_failed(self,error,dialog): dialog.mic.setChecked(False); dialog.mic.setText("麥克風"); dialog.voice_status.setText("語音錯誤："+error)
+ def on_recorded(self,path,dialog):
+  mode=self.config.get("voice_input_mode","traditional"); dialog.mic.setChecked(False); dialog.mic.setText("麥克風"); dialog.voice_status.setText("辨識中…"); self.voice_transcriber=VoiceTranscriber(path,mode,{**self.voice_profile(),"stt_model":self.config.get("stt_model","whisper-1")},self); self.voice_transcriber.finished.connect(lambda ok,text:self.on_transcribed(ok,text,dialog)); self.voice_transcriber.start()
+ def on_transcribed(self,ok,text,dialog):
+  if not ok: dialog.voice_status.setText("語音辨識錯誤："+text); return
+  dialog.input.setText(text); dialog.voice_status.setText("語音辨識完成");
+  if self.config.get("voice_input_mode")=="traditional" or self.config.get("voice_auto_send",False): dialog.send()
+ def speak(self,text):
+  mode=self.config.get("tts_mode","off")
+  if mode=="off" or not text.strip(): return
+  self.tts_worker=TTSWorker(text,mode,{**self.voice_profile(),"tts_model":self.config.get("tts_model"),"voice":self.config.get("tts_voice")},self); self.tts_worker.finished.connect(self.on_tts_done); self.tts_worker.start()
+ def on_tts_done(self,ok,msg):
+  if not ok: self.add_log("TTS錯誤："+msg)
+  elif msg: self.play_file(msg)
+ def play_file(self,path):
+  try:
+   self.audio_output=QAudioOutput(self); self.audio_output.setVolume(.9); self.audio_player=QMediaPlayer(self); self.audio_player.setAudioOutput(self.audio_output); self.audio_player.setSource(QUrl.fromLocalFile(path)); self.audio_player.play()
+  except Exception as e: self.add_log("音訊播放錯誤："+str(e))
  def chat(self):
   if getattr(self,"chat_dialog",None) and self.chat_dialog.isVisible(): self.chat_dialog.raise_(); self.chat_dialog.activateWindow(); return
   self.chat_dialog=ChatDialog(self); self.chat_dialog.finished.connect(lambda _: setattr(self,"chat_dialog",None)); self.chat_dialog.show(); self.chat_dialog.raise_(); self.chat_dialog.activateWindow()
@@ -297,7 +395,7 @@ class Pet(QMainWindow):
   prompt=self.memory_prompt()+"\n\n請回應最近一則使用者訊息。"
   self.chat_worker=Worker(profile,prompt,self); self.chat_worker.done.connect(lambda ok,data:self.chat_result(dialog,ok,data)); self.chat_worker.start()
  def chat_result(self,dialog,ok,data):
-  reply=data.get("message") if ok else random.choice(LINES); self.remember("assistant",reply); self.show_bubble(reply,False); dialog.add_message("角色",reply); self.play("hit.mp3") if self.is_deepseek_dark() else None
+  reply=data.get("message") if ok else random.choice(LINES); self.remember("assistant",reply); self.show_bubble(reply,False); dialog.add_message("角色",reply); self.play("hit.mp3") if self.is_deepseek_dark() else None; self.speak(reply)
   if not ok: self.add_log("AI 對話失敗，改用隨機文句："+data.get("error","未知錯誤"))
 
 def main():

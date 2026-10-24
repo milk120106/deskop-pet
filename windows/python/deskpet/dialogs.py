@@ -1,4 +1,4 @@
-"""Rich dialogs for Character Picker, Sound Library, and Custom Q-Characters.
+"""Rich dialogs for Character Picker, Sound Library, Agent Confirm, and Privacy Prompt.
 Material Design 3 style with dark/light theme switching and screen auto-centering.
 """
 from __future__ import annotations
@@ -438,6 +438,7 @@ class ModernMessageBox(QDialog):
                     theme = "light"
 
         is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
         self.setMinimumWidth(380)
         self.setMaximumWidth(540)
@@ -450,6 +451,12 @@ class ModernMessageBox(QDialog):
         outer.addWidget(self.title_bar)
 
         content = QWidget()
+        content.setObjectName("ModernDialogContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        content.setStyleSheet(
+            f"QWidget#ModernDialogContent {{ background-color: {bg_col}; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
         lay = QVBoxLayout(content)
         lay.setContentsMargins(22, 18, 22, 18)
         lay.setSpacing(16)
@@ -889,61 +896,84 @@ class SoundLibraryDialog(QDialog):
         self.file_labels[key].setText("檔案: 預設音效")
 
 
-class CustomQDialog(QDialog):
-    def __init__(self, app, parent=None):
+class AgentConfirmDialog(QDialog):
+    """精緻小型無邊框確認視窗（寬 380px，高 220px），用於 Agent 執行未在白名單之命令時的使用者確認。
+    杜絕全螢幕紅色警示，提供高質感微光邊框與流暢操作。
+    """
+    def __init__(self, parent=None, command: str = "", reason: str = "", theme: str | None = None):
         super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
-        self.app = app
-        self.qchars = app.qchars
-        self.setWindowTitle("Q 版自訂角色管理")
-        self.setFixedSize(560, 460)
+        self.setFixedSize(380, 220)
+        self.confirmed = False
 
-        is_dark = (self.app.cfg.get("theme", "light") == "dark")
+        if not theme:
+            if hasattr(parent, "cfg") and hasattr(parent.cfg, "get"):
+                theme = parent.cfg.get("theme", "light")
+            else:
+                theme = "dark"
+        is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        self.title_bar = CustomTitleBar(self, "Q 版自訂角色管理", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        self.title_bar = CustomTitleBar(self, "Agent 指令安全確認", has_min=False, has_close=True, theme="dark" if is_dark else "light")
         outer.addWidget(self.title_bar)
 
         content = QWidget()
+        content.setObjectName("AgentConfirmContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        border_col = "#3b82f6" if is_dark else "#2563eb"
+        content.setStyleSheet(
+            f"QWidget#AgentConfirmContent {{ background-color: {bg_col}; border: 1.5px solid {border_col}; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
         lay = QVBoxLayout(content)
-        lay.setContentsMargins(18, 16, 18, 18)
-        lay.setSpacing(12)
+        lay.setContentsMargins(18, 12, 18, 14)
+        lay.setSpacing(10)
 
-        t_lbl = QLabel("Q 版人物形象管理")
-        t_lbl.setStyleSheet("font-size: 15px; font-weight: bold; color: " + ("#93c5fd;" if is_dark else "#1e40af;"))
-        lay.addWidget(t_lbl)
+        header_lbl = QLabel("系統助手 Agent 欲執行非白名單命令：")
+        header_lbl.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {'#93c5fd' if is_dark else '#1e40af'};")
+        lay.addWidget(header_lbl)
 
-        d_lbl = QLabel("圖片格式不限（PNG、JPG、WEBP…），檔案限制 10MB、尺寸限制 2048px 內。<br>匯入後可召喚到桌面走動巡邏！")
-        d_lbl.setStyleSheet("font-size: 12px; color: " + ("#94a3b8;" if is_dark else "#64748b;"))
-        lay.addWidget(d_lbl)
+        cmd_box = QLabel(command)
+        cmd_box.setWordWrap(True)
+        cmd_box.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        cmd_bg = "#0d1117" if is_dark else "#e2e8f0"
+        cmd_fg = "#38bdf8" if is_dark else "#0369a1"
+        cmd_box.setStyleSheet(
+            f"background-color: {cmd_bg}; color: {cmd_fg}; font-family: 'Consolas', 'Courier New', monospace; "
+            f"font-size: 12px; border: 1px solid {'#30363d' if is_dark else '#cbd5e1'}; border-radius: 6px; padding: 6px 10px;"
+        )
+        lay.addWidget(cmd_box, 1)
 
-        self.list_widget = QListWidget()
-        lay.addWidget(self.list_widget, 1)
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_row.addStretch(1)
 
-        r_btns = QHBoxLayout()
-        b_add = QPushButton("匯入新 Q 版角色...")
-        b_add.clicked.connect(self._import)
-        b_spawn = QPushButton("召喚到桌面")
-        b_spawn.setObjectName("primary")
-        b_spawn.clicked.connect(self._spawn)
-        b_del = QPushButton("刪除角色")
-        b_del.setObjectName("danger")
-        b_del.clicked.connect(self._delete)
-        b_close = QPushButton("關閉")
-        b_close.clicked.connect(self.accept)
+        btn_deny = QPushButton("拒絕")
+        btn_deny.setObjectName("danger")
+        btn_deny.setFixedWidth(85)
+        btn_deny.clicked.connect(self._reject)
+        btn_row.addWidget(btn_deny)
 
-        r_btns.addWidget(b_add)
-        r_btns.addWidget(b_spawn)
-        r_btns.addWidget(b_del)
-        r_btns.addStretch(1)
-        r_btns.addWidget(b_close)
-        lay.addLayout(r_btns)
+        btn_approve = QPushButton("確認執行")
+        btn_approve.setObjectName("primary")
+        btn_approve.setFixedWidth(95)
+        btn_approve.clicked.connect(self._approve)
+        btn_row.addWidget(btn_approve)
+
+        lay.addLayout(btn_row)
         outer.addWidget(content, 1)
 
-        self._refresh()
+    def _approve(self):
+        self.confirmed = True
+        self.accept()
+
+    def _reject(self):
+        self.confirmed = False
+        self.reject()
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -951,38 +981,68 @@ class CustomQDialog(QDialog):
         self.raise_()
         self.activateWindow()
 
-    def _refresh(self):
-        self.list_widget.clear()
-        for name in self.qchars.list_custom_q():
-            self.list_widget.addItem(name)
 
-    def _import(self):
-        path, _ = QFileDialog.getOpenFileName(self, "選擇 Q 版人物圖片", "", "圖片檔案 (*.png *.jpg *.jpeg *.webp *.bmp)")
-        if not path:
-            return
-        name, ok = QInputDialog.getText(self, "角色名稱", "請輸入這個 Q 版角色的名稱：")
-        if not ok or not name.strip():
-            return
-        ok, msg = self.qchars.import_custom_q(name.strip(), path)
-        if not ok:
-            ModernMessageBox.warning(self, "匯入失敗", msg)
-        else:
-            ModernMessageBox.information(self, "匯入成功", f"Q 版角色「{msg}」已建立！")
-            self._refresh()
+class PrivacyPromptDialog(QDialog):
+    """精緻小型無邊框隱私提示視窗（寬 380px，高 220px），提供清晰友善的隱私說明。"""
+    def __init__(self, parent=None, message: str = "", theme: str | None = None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.setFixedSize(380, 220)
 
-    def _spawn(self):
-        item = self.list_widget.currentItem()
-        if not item:
-            ModernMessageBox.information(self, "提示", "請先選擇一個角色。")
-            return
-        name = item.text()
-        self.app.add_q(kind="custom", custom_id=name)
+        if not theme:
+            if hasattr(parent, "cfg") and hasattr(parent.cfg, "get"):
+                theme = parent.cfg.get("theme", "light")
+            else:
+                theme = "dark"
+        is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
 
-    def _delete(self):
-        item = self.list_widget.currentItem()
-        if not item:
-            return
-        name = item.text()
-        if ModernMessageBox.question(self, "確認刪除", f"確定要刪除 Q 版角色「{name}」嗎？") == ModernMessageBox.Yes:
-            self.qchars.delete_custom_q(name)
-            self._refresh()
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "隱私優先與脫敏保護", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        content.setObjectName("PrivacyPromptContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        border_col = "#10b981" if is_dark else "#059669"
+        content.setStyleSheet(
+            f"QWidget#PrivacyPromptContent {{ background-color: {bg_col}; border: 1.5px solid {border_col}; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(18, 12, 18, 14)
+        lay.setSpacing(10)
+
+        title_lbl = QLabel("本地脫敏過濾與零資料保留 (ZDR)")
+        title_lbl.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {'#6ee7b7' if is_dark else '#065f46'};")
+        lay.addWidget(title_lbl)
+
+        desc_text = message or (
+            "本模式已全面啟動：\n"
+            "1. 自動過濾本機檔案路徑、API Key、私有 IP 及使用者名稱\n"
+            "2. 請求時強制注入零儲存參數 (ZDR: True, store: False)"
+        )
+        msg_box = QLabel(desc_text)
+        msg_box.setWordWrap(True)
+        msg_box.setStyleSheet(f"color: {'#cbd5e1' if is_dark else '#334155'}; font-size: 12px; line-height: 1.4;")
+        lay.addWidget(msg_box, 1)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        btn_ok = QPushButton("了解並確認")
+        btn_ok.setObjectName("primary")
+        btn_ok.setFixedWidth(110)
+        btn_ok.clicked.connect(self.accept)
+        btn_row.addWidget(btn_ok)
+        lay.addLayout(btn_row)
+
+        outer.addWidget(content, 1)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()

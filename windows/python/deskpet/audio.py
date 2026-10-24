@@ -118,6 +118,13 @@ class MciVoice:
             if self.is_open:
                 _mci_send(f"stop {self.alias}")
 
+    def is_playing(self) -> bool:
+        with self._lock:
+            if not self.is_open:
+                return False
+            res, out = _mci_send(f"status {self.alias} mode")
+            return res == 0 and "playing" in out.lower()
+
     def close(self):
         with self._lock:
             if self.is_open:
@@ -309,6 +316,15 @@ class Sounds:
                 self._file_voice.close()
         except Exception:
             pass
+
+    def is_file_playing(self) -> bool:
+        """檢查目前是否有語音檔案正在播放。"""
+        try:
+            if self._file_voice:
+                return self._file_voice.is_playing()
+        except Exception:
+            pass
+        return False
 
     def close_all(self):
         """Close all opened MCI voices."""

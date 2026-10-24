@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <!-- Desktop Pet 桌面寵物 Windows Installer (MSI) 規格定義 -->
+  <Product Id="*"
+           Name="Desktop Pet 桌面寵物"
+           Language="1028"
+           Version="2.1.0.0"
+           Manufacturer="Desktop Pet Team"
+           UpgradeCode="B9A7659E-6C14-41A8-8F28-569A57B23E11">
+
+    <Package InstallerVersion="300"
+             Compressed="yes"
+             InstallScope="perUser"
+             Description="Desktop Pet 桌面寵物 安裝套件"
+             Comments="免安裝便攜與企業標準部署套件" />
+
+    <MajorUpgrade DowngradeErrorMessage="已安裝更新版本的桌面寵物，安裝已中止。" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- 應用程式圖示 -->
+    <Icon Id="AppIcon" SourceFile="assets\tray.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/milk120106/deskop-pet" />
+
+    <!-- 目錄結構 -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <!-- 安裝至目前使用者的 AppData 目錄 (免管理員提權) -->
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="DesktopPet" />
+        </Directory>
+      </Directory>
+
+      <!-- 開始功能表目錄 -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Desktop Pet 桌面寵物" />
+      </Directory>
+
+      <!-- 桌面目錄 -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- 主程式元件 -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="3E45BF21-972B-4523-BF29-4F43A6E469C1">
+        <File Id="DesktopPetEXE"
+              Source="dist\DesktopPet_Portable\DesktopPet.exe"
+              KeyPath="yes" />
+
+        <!-- 桌面捷徑 -->
+        <Shortcut Id="DesktopShortcut"
+                  Directory="DesktopFolder"
+                  Name="Desktop Pet 桌面寵物"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon"
+                  Advertise="no" />
+
+        <!-- 開始功能表捷徑 -->
+        <Shortcut Id="StartMenuShortcut"
+                  Directory="ApplicationProgramsFolder"
+                  Name="Desktop Pet 桌面寵物"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon"
+                  Advertise="no" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- 開始功能表解除安裝與清理 -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="72A1B8C4-D5E6-49FA-8C9B-123456789ABC">
+        <Shortcut Id="UninstallProduct"
+                  Name="解除安裝 Desktop Pet"
+                  Target="[SystemFolder]msiexec.exe"
+                  Arguments="/x [ProductCode]"
+                  Description="解除安裝 Desktop Pet 桌面寵物" />
+        <RemoveFolder Id="CleanUpShortCut" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\DesktopPet" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- 安裝功能集 -->
+    <Feature Id="ProductFeature" Title="Desktop Pet 主程式" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+  </Product>
+</Wix>

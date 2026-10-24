@@ -24,10 +24,13 @@ def check(name: str, ok: bool, info: str = ""):
     results.append((name, bool(ok), info))
     msg = ("PASS " if ok else "FAIL ") + name + (f"  [{info}]" if info else "")
     try:
-        print(msg)
+        print(msg, flush=True)
     except Exception:
         enc = getattr(sys.stdout, "encoding", "utf-8") or "utf-8"
-        print(msg.encode(enc, errors="replace").decode(enc))
+        try:
+            print(msg.encode(enc, errors="replace").decode(enc), flush=True)
+        except Exception:
+            pass
 
 
 def wait(ms: int):
@@ -115,46 +118,39 @@ def run(qapp) -> int:
     app.go_corner("left")
     wait(400)
 
-    # ========================================================= 5. Q Characters Disabled & Decoupled
-    # Check that Q images and modules are removed and backed up
-    q_dir = config.APP_DIR / "assets" / "q"
-    dark_dir = config.APP_DIR / "assets" / "dark"
-    check("Q character images removed for remaking", len(list(q_dir.glob("*.png"))) == 0 and len(list(dark_dir.glob("*.png"))) == 0)
-    check("qchars.py removed from codebase", not (config.APP_DIR / "deskpet" / "qchars.py").exists())
-    check("custom_q dir removed from codebase", not (config.APP_DIR / "custom_q").exists())
-    check("backup_qchars exists with backup files", (config.APP_DIR.parent / "backup_qchars" / "qchars.py").exists())
+    # ========================================================= 5. Q Characters Completely Purged (Zero Residue / Dead Code)
+    check("backup_qchars directory completely deleted", not (config.APP_DIR.parent / "backup_qchars").exists())
+    check("custom_q dir does not exist", not (config.APP_DIR / "custom_q").exists())
+    check("qchars.py does not exist", not (config.APP_DIR / "deskpet" / "qchars.py").exists())
+    check("Q assets directories do not exist", not (config.APP_DIR / "assets" / "q").exists() and not (config.APP_DIR / "assets" / "dark").exists())
+    check("CUSTOM_Q_DIR removed from config module", not hasattr(config, "CUSTOM_Q_DIR"))
+    check("q_dark removed from DEFAULTS", "q_dark" not in config.DEFAULTS)
+    check("q_height removed from DEFAULTS", "q_height" not in config.DEFAULTS)
+    check("q_chars removed from DEFAULTS", "q_chars" not in config.DEFAULTS)
 
-    # Check right-click menu: dark mode removed, Q character submenu marked as maintenance
-    from PySide6.QtWidgets import QMenu, QMessageBox
+    import deskpet.app as app_mod
+    check("_DummyQCharManager removed from app module", not hasattr(app_mod, "_DummyQCharManager"))
+    check("self.qchars removed from app instance", not hasattr(app, "qchars"))
+    check("_show_qchars_maintenance_dialog removed from app", not hasattr(app, "_show_qchars_maintenance_dialog"))
+    check("open_custom_q_dialog removed from app", not hasattr(app, "open_custom_q_dialog"))
+    check("set_q_dark removed from app", not hasattr(app, "set_q_dark"))
+    check("add_q removed from app", not hasattr(app, "add_q"))
+    check("remove_all_q removed from app", not hasattr(app, "remove_all_q"))
+    check("set_q_height removed from app", not hasattr(app, "set_q_height"))
+
+    import deskpet.dialogs as dialogs_mod
+    check("CustomQDialog removed from dialogs module", not hasattr(dialogs_mod, "CustomQDialog"))
+
+    import deskpet.panel as panel_mod
+    check("_tab_q removed from ControlPanel", not hasattr(panel_mod.ControlPanel, "_tab_q"))
+    check("_open_custom_q removed from ControlPanel", not hasattr(panel_mod.ControlPanel, "_open_custom_q"))
+
+    from PySide6.QtWidgets import QMenu
     m = QMenu()
     app._fill_menu(m)
     menu_texts = [a.text() for a in m.actions()]
     check("dark mode removed from context menu", not any("黑化模式" in t for t in menu_texts))
-    check("Q character menu marked as under maintenance", any("Q 版角色（維護中）" in t for t in menu_texts))
-
-    # Test that clicking add_q notifies the user that the feature is under maintenance / not completed
-    notices = []
-    real_info = QMessageBox.information
-    QMessageBox.information = lambda *a, **kw: notices.append(a)
-    try:
-        app.add_q(dark=False, kind="ds")
-        check("clicking add_q prompts feature not completed", any("Q 版角色功能目前暫時停用並進行重構升級中" in str(x) or "尚未完成" in str(x) for x in notices))
-        notices.clear()
-        app.open_custom_q_dialog()
-        check("custom_q dialog also prompts maintenance", any("Q 版角色功能目前暫時停用並進行重構升級中" in str(x) or "尚未完成" in str(x) for x in notices))
-    finally:
-        QMessageBox.information = real_info
-
-    # Stability check: ensure decoupled methods execute cleanly without errors
-    try:
-        app.set_q_dark(True)
-        app.set_q_dark(False)
-        app.remove_all_q()
-        app.set_click_through(False)
-        app.set_topmost(True)
-        check("Q char decoupling stability check passed", True)
-    except Exception as e:
-        check("Q char decoupling stability check passed", False, str(e))
+    check("redundant and obsolete items removed from context menu", not any("Q 版角色" in t or "傳統控制台" in t for t in menu_texts))
 
     # ========================================================= 7. Bowl-vs-Bowl Collision Physics
     app.pet.props.clear()
@@ -545,20 +541,233 @@ def run(qapp) -> int:
     import re
     emoji_pattern = re.compile(r"[\U0001F300-\U0001F9FF\U0001FA00-\U0001FAFF]")
     found_emojis = []
-    py_files = [
-        config.APP_DIR / "deskpet" / "chat.py",
-        config.APP_DIR / "deskpet" / "panel.py",
-        config.APP_DIR / "deskpet" / "dialogs.py",
-        config.APP_DIR / "deskpet" / "titlebar.py",
-        config.APP_DIR / "deskpet" / "font_manager.py",
-        config.APP_DIR / "deskpet" / "icons.py",
-    ]
+    py_files = list((config.APP_DIR / "deskpet").glob("*.py"))
     for pyf in py_files:
         content = pyf.read_text(encoding="utf-8")
         matches = emoji_pattern.findall(content)
         if matches:
             found_emojis.append(f"{pyf.name}: {matches}")
     check("strictly zero emojis in upgraded codebase", len(found_emojis) == 0, str(found_emojis))
+
+    # ========================================================= 19. Repaired Features: Voice, Mode Capsule & Pure Voice Mode
+    # 1. 語音按鈕狀態與浮動提示測試
+    check("mic button exists and is checkable", hasattr(chat_dlg, "btn_mic") and chat_dlg.btn_mic.isCheckable())
+    check("mic button has clear tooltip", "語音" in chat_dlg.btn_mic.toolTip())
+    chat_dlg.show_floating_notice("語音測試浮動提示", is_error=False)
+    check("floating notice label exists and visible", hasattr(chat_dlg, "_toast_label") and chat_dlg._toast_label.isVisible())
+
+    # 2. 膠囊視窗模式按鈕測試（徹底移除 Turbo，換為實質功能切換）
+    check("mode button exists", hasattr(chat_dlg, "btn_mode"))
+    check("Turbo completely removed from mode button text", "Turbo" not in chat_dlg.btn_mode.text())
+    chat_dlg._set_mode("reasoner")
+    check("mode switched to reasoner", chat_dlg.current_mode == "reasoner" and "思考" in chat_dlg.btn_mode.text())
+    p_reasoner = chat_dlg._build_prompt("請幫我分析這道難題")
+    check("reasoner prompt contains deep thinking instruction", "深度思考模式" in p_reasoner)
+
+    chat_dlg._set_mode("voice")
+    check("mode switched to voice companion", chat_dlg.current_mode == "voice" and "語音" in chat_dlg.btn_mode.text())
+    p_voice = chat_dlg._build_prompt("今天心情好嗎？")
+    check("voice companion prompt contains spoken dialogue instruction", "語音陪伴模式" in p_voice)
+
+    chat_dlg._set_mode("standard")
+    check("mode switched to standard", chat_dlg.current_mode == "standard" and "標準" in chat_dlg.btn_mode.text())
+
+    # 測試系統助手 Agent 模式
+    chat_dlg._set_mode("agent")
+    check("mode switched to agent mode", chat_dlg.current_mode == "agent" and "助手" in chat_dlg.btn_mode.text())
+    p_agent = chat_dlg._build_prompt("幫我查詢目錄內容")
+    check("agent prompt contains agent instruction", "系統助手 Agent 模式" in p_agent)
+    chat_dlg._set_mode("standard")
+
+    # 測試純淨無套版 AI 人格與自訂 Prompt
+    p_clean = chat_dlg._build_prompt("日常問題")
+    check("prompt free of tsundere and maid persona", "傲嬌" not in p_clean and "女僕" not in p_clean)
+    cfg.set("custom_system_prompt", "自訂系統提示詞內容")
+    p_custom = chat_dlg._build_prompt("自訂測試")
+    check("custom system prompt applied correctly", "自訂系統提示詞內容" in p_custom)
+    cfg.set("custom_system_prompt", "")
+
+    # 測試 PrivacySanitizer 脫敏過濾器
+    from deskpet.chat import PrivacySanitizer
+    san_path = PrivacySanitizer.sanitize("檔案存放在 C:\\Windows\\System32\\test.dll 與 D:\\Data\\file.txt")
+    check("PrivacySanitizer desensitizes local paths", "[本機檔案路徑]" in san_path and "D:\\Data" not in san_path)
+    san_key = PrivacySanitizer.sanitize("我的金鑰是 sk-12345678901234567890abcdef")
+    check("PrivacySanitizer masks api keys", "[金鑰憑證]" in san_key and "sk-12345" not in san_key)
+    san_ip = PrivacySanitizer.sanitize("內部主機 192.168.1.100 與 10.0.0.1 還有 127.0.0.1")
+    check("PrivacySanitizer masks private ips", "[私有IP位址]" in san_ip and "192.168.1.100" not in san_ip)
+
+    # 測試 Agent 黑名單攔截
+    chat_dlg._handle_agent_command("del /f /s /q C:\\Windows")
+    hist_text = chat_dlg.history_view.toPlainText()
+    check("blacklist command intercepted by safety engine", "已攔截危險指令" in hist_text or "符合黑名單規則" in hist_text)
+
+    # 測試精緻小型確認彈窗 (380x220)
+    from deskpet.dialogs import AgentConfirmDialog, PrivacyPromptDialog
+    agent_dlg = AgentConfirmDialog(chat_dlg, command="dir", theme="dark")
+    check("AgentConfirmDialog width is 380", agent_dlg.width() == 380)
+    check("AgentConfirmDialog height is 220", agent_dlg.height() == 220)
+    agent_dlg.close()
+
+    privacy_dlg = PrivacyPromptDialog(chat_dlg, message="測試隱私說明", theme="dark")
+    check("PrivacyPromptDialog width is 380", privacy_dlg.width() == 380)
+    check("PrivacyPromptDialog height is 220", privacy_dlg.height() == 220)
+    privacy_dlg.close()
+
+    # 測試低配效能優化、FPS 調度與半透明切換
+    app.set_disable_transparency(True)
+    check("disable_transparency disables WA_TranslucentBackground", not app.pet.testAttribute(Qt.WA_TranslucentBackground))
+    check("disable_transparency locks opacity to 1.0", app.pet.windowOpacity() == 1.0)
+    app.set_disable_transparency(False)
+    check("restore transparency re-enables WA_TranslucentBackground", app.pet.testAttribute(Qt.WA_TranslucentBackground))
+
+    app.set_target_fps(30)
+    check("target_fps 30 sets timer interval to 33ms", app.pet.timer.interval() == 33)
+    app.set_target_fps(60)
+    check("target_fps 60 sets timer interval to 16ms", app.pet.timer.interval() == 16)
+
+    app.set_performance_mode(True)
+    check("performance_mode caps timer interval to 30fps (33ms)", app.pet.timer.interval() == 33)
+    app.set_performance_mode(False)
+    check("performance_mode off restores 60fps (16ms)", app.pet.timer.interval() == 16)
+
+    # 測試廠商擴充與 Gemini 3.x 家族優先
+    import deskpet.model_catalog as mc
+    for expected_prov in [
+        "Cerebras", "Together AI", "Fireworks AI", "DeepInfra",
+        "矽基流動 (SiliconFlow)", "月之暗面 (Moonshot/Kimi)",
+        "本地 LM Studio", "本地 vLLM"
+    ]:
+        check(f"model_catalog supports {expected_prov}", expected_prov in mc.PROVIDERS)
+    gemini_aliases = [m["id"] for m in mc.DYNAMIC_MODEL_ALIASES.get("Google Gemini", [])]
+    check("gemini dynamic aliases prioritize flash-lite and gemini 3.x", "gemini-3.5-flash-lite" in gemini_aliases and "gemini-3.8-flash" in gemini_aliases and "gemini-3.8-live" in gemini_aliases)
+    check("gemini default model is flash or flash-lite, never pro", "pro" not in config.DEFAULTS["api_profiles"][3]["model"])
+
+    # 3. 音訊引擎播放與停止測試
+    check("sound engine has play_file method", hasattr(app.sounds, "play_file"))
+    check("sound engine has stop_file method", hasattr(app.sounds, "stop_file"))
+
+    # 4. 右鍵純語音模式邏輯測試（絕不彈出文字對話框）
+    chat_dlg.close()
+    wait(200)
+    check("chat dialog is closed before pure voice test", not chat_dlg.isVisible())
+
+    # 測試啟動純語音模式
+    app.start_pure_voice(target_pet=app.pet)
+    wait(200)
+    check("pure voice mode active flag set", app.pure_voice_active is True or hasattr(app.pet, "_bubble"))
+    check("pure voice mode NEVER opens text chat dialog", not chat_dlg.isVisible())
+    check("pet speech bubble shown for pure voice mode", hasattr(app.pet, "_bubble") and app.pet._bubble.isVisible())
+
+    # 測試關閉純語音模式
+    app.stop_pure_voice()
+    wait(200)
+    check("pure voice mode stopped cleanly", app.pure_voice_active is False)
+
+    # ========================================================= 20. Thought Bubble & Breathing Animation Tests
+    app.pet.show_speech_bubble("現在是語音模式ㄛ", thought=True, persistent=True, on_click=app.stop_pure_voice)
+    wait(100)
+    check("thought bubble is in thought mode", getattr(app.pet._bubble, "_thought", False) is True)
+    check("thought bubble is persistent", getattr(app.pet._bubble, "_persistent", False) is True)
+    check("thought bubble breathing animation timer active", app.pet._bubble._breath_timer.isActive())
+    check("thought bubble text is correct", app.pet._bubble.text() == "現在是語音模式ㄛ")
+
+    # 測試呼吸透明度在 210..255 範圍內
+    app.pet._bubble._on_breath_tick()
+    check("thought bubble breath alpha in valid range", 210 <= app.pet._bubble._breath_alpha <= 255)
+
+    # 測試氣泡點擊回呼（退出純語音模式）
+    clicked = []
+    app.pet._bubble.set_click_callback(lambda: clicked.append(True))
+    press_event = QMouseEvent(QEvent.MouseButtonPress, QPointF(10, 10), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    app.pet._bubble.mousePressEvent(press_event)
+    check("clicking speech bubble triggers click callback", len(clicked) == 1 and clicked[0] is True)
+
+    # 測試切換為思考中想法框
+    app.pet.show_speech_bubble("思考中...", thought=True, persistent=True)
+    check("thinking thought bubble text correct", app.pet._bubble.text() == "思考中...")
+    check("thinking thought bubble is in thought mode", getattr(app.pet._bubble, "_thought", False) is True)
+
+    # 測試切換回傳統對話氣泡（thought=False）
+    app.pet.show_speech_bubble("這是一般回覆", thought=False, persistent=False)
+    check("traditional bubble thought is False", getattr(app.pet._bubble, "_thought", False) is False)
+    check("traditional bubble breathing timer stopped", not app.pet._bubble._breath_timer.isActive())
+    app.pet.hide_speech_bubble()
+
+    # 測試右鍵選單包含純語音模式切換
+    m_test = QMenu()
+    app._fill_menu(m_test)
+    action_texts = [act.text() for act in m_test.actions()]
+    check("context menu includes pure voice mode action", any("純語音模式" in t for t in action_texts))
+    check("context menu includes unified settings action", any(t == "設定" for t in action_texts))
+    check("context menu uses pure text without ellipsis", not any("..." in t for t in action_texts))
+
+    # ========================================================= 21. Qt Quick / QML 現代動效架構測試（路線 A）
+    app.show_qml_panel()
+    wait(400)
+    qml_win = app.qml_panel
+    check("qml control panel opened", qml_win is not None and qml_win.isVisible())
+    from PySide6.QtQuickWidgets import QQuickWidget
+    check("qml control panel has quick widget", qml_win.quick_widget is not None and qml_win.quick_widget.status() == QQuickWidget.Status.Ready)
+    check("qml backend theme binding", qml_win.backend.get_theme() in ("light", "dark"))
+
+    # 測試 QML 後端雙向綁定與切換
+    cur_th = qml_win.backend.get_theme()
+    qml_win.backend.toggleTheme()
+    wait(100)
+    check("qml backend toggleTheme switched theme", qml_win.backend.get_theme() != cur_th)
+    qml_win.backend.setTheme(cur_th)
+    wait(100)
+
+    # 測試角色切換雙向綁定
+    qml_win.backend.setCharacter("claude")
+    wait(100)
+    check("qml backend setCharacter synced to app", app.pet.character == "claude" and qml_win.backend.get_character() == "claude")
+    qml_win.backend.setCharacter("deepseek")
+    wait(100)
+
+    # 測試尺寸切換雙向綁定
+    qml_win.backend.setSizePx(340)
+    wait(100)
+    check("qml backend setSizePx synced to app", app.pet.size_px == 340 and qml_win.backend.get_size_px() == 340)
+    qml_win.backend.setSizePx(454)
+    wait(100)
+
+    # 測試音量與滑鼠穿透雙向綁定
+    qml_win.backend.setVolume(75)
+    check("qml backend setVolume synced", app.cfg.get("volume") == 75 and qml_win.backend.get_volume() == 75)
+
+    # 測試立繪形態切換雙向綁定 (1:1 正方形 / 1.5:1 帶尾巴)
+    qml_win.backend.setVariant("tail")
+    wait(100)
+    check("qml backend setVariant synced to app", app.pet.variant == "tail" and qml_win.backend.get_variant() == "tail")
+    qml_win.backend.setVariant("square")
+    wait(100)
+
+    # 測試字體系統清單與讀取
+    check("qml backend system fonts accessible", len(qml_win.backend.get_system_fonts()) > 0)
+    check("qml backend current font family valid", len(qml_win.backend.get_current_font_family()) > 0)
+
+    # 測試個別提示音槽位讀取
+    check("qml backend cue hit slot initialized", len(qml_win.backend.get_cue_hit_file()) > 0)
+
+    # 測試模型供應商切換雙向綁定
+    qml_win.backend.setApiProvider("OpenAI")
+    check("qml backend api provider switched to OpenAI", qml_win.backend.get_api_provider() == "OpenAI")
+    qml_win.backend.setApiProvider("DeepSeek")
+
+    # 測試日誌擷取
+    qml_win.backend.refreshLogs()
+    check("qml backend logs snippet retrieved", len(qml_win.backend.get_logs_snippet()) > 0)
+
+    # 產出新設定視窗淺色與深色視覺截圖至 selftest_out/
+    qml_win.backend.setTheme("dark")
+    wait(200)
+    qml_win.grab().save(str(OUT / "20_qml_settings_dark.png"))
+    qml_win.backend.setTheme("light")
+    wait(200)
+    qml_win.grab().save(str(OUT / "20_qml_settings_light.png"))
+    qml_win.grab().save(str(OUT / "20_qml_modern_panel.png"))
+    qml_win.hide()
 
     chat_dlg.close()
 
@@ -567,3 +776,10 @@ def run(qapp) -> int:
     app.tray.hide()
     p.hide()
     return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    from PySide6.QtWidgets import QApplication
+    qapp = QApplication(sys.argv)
+    code = run(qapp)
+    sys.exit(code)

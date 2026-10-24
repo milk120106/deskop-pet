@@ -90,16 +90,23 @@ class PetWindow(QWidget):
     def __init__(self, cfg, ledger, sounds, character_override: str | None = None, is_extra: bool = False, pet_id: str | None = None):
         super().__init__(None, Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
                          | Qt.NoDropShadowWindowHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setMouseTracking(True)
-        self.setWindowTitle("Desktop Pet")
         self.cfg = cfg
         self.ledger = ledger
         self.sounds = sounds
         self.is_extra = is_extra
         self.pet_id = pet_id or (character_override if character_override else "main")
         self._bubble = None
+
+        if self.cfg.get("disable_transparency", False):
+            self.setAttribute(Qt.WA_TranslucentBackground, False)
+            self.setWindowOpacity(1.0)
+        else:
+            self.setAttribute(Qt.WA_TranslucentBackground, True)
+            self.setWindowOpacity(max(0.2, min(1.0, int(cfg.get("opacity", 100)) / 100.0)))
+
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setMouseTracking(True)
+        self.setWindowTitle("Desktop Pet")
 
         self.size_px = int(cfg.get("size", 454))
         self.character = character_override if character_override else cfg.get("character", "deepseek")
@@ -160,6 +167,30 @@ class PetWindow(QWidget):
 
         self._resize_window()
         self._build_screen()
+        self.update_fps_timer()
+
+    def update_fps_timer(self):
+        """根據 target_fps 與 performance_mode 動態調度定時器幀率。"""
+        perf = bool(self.cfg.get("performance_mode", False))
+        fps = int(self.cfg.get("target_fps", 60))
+        if perf:
+            effective_fps = min(30, fps) if fps > 0 else 30
+        else:
+            effective_fps = fps
+        if effective_fps <= 0:
+            interval = 1
+        else:
+            interval = max(1, int(1000 / effective_fps))
+        self.timer.setInterval(interval)
+
+    def set_disable_transparency(self, on: bool):
+        """動態切換停用半透明背景：使用純色背景緩衝，透明度鎖定 1.0。"""
+        self.setAttribute(Qt.WA_TranslucentBackground, not on)
+        if on:
+            self.setWindowOpacity(1.0)
+        else:
+            self.setWindowOpacity(max(0.2, min(1.0, int(self.cfg.get("opacity", 100)) / 100.0)))
+        self.update()
 
     # ====================================================== Character & Art loading
     @property
@@ -717,18 +748,25 @@ class PetWindow(QWidget):
         p = QPainter(self)
         p.setRenderHints(QPainter.SmoothPixmapTransform | QPainter.Antialiasing | QPainter.TextAntialiasing)
 
+        # 低配效能優化：停用半透明時使用純色背景緩衝
+        if self.cfg.get("disable_transparency", False):
+            p.fillRect(self.rect(), QColor("#1e1e24"))
+
+        anims_on = self.cfg.get("animations_enabled", True)
+
         # Shake: damped sine
         dx = dy = 0.0
         flash = 0.0
-        for t0 in self.flashes[-3:]:
-            a = now - t0
-            if a < SHAKE_DUR:
-                env = (1 - a / SHAKE_DUR) ** 2
-                dx += 8.0 * math.sin(a * 2 * math.pi * 13) * env
-                dy += 3.0 * math.sin(a * 2 * math.pi * 17 + 1) * env
-            flash += math.exp(-a / FLASH_DECAY)
-        dx = max(-14.0, min(14.0, dx))
-        dy = max(-6.0, min(6.0, dy))
+        if anims_on:
+            for t0 in self.flashes[-3:]:
+                a = now - t0
+                if a < SHAKE_DUR:
+                    env = (1 - a / SHAKE_DUR) ** 2
+                    dx += 8.0 * math.sin(a * 2 * math.pi * 13) * env
+                    dy += 3.0 * math.sin(a * 2 * math.pi * 17 + 1) * env
+                flash += math.exp(-a / FLASH_DECAY)
+            dx = max(-14.0, min(14.0, dx))
+            dy = max(-6.0, min(6.0, dy))
         max_tint = max(0.30, 0.64 - (H / 1024.0) * 0.75)
         flash = min(1.0, flash) * max_tint
 
@@ -736,15 +774,16 @@ class PetWindow(QWidget):
         sq_x = 1.0
         sq_y = 1.0
         shift_y = 0.0
-        if self.pat_active:
-            frame = int(self.pat_phase * 5) % 5
-            w_rel = PETPET_W[frame] / PETPET_W[0]
-            h_rel = PETPET_H[frame] / PETPET_H[0]
-            sq_x = float(1.0 - (1.0 - w_rel))
-            sq_y = float(1.0 - (1.0 - h_rel))
-            shift_y = float((PETPET_OFFSET_Y[frame] - PETPET_BASE_OFFSET_Y) * H)
-        if self.bounce_t > 0:
-            sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
+        if anims_on:
+            if self.pat_active:
+                frame = int(self.pat_phase * 5) % 5
+                w_rel = PETPET_W[frame] / PETPET_W[0]
+                h_rel = PETPET_H[frame] / PETPET_H[0]
+                sq_x = float(1.0 - (1.0 - w_rel))
+                sq_y = float(1.0 - (1.0 - h_rel))
+                shift_y = float((PETPET_OFFSET_Y[frame] - PETPET_BASE_OFFSET_Y) * H)
+            if self.bounce_t > 0:
+                sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
 
         ox, oy = M_L + dx, M_T + dy
         p.save()
@@ -857,6 +896,10 @@ class PetWindow(QWidget):
         return self._heart_pix
 
     def _paint_fx(self, p: QPainter, ox, oy, now):
+        if self.cfg.get("performance_mode", False) or not self.cfg.get("animations_enabled", True):
+            # 在效能模式或停用動效時，關閉愛心粒子與飄字上升動效
+            return
+
         W = self.art_w
         H = self.art_h
         k = H / 454.0

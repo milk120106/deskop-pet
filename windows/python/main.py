@@ -39,14 +39,24 @@ def main() -> int:
             source="CrashGuard",
         )
 
+    # 讀取渲染後端設定並在 QApplication 實例化前配置 QSG_RHI_BACKEND
+    from deskpet.config import Config
+    try:
+        cfg_init = Config()
+        rendering_backend = str(cfg_init.get("rendering_backend", "opengl")).strip().lower()
+        if rendering_backend in ("opengl", "d3d11", "d3d12", "vulkan", "software"):
+            os.environ["QSG_RHI_BACKEND"] = rendering_backend
+            log_info(f"配置 Qt Quick 渲染後端 (QSG_RHI_BACKEND): {rendering_backend}", source="Main")
+    except Exception as exc:
+        log_info(f"讀取渲染後端設定失敗，採用預設值: {exc}", source="Main")
+
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
     qapp.setApplicationName("Desktop Pet")
 
-    from deskpet.config import Config
     from deskpet.font_manager import init_app_font
-    init_app_font(Config())
+    init_app_font(cfg_init)
 
     if "--selftest" in sys.argv:
         from deskpet.selftest import run

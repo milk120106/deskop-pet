@@ -7,7 +7,7 @@
 - 提交前确认没有把个人凭证、日志、设置文件带进版本控制（见根目录 `.gitignore`）。
 - 不要改动对方平台的目录内容，除非事先沟通。
 
-## 🪟 Windows 版（`windows/`）
+##  Windows 版（`windows/`）
 
 - 更新时直接修改 `windows/` ，不要新建文件夹，更新新版本时根据版本名加 Tag
 - 每次功能新增、行为变更或修复，同步更新**根目录 README.md 的「Windows 版 → 版本历史」**，
@@ -18,7 +18,7 @@
 - `.md` 用 UTF-8 无 BOM + LF；`.txt`（给记事本看的）用 UTF-8 **带 BOM** + CRLF。
 - 改完跑一遍 `_pdf_build/verify_release.py` 式的隐私与格式自检，再打包。
 
-## 🍎 macOS 版（`dsh-balance-pet-macos/`）
+##  macOS 版（`dsh-balance-pet-macos/`）
 
 - 每次功能新增、行为变更或修复，都必须同步更新根目录 `README.md` 的「macOS 版 → 更新记录」，
   以用户可理解的语言说明变化。

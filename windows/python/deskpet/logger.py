@@ -17,10 +17,31 @@ from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
 
-if getattr(sys, "frozen", False):
-    APP_DIR = Path(sys.executable).resolve().parent
-else:
-    APP_DIR = Path(__file__).resolve().parent.parent
+def _get_log_app_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        test_file = exe_dir / ".perm_check"
+        is_writable = False
+        try:
+            test_file.touch(exist_ok=True)
+            test_file.unlink(missing_ok=True)
+            is_writable = True
+        except Exception:
+            is_writable = False
+
+        if is_writable:
+            return exe_dir
+        else:
+            appdata = os.environ.get("LOCALAPPDATA")
+            if appdata:
+                p = Path(appdata) / "DesktopPet"
+                p.mkdir(parents=True, exist_ok=True)
+                return p
+            return exe_dir
+    return Path(__file__).resolve().parent.parent
+
+
+APP_DIR = _get_log_app_dir()
 LOGS_DIR = APP_DIR / "logs"
 CRASH_LOG_PATH = LOGS_DIR / "crash.log"
 STATE_FILE_PATH = LOGS_DIR / ".session_state.json"

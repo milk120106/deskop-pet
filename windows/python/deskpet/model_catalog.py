@@ -21,6 +21,18 @@ OPENAI_BASES = {
     "Groq": "https://api.groq.com/openai/v1",
     "z.ai": "https://api.z.ai/api/paas/v4",
     "GLM": "https://open.bigmodel.cn/api/paas/v4",
+    "Cerebras": "https://api.cerebras.ai/v1",
+    "Together AI": "https://api.together.xyz/v1",
+    "Fireworks AI": "https://api.fireworks.ai/inference/v1",
+    "DeepInfra": "https://api.deepinfra.com/v1/openai",
+    "矽基流動 (SiliconFlow)": "https://api.siliconflow.cn/v1",
+    "SiliconFlow": "https://api.siliconflow.cn/v1",
+    "月之暗面 (Moonshot/Kimi)": "https://api.moonshot.cn/v1",
+    "Moonshot": "https://api.moonshot.cn/v1",
+    "本地 LM Studio": "http://localhost:1234/v1",
+    "LM Studio": "http://localhost:1234/v1",
+    "本地 vLLM": "http://localhost:8000/v1",
+    "vLLM": "http://localhost:8000/v1",
 }
 
 PROVIDERS = [
@@ -32,6 +44,14 @@ PROVIDERS = [
     "xAI / Grok",
     "z.ai",
     "GLM",
+    "Cerebras",
+    "Together AI",
+    "Fireworks AI",
+    "DeepInfra",
+    "矽基流動 (SiliconFlow)",
+    "月之暗面 (Moonshot/Kimi)",
+    "本地 LM Studio",
+    "本地 vLLM",
     "Ollama",
     "Ollama Cloud",
     "OpenRouter",
@@ -44,10 +64,25 @@ PROVIDERS = [
 # 最新動態別名模型定義（不寫死版本快照，指向廠商最新動態別名）
 DYNAMIC_MODEL_ALIASES: dict[str, list[dict]] = {
     "Google Gemini": [
-        {"id": "gemini-flash-latest", "label": "Gemini Flash (最新動態導向)", "context_length": 1048576},
-        {"id": "gemini-flash-lite-latest", "label": "Gemini Flash Lite (最新輕量動態導向)", "context_length": 1048576},
-        {"id": "gemini-pro-latest", "label": "Gemini Pro (最新高階動態導向)", "context_length": 2097152},
-        {"id": "gemini-3.8-live", "label": "Gemini 3.8 Live (語音即時雙向)", "context_length": 128000},
+        # Flash-Lite 模型（免費版可用，最新發布至 3.5，超低延遲、省 Token 首選）
+        {"id": "gemini-flash-lite-latest", "label": "Gemini Flash-Lite (最新輕量動態導向，免費推薦)", "context_length": 1048576},
+        {"id": "gemini-3.5-flash-lite", "label": "Gemini 3.5 Flash-Lite (最新發布輕量旗艦，免費可用)", "context_length": 1048576},
+        {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash-Lite (輕量節能，免費可用)", "context_length": 1048576},
+        {"id": "gemini-2.5-flash-lite", "label": "Gemini 2.5 Flash-Lite (穩定輕量，免費可用)", "context_length": 1048576},
+        # Flash 模型（免費版可用，支援 2.5, 3.5, 3.6, 3.7, 3.8）
+        {"id": "gemini-flash-latest", "label": "Gemini Flash (最新官方動態導向，免費推薦)", "context_length": 1048576},
+        {"id": "gemini-3.8-flash", "label": "Gemini 3.8 Flash (最新日常高效旗艦，免費可用)", "context_length": 1048576},
+        {"id": "gemini-3.7-flash", "label": "Gemini 3.7 Flash (高效多模態，免費可用)", "context_length": 1048576},
+        {"id": "gemini-3.6-flash", "label": "Gemini 3.6 Flash (高效多模態，免費可用)", "context_length": 1048576},
+        {"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash (穩定旗艦，免費可用)", "context_length": 1048576},
+        {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash (穩定旗艦，免費可用)", "context_length": 1048576},
+        # Live 雙向與 TTS 語音模型
+        {"id": "gemini-3.8-live", "label": "Gemini 3.8 Live (語音即時全雙工)", "context_length": 128000},
+        {"id": "gemini-live", "label": "Gemini Live (語音即時動態導向)", "context_length": 128000},
+        # Pro 模型（注意：僅限付費版方案！Google AI Studio 免費版無法調用任何 Pro 模型或生圖模型）
+        {"id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro (深度推理，僅限付費方案)", "context_length": 2097152},
+        {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro (深度推理，僅限付費方案)", "context_length": 2097152},
+        {"id": "gemini-pro-latest", "label": "Gemini Pro (最新高階動態導向，僅限付費方案)", "context_length": 2097152},
     ],
     "OpenAI": [
         {"id": "gpt-4o", "label": "GPT-4o (最新旗艦快照)", "context_length": 128000},
@@ -63,6 +98,37 @@ DYNAMIC_MODEL_ALIASES: dict[str, list[dict]] = {
     "DeepSeek": [
         {"id": "deepseek-chat", "label": "DeepSeek-Chat (動態對齊 V3)", "context_length": 64000},
         {"id": "deepseek-reasoner", "label": "DeepSeek-Reasoner (動態對齊 R1)", "context_length": 64000},
+    ],
+    "Cerebras": [
+        {"id": "llama-3.3-70b", "label": "Llama 3.3 70B (超高速推論)", "context_length": 128000},
+        {"id": "llama3.1-8b", "label": "Llama 3.1 8B (極速輕量)", "context_length": 128000},
+    ],
+    "Together AI": [
+        {"id": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "label": "Llama 3.1 70B Turbo", "context_length": 131072},
+        {"id": "deepseek-ai/DeepSeek-V3", "label": "DeepSeek-V3", "context_length": 64000},
+    ],
+    "Fireworks AI": [
+        {"id": "accounts/fireworks/models/llama-v3p3-70b-instruct", "label": "Llama 3.3 70B Instruct", "context_length": 131072},
+        {"id": "accounts/fireworks/models/deepseek-v3", "label": "DeepSeek-V3", "context_length": 64000},
+    ],
+    "DeepInfra": [
+        {"id": "meta-llama/Llama-3.3-70B-Instruct", "label": "Llama 3.3 70B Instruct", "context_length": 131072},
+        {"id": "deepseek-ai/DeepSeek-V3", "label": "DeepSeek-V3", "context_length": 64000},
+    ],
+    "矽基流動 (SiliconFlow)": [
+        {"id": "deepseek-ai/DeepSeek-V3", "label": "DeepSeek-V3 (矽基全速版)", "context_length": 64000},
+        {"id": "deepseek-ai/DeepSeek-R1", "label": "DeepSeek-R1 (深度推理版)", "context_length": 64000},
+    ],
+    "月之暗面 (Moonshot/Kimi)": [
+        {"id": "moonshot-v1-8k", "label": "Moonshot v1 8K (Kimi)", "context_length": 8192},
+        {"id": "moonshot-v1-32k", "label": "Moonshot v1 32K (Kimi)", "context_length": 32768},
+        {"id": "moonshot-v1-128k", "label": "Moonshot v1 128K (Kimi)", "context_length": 131072},
+    ],
+    "本地 LM Studio": [
+        {"id": "local-model", "label": "LM Studio 本地加載模型", "context_length": 32768},
+    ],
+    "本地 vLLM": [
+        {"id": "default", "label": "vLLM 本地高吞吐服務", "context_length": 32768},
     ],
 }
 

@@ -283,7 +283,7 @@ class ChatDialog(QDialog):
 class Bowl(QLabel):
  fed=Signal()
  def __init__(self,parent):
-  super().__init__(parent); self.host=parent; self.drag=None; self.setText("🍚"); self.setAlignment(Qt.AlignCenter); self.setStyleSheet("font-size:40px;background:rgba(255,255,255,210);border-radius:24px;padding:5px;"); self.resize(78,78)
+  super().__init__(parent); self.host=parent; self.drag=None; self.setText(""); self.setAlignment(Qt.AlignCenter); self.setStyleSheet("font-size:40px;background:rgba(255,255,255,210);border-radius:24px;padding:5px;"); self.resize(78,78)
  def mousePressEvent(self,e):
   if e.button()==Qt.LeftButton:self.drag=e.globalPosition().toPoint()-self.host.mapToGlobal(self.pos()); e.accept()
  def mouseMoveEvent(self,e):

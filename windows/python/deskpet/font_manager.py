@@ -24,7 +24,12 @@ MODERN_FONT_STACK = [
     "sans-serif",
 ]
 
-_REGISTERED_CUSTOM_FONTS: dict[str, str] = {}  # path -> family
+FONT_STACK_STRING = '"Segoe UI Variable Text", "Microsoft JhengHei UI", "PingFang TC", "Noto Sans TC", sans-serif'
+
+
+def get_font_stack_string() -> str:
+    """Return the modern CSS/QML font-family stack string."""
+    return FONT_STACK_STRING
 
 
 def get_system_fonts() -> list[str]:
@@ -71,10 +76,12 @@ def load_font_file(file_path: str) -> tuple[bool, str, str]:
 
 
 def apply_global_font(family: str, point_size: int = 10):
-    """Set the application-wide font on QApplication."""
+    """Set the application-wide font on QApplication with antialiasing and subpixel rendering."""
     qapp = QApplication.instance()
     font = QFont(family, point_size)
     font.setStyleHint(QFont.StyleHint.SansSerif)
+    font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.PreferQuality)
+    font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
     if qapp:
         qapp.setFont(font)
 

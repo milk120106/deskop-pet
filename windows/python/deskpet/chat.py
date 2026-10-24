@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import random
 import re
@@ -17,8 +18,8 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, QRectF, QSize, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath
+from PySide6.QtCore import QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QGuiApplication, QIcon, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -54,6 +55,60 @@ ARROW_DOWN_LIGHT = (ASSETS / "arrow_down_light.svg").as_posix()
 
 VOICE_DIR = APP_DIR / "voice_cache"
 VOSK_MODEL = APP_DIR / "models" / "vosk-model-small-cn-0.22"
+
+
+class PrivacySanitizer:
+    """第三方推論隱私優先模式正則脫敏過濾器：
+    對本機檔案路徑、API Key/Token、私有 IP、本機使用者名稱進行語義標籤替換。
+    """
+    _KEY_PATTERNS = [
+        re.compile(r'\b(sk-[a-zA-Z0-9_\-]{20,})\b'),
+        re.compile(r'\b(ghp_[a-zA-Z0-9]{36,})\b'),
+        re.compile(r'\b(AIza[0-9A-Za-z\-_]{35})\b'),
+        re.compile(r'(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})'),
+        re.compile(r'(?i)(?:api[_-]?key|secret|token)\s*[:=]\s*["\']?([a-zA-Z0-9_\-]{16,})["\']?'),
+    ]
+
+    _PATH_WIN = re.compile(r'\b[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*')
+    _PATH_UNIX = re.compile(r'\b/(?:home|Users|etc|var|usr|opt)/[^\s"\'<>]+')
+
+    _PRIVATE_IPS = [
+        re.compile(r'\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'),
+        re.compile(r'\b192\.168\.\d{1,3}\.\d{1,3}\b'),
+        re.compile(r'\b172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b'),
+        re.compile(r'\b127\.0\.0\.1\b'),
+    ]
+
+    @classmethod
+    def sanitize(cls, text: str) -> str:
+        if not text or not isinstance(text, str):
+            return text
+
+        result = text
+
+        # 1. 本機使用者名稱替換
+        username = os.environ.get("USERNAME") or os.environ.get("USER") or ""
+        if username and len(username) >= 2:
+            result = re.sub(re.escape(username), "[本機使用者名稱]", result, flags=re.IGNORECASE)
+
+        # 2. API Key / Token 脫敏
+        for pat in cls._KEY_PATTERNS:
+            def _key_repl(m):
+                full = m.group(0)
+                secret = m.group(1) if m.groups() else full
+                return full.replace(secret, "[金鑰憑證]")
+            result = pat.sub(_key_repl, result)
+
+        # 3. 本機檔案路徑脫敏
+        result = cls._PATH_WIN.sub("[本機檔案路徑]", result)
+        result = cls._PATH_UNIX.sub("[本機檔案路徑]", result)
+
+        # 4. 私有 IP 脫敏
+        for pat in cls._PRIVATE_IPS:
+            result = pat.sub("[私有IP位址]", result)
+
+        return result
+
 
 COMPANION_LINES = [
     "今天也要記得適度休息一下。",
@@ -328,13 +383,25 @@ PREFIX_MAP = {
     "Hugging Face": "huggingface/",
     "z.ai": "openai/",
     "GLM": "openai/",
+    "Cerebras": "cerebras/",
+    "Together AI": "together_ai/",
+    "Fireworks AI": "fireworks_ai/",
+    "DeepInfra": "deepinfra/",
+    "矽基流動 (SiliconFlow)": "openai/",
+    "SiliconFlow": "openai/",
+    "月之暗面 (Moonshot/Kimi)": "moonshot/",
+    "Moonshot": "moonshot/",
+    "本地 LM Studio": "openai/",
+    "LM Studio": "openai/",
+    "本地 vLLM": "openai/",
+    "vLLM": "openai/",
     "OpenAI 相容自訂端點": "openai/",
 }
 
 DEFAULT_MODELS = {
     "DeepSeek": "deepseek-chat",
     "OpenAI": "gpt-4o-mini",
-    "Google Gemini": "gemini-flash-latest",
+    "Google Gemini": "gemini-3.8-flash-lite",
     "Anthropic": "claude-3-5-haiku-latest",
     "Mistral": "mistral-small-latest",
     "xAI / Grok": "grok-3-mini",
@@ -342,6 +409,18 @@ DEFAULT_MODELS = {
     "Ollama Cloud": "llama3.2",
     "OpenRouter": "auto",
     "Groq": "llama-3.3-70b-versatile",
+    "Cerebras": "llama-3.3-70b",
+    "Together AI": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "Fireworks AI": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    "DeepInfra": "meta-llama/Llama-3.3-70B-Instruct",
+    "矽基流動 (SiliconFlow)": "deepseek-ai/DeepSeek-V3",
+    "SiliconFlow": "deepseek-ai/DeepSeek-V3",
+    "月之暗面 (Moonshot/Kimi)": "moonshot-v1-8k",
+    "Moonshot": "moonshot-v1-8k",
+    "本地 LM Studio": "local-model",
+    "LM Studio": "local-model",
+    "本地 vLLM": "default",
+    "vLLM": "default",
 }
 
 
@@ -434,6 +513,14 @@ def _call_via_urllib(profile: dict, prompt: str) -> str:
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 300,
         }
+        # 第三方推論隱私優先：自動注入零儲存參數
+        prov_lower = str(provider).lower()
+        if "openrouter" in prov_lower or "openrouter.ai" in url:
+            payload["provider"] = {"data_collection": "deny", "zdr": True}
+        elif "mistral" in prov_lower:
+            payload["safe_prompt"] = True
+        else:
+            payload["store"] = False
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -446,6 +533,9 @@ def _call_via_urllib(profile: dict, prompt: str) -> str:
 
 def execute_chat(profile: dict, prompt: str, cfg: Config | None = None) -> str:
     """呼叫 AI 完成對話，支援多組 API Key 自動輪替（遭遇 429/401 或驗證錯誤自動切換備用 Key 重試）。"""
+    if cfg and cfg.get("privacy_mode", True):
+        prompt = PrivacySanitizer.sanitize(prompt)
+
     provider = profile.get("provider", "DeepSeek")
     raw_key = profile.get("key", "").strip()
     keys = parse_api_keys(raw_key)
@@ -484,6 +574,15 @@ def execute_chat(profile: dict, prompt: str, cfg: Config | None = None) -> str:
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 300,
             }
+            extra_body = {}
+            prov_lower = str(provider).lower()
+            if "openrouter" in prov_lower:
+                extra_body["provider"] = {"data_collection": "deny", "zdr": True}
+            elif "mistral" in prov_lower:
+                extra_body["safe_prompt"] = True
+            else:
+                extra_body["store"] = False
+            kwargs["extra_body"] = extra_body
             if active_key:
                 kwargs["api_key"] = active_key
             if endpoint:
@@ -652,12 +751,20 @@ class VoiceTranscriber(QThread):
                     rec.AcceptWaveform(data)
                 res = json.loads(rec.FinalResult())
                 text = (res.get("text", "") or "").replace(" ", "")
-            else:
+            elif self.mode == "faster-whisper":
+                try:
+                    from faster_whisper import WhisperModel
+                    fw_model = WhisperModel("base", device="cpu", compute_type="int8")
+                    segments, _ = fw_model.transcribe(self.path, language="zh")
+                    text = "".join(segment.text for segment in segments).strip()
+                except ImportError:
+                    pass
+            if not text:
                 # 雲端 AI 語音辨識（或 traditional 缺少模型時自動降級至可用金鑰）
                 prof = self.profile
                 if not prof.get("key", "").strip():
                     for p in self.all_profiles:
-                        if p.get("key", "").strip() and p.get("provider") in ("Google Gemini", "OpenAI"):
+                        if p.get("key", "").strip() and p.get("provider") in ("Google Gemini", "OpenAI", "Groq"):
                             prof = p
                             break
 
@@ -673,13 +780,23 @@ class VoiceTranscriber(QThread):
                     with open(self.path, "rb") as f:
                         audio_data = f.read()
                     resp = client.models.generate_content(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.8-flash",
                         contents=[
                             types.Part.from_bytes(data=audio_data, mime_type="audio/wav"),
                             "請將這段語音轉錄為純文字繁體中文。請只輸出轉錄文字內容，不可包含任何說明、問候、標籤或 Markdown 符號。"
                         ]
                     )
                     text = (resp.text or "").strip()
+                elif (prov == "Groq" or "groq" in (prof.get("endpoint") or "").lower()) and keys:
+                    from litellm import transcription
+                    with open(self.path, "rb") as f:
+                        result = transcription(
+                            model="groq/whisper-large-v3",
+                            file=f,
+                            api_key=keys[0] or None,
+                        )
+                    text = getattr(result, "text", "") or (result.get("text", "") if isinstance(result, dict) else "")
+                    text = (text or "").strip()
                 elif keys:
                     from litellm import transcription
 
@@ -717,27 +834,81 @@ class TTSWorker(QThread):
 
     def run(self):
         try:
-            if self.mode == "traditional":
+            VOICE_DIR.mkdir(parents=True, exist_ok=True)
+            tts_model = self.profile.get("tts_model") or ""
+            prov = self.profile.get("provider", "")
+            raw_key = self.profile.get("key", "").strip()
+            keys = parse_api_keys(raw_key) if raw_key else []
+
+            # 1. 傳統本機語音 (pyttsx3)
+            if self.mode == "traditional" or self.mode == "pyttsx3":
                 import pyttsx3
 
                 engine = pyttsx3.init()
                 engine.say(self.text)
                 engine.runAndWait()
                 self.finished.emit(True, "")
-            else:
-                from litellm import speech
+                return
 
-                VOICE_DIR.mkdir(parents=True, exist_ok=True)
-                path = VOICE_DIR / f"tts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3"
-                result = speech(
-                    model=self.profile.get("tts_model") or "openai/tts-1",
-                    voice=self.profile.get("tts_voice") or "alloy",
-                    input=self.text,
-                    api_key=self.profile.get("key") or None,
-                    api_base=self.profile.get("endpoint") or None,
-                )
-                result.stream_to_file(path)
-                self.finished.emit(True, str(path))
+            # 2. Edge-TTS 語音整合骨幹
+            if self.mode == "edge" or "edge" in tts_model.lower():
+                try:
+                    import edge_tts
+                    path = str(VOICE_DIR / f"edge_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3")
+                    voice = self.profile.get("tts_voice") or "zh-TW-HsiaoChenNeural"
+                    communicate = edge_tts.Communicate(self.text, voice)
+                    asyncio.run(communicate.save(path))
+                    self.finished.emit(True, path)
+                    return
+                except Exception:
+                    pass
+
+            # 3. Google Gemini 2.0 Audio Modality / Gemini TTS
+            if prov == "Google Gemini" or "gemini" in tts_model.lower():
+                if keys:
+                    try:
+                        from google import genai
+                        from google.genai import types
+
+                        client = genai.Client(api_key=keys[0])
+                        path = str(VOICE_DIR / f"gemini_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
+                        resp = client.models.generate_content(
+                            model=self.profile.get("model") or "gemini-3.8-flash",
+                            contents=f"請以繁體中文朗讀以下文字，不要有任何其他回應：{self.text}",
+                            config=types.GenerateContentConfig(
+                                response_modalities=["AUDIO"],
+                                speech_config=types.SpeechConfig(
+                                    voice_config=types.VoiceConfig(
+                                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                            voice_name=self.profile.get("tts_voice") or "Kore"
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                        if resp.candidates and resp.candidates[0].content and resp.candidates[0].content.parts:
+                            for part in resp.candidates[0].content.parts:
+                                if getattr(part, "inline_data", None) and part.inline_data.data:
+                                    with open(path, "wb") as f:
+                                        f.write(part.inline_data.data)
+                                    self.finished.emit(True, path)
+                                    return
+                    except Exception:
+                        pass
+
+            # 4. LiteLLM / OpenAI 相容 TTS
+            from litellm import speech
+
+            path = VOICE_DIR / f"tts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3"
+            result = speech(
+                model=self.profile.get("tts_model") or "openai/tts-1",
+                voice=self.profile.get("tts_voice") or "alloy",
+                input=self.text,
+                api_key=keys[0] if keys else None,
+                api_base=self.profile.get("endpoint") or None,
+            )
+            result.stream_to_file(path)
+            self.finished.emit(True, str(path))
         except Exception as e:
             self.finished.emit(False, str(e))
 
@@ -940,13 +1111,43 @@ class SpeechBubble(QLabel):
         super().__init__(pet)
         self.pet = pet
         self._click_cb = None
+        self._thought = False
+        self._persistent = False
+        self._bubble_w = 200
+        self._bubble_h = 42
+
+        # 消失計時器
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self.hide)
+
+        # 溫和呼吸動效計時器（alpha 210..255）
+        self._breath_timer = QTimer(self)
+        self._breath_timer.setInterval(40)
+        self._breath_timer.timeout.connect(self._on_breath_tick)
+        self._breath_phase = 0.0
+        self._breath_alpha = 255
+
         self.setWordWrap(True)
         self.setAlignment(Qt.AlignCenter)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setStyleSheet("background: transparent; border: none;")
         self.hide()
+
+    def _on_breath_tick(self):
+        self._breath_phase += 0.08
+        self._breath_alpha = int(232.5 + 22.5 * math.sin(self._breath_phase))
+        self.update()
+
+    def hide(self):
+        if hasattr(self, "_breath_timer") and self._breath_timer.isActive():
+            self._breath_timer.stop()
+        super().hide()
+
+    def hideEvent(self, e):
+        if hasattr(self, "_breath_timer") and self._breath_timer.isActive():
+            self._breath_timer.stop()
+        super().hideEvent(e)
 
     def set_click_callback(self, cb):
         self._click_cb = cb
@@ -963,31 +1164,139 @@ class SpeechBubble(QLabel):
         else:
             super().mousePressEvent(e)
 
-    def show_message(self, text: str, thought: bool = False, timeout_ms: int = 6500, persistent: bool = False):
-        self.setText(text)
-        theme = self.pet.cfg.get("theme", "light")
-        if theme == "dark":
-            bg = "#1e1f24" if not thought else "#16171b"
-            border = "#3e424e" if not thought else "#60a5fa"
-            fg = "#f1f3f5"
-        else:
-            bg = "#ffffff" if not thought else "#f1f4f9"
-            border = "#cbd5e1" if not thought else "#0b57d0"
-            fg = "#0f172a"
+    def _get_target_head_x(self, bubble_w: float) -> float:
+        """計算精準指向寵物頭頂的水平座標（於氣泡自身座標系）。"""
+        try:
+            from .pet import M_L
+            is_tail = getattr(self.pet, "is_tail", False)
+            snap_right = getattr(self.pet, "snap_right", False)
+            art_w = getattr(self.pet, "art_w", self.pet.width())
+            base_cx = 0.672 if is_tail else 0.60
+            head_cx_in_pet = M_L + (art_w * (1.0 - base_cx) if snap_right else art_w * base_cx)
+            target_x = head_cx_in_pet - self.x()
+            return max(28.0, min(float(bubble_w - 28.0), float(target_x)))
+        except Exception:
+            return bubble_w / 2.0
 
-        self.setStyleSheet(
-            f"QLabel {{ color: {fg}; background-color: {bg}; border: 1.5px solid {border}; "
-            f"border-radius: 16px; padding: 10px 14px; font-size: 13px; font-weight: {'bold' if thought else 'normal'}; }}"
-        )
+    def sizeHint(self) -> QSize:
+        return QSize(self._bubble_w, self._bubble_h + (40 if self._thought else 0))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
+
+        theme = "light"
+        if hasattr(self.pet, "cfg") and self.pet.cfg:
+            theme = self.pet.cfg.get("theme", "light")
+
+        alpha = self._breath_alpha if self._persistent else 255
+
+        if theme == "dark":
+            if self._thought:
+                bg_col = QColor("#16171b")
+                border_col = QColor(96, 165, 250, alpha)
+                fg_col = QColor("#f1f3f5")
+            else:
+                bg_col = QColor("#1e1f24")
+                border_col = QColor(62, 66, 78, alpha)
+                fg_col = QColor("#f1f3f5")
+        else:
+            if self._thought:
+                bg_col = QColor("#f1f4f9")
+                border_col = QColor(11, 87, 208, alpha)
+                fg_col = QColor("#0f172a")
+            else:
+                bg_col = QColor("#ffffff")
+                border_col = QColor(203, 213, 225, alpha)
+                fg_col = QColor("#0f172a")
+
+        bw = float(self._bubble_w)
+        bh = float(self._bubble_h)
+
+        # 1. 繪製主體氣泡矩形（平滑圓角膠囊／矩形）
+        pen = QPen(border_col, 1.5)
+        painter.setPen(pen)
+        painter.setBrush(QBrush(bg_col))
+
+        radius = min(16.0, bh / 2.0)
+        bubble_rect = QRectF(1.0, 1.0, bw - 2.0, bh - 2.0)
+        painter.drawRoundedRect(bubble_rect, radius, radius)
+
+        # 2. 當 thought=True 時，下方延伸繪製 3 顆由大至小依序遞減的小圓點指向角色頭頂
+        if self._thought:
+            target_x = self._get_target_head_x(bw)
+            start_x = bw / 2.0 + (target_x - bw / 2.0) * 0.3
+
+            # 3 顆小圓點直徑分別約為 12px, 8px, 5px（半徑 6.0, 4.0, 2.5）
+            c1_x = start_x + (target_x - start_x) * 0.25
+            c1_y = bh + 9.0
+            r1 = 6.0
+
+            c2_x = start_x + (target_x - start_x) * 0.65
+            c2_y = bh + 22.0
+            r2 = 4.0
+
+            c3_x = target_x
+            c3_y = bh + 33.0
+            r3 = 2.5
+
+            painter.drawEllipse(QPointF(c1_x, c1_y), r1, r1)
+            painter.drawEllipse(QPointF(c2_x, c2_y), r2, r2)
+            painter.drawEllipse(QPointF(c3_x, c3_y), r3, r3)
+
+        # 3. 繪製文字
+        painter.setPen(fg_col)
+        font = self.font()
+        font.setPointSize(13)
+        font.setBold(self._thought)
+        painter.setFont(font)
+
+        text_rect = QRectF(14.0, 4.0, bw - 28.0, bh - 8.0)
+        painter.drawText(text_rect, Qt.AlignCenter | Qt.TextWordWrap, self.text())
+        painter.end()
+
+    def show_message(self, text: str, thought: bool = False, timeout_ms: int = 6500, persistent: bool = False):
+        self._thought = thought
+        self._persistent = persistent
+        self.setText(text)
+
+        font = self.font()
+        font.setPointSize(13)
+        font.setBold(thought)
+        self.setFont(font)
+
+        fm = self.fontMetrics()
         max_w = max(200, min(380, self.pet.width() - 20))
-        self.setMaximumWidth(max_w)
-        self.adjustSize()
-        w = min(max_w, max(200, self.sizeHint().width()))
-        h = max(42, self.sizeHint().height())
-        self.resize(w, h)
-        self.move(max(6, (self.pet.width() - w) // 2), 10)
+        text_bound = fm.boundingRect(0, 0, max_w - 28, 1000, Qt.AlignCenter | Qt.TextWordWrap, text)
+
+        bubble_w = min(max_w, max(180, text_bound.width() + 32))
+        bubble_h = max(42, text_bound.height() + 20)
+        dots_h = 40 if thought else 0
+
+        self._bubble_w = bubble_w
+        self._bubble_h = bubble_h
+        self.resize(bubble_w, bubble_h + dots_h)
+
+        # 水平置中於寵物視窗
+        bx = max(6, min(self.pet.width() - bubble_w - 6, (self.pet.width() - bubble_w) // 2))
+        by = 10
+        self.move(bx, by)
         self.raise_()
         self.show()
+
+        # 呼吸動畫控制
+        if persistent:
+            if not self._breath_timer.isActive():
+                self._breath_phase = 0.0
+                self._breath_alpha = 255
+                self._breath_timer.start(40)
+        else:
+            self._breath_timer.stop()
+            self._breath_alpha = 255
+
+        self.update()
+
         self._timer.stop()
         if not persistent and timeout_ms > 0:
             self._timer.start(timeout_ms)
@@ -996,12 +1305,26 @@ class SpeechBubble(QLabel):
 # ==============================================================================
 # 4. 輔助設定對話框 (記憶管理、語音設定、API 設定檔)
 # ==============================================================================
+def clamp_to_screen(win: QWidget, target_x: int, target_y: int, scr=None) -> tuple[int, int]:
+    screen = scr or QGuiApplication.primaryScreen()
+    geo = screen.availableGeometry()
+    w = win.width()
+    h = win.height()
+    x = max(geo.left() + 16, min(target_x, geo.right() - w - 16))
+    y = max(geo.top() + 16, min(target_y, geo.bottom() - h - 16))
+    return x, y
+
+
 def center_dialog(dialog: QWidget):
-    screen = QApplication.primaryScreen()
+    screen = QGuiApplication.primaryScreen()
     if screen:
         geo = screen.availableGeometry()
-        x = geo.x() + max(0, (geo.width() - dialog.width()) // 2)
-        y = geo.y() + max(0, (geo.height() - dialog.height()) // 2)
+        w = dialog.width()
+        h = dialog.height()
+        cx = geo.x() + max(0, (geo.width() - w) // 2)
+        cy = geo.y() + max(0, (geo.height() - h) // 2)
+        x = max(geo.left() + 16, min(cx, geo.right() - w - 16))
+        y = max(geo.top() + 16, min(cy, geo.bottom() - h - 16))
         dialog.move(x, y)
 
 
@@ -1067,7 +1390,7 @@ class MemoryDialog(QDialog):
 
     def _clear_short(self):
         self.cfg.set("short_memory", [])
-        QMessageBox.information(self, "記憶管理", "短期記憶已清空。")
+        ModernMessageBox.information(self, "記憶管理", "短期記憶已清空。")
 
     def _save(self):
         lines = [x.strip() for x in self.long_edit.toPlainText().splitlines() if x.strip()]
@@ -1288,7 +1611,7 @@ class ApiProfileDialog(QDialog):
                     caption="API 設定檔 - 身分驗證",
                 )
                 if not ok:
-                    QMessageBox.warning(self, "身分驗證失敗", "Windows 身分驗證未通過，無法檢視金鑰。")
+                    ModernMessageBox.warning(self, "身分驗證失敗", "Windows 身分驗證未通過，無法檢視金鑰。")
                     return
             self.ed_key.setEchoMode(QLineEdit.Normal)
             self.btn_toggle_key.setText("隱藏")
@@ -1327,7 +1650,7 @@ class ApiProfileDialog(QDialog):
 
     def _del_profile(self):
         if len(self.profiles) <= 1:
-            QMessageBox.warning(self, "提示", "至少保留一個設定檔。")
+            ModernMessageBox.warning(self, "提示", "至少保留一個設定檔。")
             return
         row = self.list_w.currentRow()
         if 0 <= row < len(self.profiles):
@@ -1367,14 +1690,14 @@ class ApiProfileDialog(QDialog):
                 caption="API 設定檔 - 身分驗證",
             )
             if not ok:
-                QMessageBox.warning(self, "身分驗證失敗", "Windows 身分驗證未通過，無法儲存變更。")
+                ModernMessageBox.warning(self, "身分驗證失敗", "Windows 身分驗證未通過，無法儲存變更。")
                 return
         self.cfg.set("api_profiles", self.profiles, save=True)
         self.accept()
 
 
 # ==============================================================================
-# 5. 極簡深灰高質感膠囊對話視窗 (ChatDialog)
+# 5. AI 對話視窗 (ChatDialog)
 # ==============================================================================
 class ChatDialog(QDialog):
     def __init__(self, app, pet, parent=None):
@@ -1394,10 +1717,12 @@ class ChatDialog(QDialog):
             self.current_mode = "standard"
         self._toast_label = None
         self._toast_timer = None
+        self.history_expanded = False
+        self._anim = None
 
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setMinimumSize(480, 420)
-        self.resize(580, 520)
+        self.setMinimumSize(500, 160)
+        self.resize(560, 180)
 
         self._setup_ui()
         self._apply_mode_ui(self.current_mode)
@@ -1405,103 +1730,55 @@ class ChatDialog(QDialog):
         self.sync_memory_info()
 
     def _setup_ui(self):
-        # Outer dialog root layout
+        theme = self.cfg.get("theme", "dark")
+
         outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(10, 10, 10, 10)
+        outer_layout.setContentsMargins(8, 8, 8, 8)
         outer_layout.setSpacing(0)
 
         # Window Frame Container
         self.container = QFrame(self)
         self.container.setObjectName("ChatContainer")
-        self.container.setStyleSheet("""
-            QFrame#ChatContainer {
-                background-color: #17181c;
-                border: 1px solid #282a32;
-                border-radius: 18px;
-            }
-        """)
 
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(0, 0, 0, 12)
-        container_layout.setSpacing(8)
+        container_layout.setContentsMargins(0, 0, 0, 10)
+        container_layout.setSpacing(6)
 
         # Title Bar
-        self.title_bar = CustomTitleBar(self, "AI 膠囊對話", has_min=True, has_close=True, theme="dark")
+        self.title_bar = CustomTitleBar(self, "AI 對話", has_min=True, has_close=True, theme=theme)
         container_layout.addWidget(self.title_bar)
 
-        # Conversation History Stream
+        # Body Widget
         body_widget = QWidget()
         body_layout = QVBoxLayout(body_widget)
-        body_layout.setContentsMargins(14, 4, 14, 0)
-        body_layout.setSpacing(8)
+        body_layout.setContentsMargins(14, 2, 14, 0)
+        body_layout.setSpacing(6)
+
+        # Collapsible Conversation History Stream
+        self.history_widget = QWidget()
+        h_layout = QVBoxLayout(self.history_widget)
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.setSpacing(0)
 
         self.history_view = QTextEdit()
         self.history_view.setReadOnly(True)
         self.history_view.setPlaceholderText("輸入任何問題開始對話，Enter 發送訊息...")
-        self.history_view.setStyleSheet("""
-            QTextEdit {
-                background: transparent;
-                border: none;
-                color: #e2e8f0;
-                font-size: 13px;
-                line-height: 1.5;
-                padding: 4px;
-            }
-            QScrollBar:vertical {
-                background: transparent;
-                width: 6px;
-                margin: 0;
-            }
-            QScrollBar::handle:vertical {
-                background: #333642;
-                border-radius: 3px;
-                min-height: 24px;
-            }
-        """)
-        body_layout.addWidget(self.history_view, 1)
+        h_layout.addWidget(self.history_view)
+        self.history_widget.setVisible(False)
+        body_layout.addWidget(self.history_widget, 1)
 
-        # Status Bar Indicator (Subtle text)
-        status_box = QHBoxLayout()
-        status_box.setContentsMargins(4, 0, 4, 0)
-        self.lb_status = QLabel("就緒")
-        self.lb_status.setStyleSheet("color: #64748b; font-size: 11px;")
-        status_box.addWidget(self.lb_status, 1)
-
-        self.lb_model_tag = QLabel("")
-        self.lb_model_tag.setStyleSheet("color: #60a5fa; font-size: 11px; font-weight: bold;")
-        status_box.addWidget(self.lb_model_tag)
-        body_layout.addLayout(status_box)
-
-        # Minimalist Capsule Input Container (Dark Charcoal Capsule #1e1f24, Border #2e3038, Radius 20px)
+        # Minimalist Capsule Input Container
         self.capsule = QFrame()
         self.capsule.setObjectName("CapsuleFrame")
-        self.capsule.setStyleSheet("""
-            QFrame#CapsuleFrame {
-                background-color: #1e1f24;
-                border: 1px solid #2e3038;
-                border-radius: 20px;
-            }
-        """)
 
         capsule_layout = QVBoxLayout(self.capsule)
-        capsule_layout.setContentsMargins(14, 10, 14, 10)
-        capsule_layout.setSpacing(6)
+        capsule_layout.setContentsMargins(12, 8, 12, 8)
+        capsule_layout.setSpacing(4)
 
         # Top Area: Transparent Input LineEdit
         self.ed_input = QLineEdit()
         self.ed_input.setPlaceholderText("輸入任何問題，Enter 發送...")
         self.ed_input.returnPressed.connect(self.send_message)
-        self.ed_input.setStyleSheet("""
-            QLineEdit {
-                background: transparent;
-                border: none;
-                color: #f1f3f5;
-                font-size: 14px;
-                padding: 2px 0 4px 0;
-                selection-background-color: #3b82f6;
-                selection-color: #ffffff;
-            }
-        """)
         capsule_layout.addWidget(self.ed_input)
 
         # Bottom Integrated Control Row
@@ -1550,7 +1827,7 @@ class ChatDialog(QDialog):
         self.btn_model.clicked.connect(self._popup_model_menu)
         ctrl_row.addWidget(self.btn_model)
 
-        # Hidden QComboBox for backward compatibility and profile index management
+        # Hidden QComboBox for backward compatibility
         self.cmb_profile = QComboBox()
         self.cmb_profile.hide()
         self.cmb_profile.currentIndexChanged.connect(self._on_profile_switched)
@@ -1558,7 +1835,28 @@ class ChatDialog(QDialog):
 
         ctrl_row.addStretch(1)
 
-        # Right: Mode Capsule (切換「標準對話」、「深度思考」、「語音陪伴」)
+        # History Toggle Capsule Button
+        self.btn_history_toggle = QPushButton("對話紀錄 ▾")
+        self.btn_history_toggle.setToolTip("展開對話歷史紀錄")
+        self.btn_history_toggle.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: #94a3b8;
+                border: none;
+                border-radius: 10px;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #282a32;
+                color: #e2e8f0;
+            }
+        """)
+        self.btn_history_toggle.clicked.connect(self.toggle_history)
+        ctrl_row.addWidget(self.btn_history_toggle)
+
+        # Right: Mode Capsule
         self.btn_mode = QPushButton("標準 ▾")
         self.btn_mode.setIcon(get_icon("forum", "#94a3b8", 15))
         self.btn_mode.setToolTip("切換對話模式")
@@ -1633,22 +1931,223 @@ class ChatDialog(QDialog):
         capsule_layout.addLayout(ctrl_row)
         body_layout.addWidget(self.capsule)
 
+        # Status Bar Indicator
+        status_box = QHBoxLayout()
+        status_box.setContentsMargins(4, 0, 4, 0)
+        self.lb_status = QLabel("就緒")
+        self.lb_status.setStyleSheet("color: #64748b; font-size: 11px;")
+        status_box.addWidget(self.lb_status, 1)
+
+        self.lb_model_tag = QLabel("")
+        self.lb_model_tag.setStyleSheet("color: #60a5fa; font-size: 11px; font-weight: bold;")
+        status_box.addWidget(self.lb_model_tag)
+        body_layout.addLayout(status_box)
+
         container_layout.addWidget(body_widget, 1)
         outer_layout.addWidget(self.container)
+
+        self.apply_theme(theme)
+
+    def apply_theme(self, theme: str):
+        is_dark = (theme == "dark")
+        self.title_bar.apply_theme(theme)
+        if is_dark:
+            self.container.setStyleSheet("""
+                QFrame#ChatContainer {
+                    background-color: #17181c;
+                    border: 1px solid #282a32;
+                    border-radius: 18px;
+                }
+            """)
+            self.capsule.setStyleSheet("""
+                QFrame#CapsuleFrame {
+                    background-color: #1e1f24;
+                    border: 1px solid #2e3038;
+                    border-radius: 18px;
+                }
+            """)
+            self.ed_input.setStyleSheet("""
+                QLineEdit {
+                    background: transparent;
+                    border: none;
+                    color: #f1f3f5;
+                    font-size: 14px;
+                    padding: 2px 0 4px 0;
+                    selection-background-color: #3b82f6;
+                    selection-color: #ffffff;
+                }
+            """)
+            self.history_view.setStyleSheet("""
+                QTextEdit {
+                    background: transparent;
+                    border: none;
+                    color: #e2e8f0;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    padding: 4px;
+                }
+                QScrollBar:vertical {
+                    background: transparent;
+                    width: 6px;
+                    margin: 0;
+                }
+                QScrollBar::handle:vertical {
+                    background: #333642;
+                    border-radius: 3px;
+                    min-height: 24px;
+                }
+            """)
+        else:
+            self.container.setStyleSheet("""
+                QFrame#ChatContainer {
+                    background-color: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                }
+            """)
+            self.capsule.setStyleSheet("""
+                QFrame#CapsuleFrame {
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                }
+            """)
+            self.ed_input.setStyleSheet("""
+                QLineEdit {
+                    background: transparent;
+                    border: none;
+                    color: #0f172a;
+                    font-size: 14px;
+                    padding: 2px 0 4px 0;
+                    selection-background-color: #3b82f6;
+                    selection-color: #ffffff;
+                }
+            """)
+            self.history_view.setStyleSheet("""
+                QTextEdit {
+                    background: transparent;
+                    border: none;
+                    color: #0f172a;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    padding: 4px;
+                }
+                QScrollBar:vertical {
+                    background: transparent;
+                    width: 6px;
+                    margin: 0;
+                }
+                QScrollBar::handle:vertical {
+                    background: #cbd5e1;
+                    border-radius: 3px;
+                    min-height: 24px;
+                }
+            """)
+
+    def toggle_history(self):
+        self.set_history_expanded(not self.history_expanded, animate=True)
+
+    def _update_history_toggle_label(self):
+        if self.history_expanded:
+            self.btn_history_toggle.setText("收起紀錄 ▴")
+            self.btn_history_toggle.setToolTip("收起對話歷史紀錄，恢復極簡扁平膠囊")
+        else:
+            self.btn_history_toggle.setText("對話紀錄 ▾")
+            self.btn_history_toggle.setToolTip("展開對話歷史紀錄")
+
+    def set_history_expanded(self, expanded: bool, animate: bool = True):
+        if self.history_expanded == expanded:
+            return
+        self.history_expanded = expanded
+        target_w = 560
+        target_h = 430 if expanded else 180
+
+        screen = QGuiApplication.screenAt(self.geometry().center()) or QGuiApplication.primaryScreen()
+        geo = screen.availableGeometry()
+
+        cur_rect = self.geometry()
+        new_w = target_w
+        new_h = target_h
+        new_x = max(geo.left() + 16, min(cur_rect.x(), geo.right() - new_w - 16))
+        if expanded:
+            new_y = min(cur_rect.y(), geo.bottom() - new_h - 16)
+            new_y = max(geo.top() + 16, new_y)
+        else:
+            new_y = cur_rect.y()
+            new_y = max(geo.top() + 16, min(new_y, geo.bottom() - new_h - 16))
+
+        target_rect = QRect(new_x, new_y, new_w, new_h)
+
+        if not animate:
+            if expanded:
+                self.history_widget.setVisible(True)
+                self.setMinimumHeight(240)
+                self.setMaximumHeight(800)
+            else:
+                self.history_widget.setVisible(False)
+                self.setMinimumHeight(160)
+                self.setMaximumHeight(220)
+            self.setGeometry(target_rect)
+            self._update_history_toggle_label()
+            return
+
+        if expanded:
+            self.history_widget.setVisible(True)
+            self.setMinimumHeight(160)
+            self.setMaximumHeight(800)
+
+        if self._anim and self._anim.state() == QPropertyAnimation.Running:
+            self._anim.stop()
+
+        self._anim = QPropertyAnimation(self, b"geometry")
+        self._anim.setDuration(220)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.setStartValue(cur_rect)
+        self._anim.setEndValue(target_rect)
+
+        def on_finished():
+            if not self.history_expanded:
+                self.history_widget.setVisible(False)
+                self.setMinimumHeight(160)
+                self.setMaximumHeight(220)
+            else:
+                self.setMinimumHeight(240)
+                self.setMaximumHeight(800)
+            self._update_history_toggle_label()
+
+        self._anim.finished.connect(on_finished)
+        self._anim.start()
 
     # ------------------------------------------------------------- Companion Placement
     def show_beside_pet(self):
         self.show()
         self.raise_()
         self.activateWindow()
-        pet_rect = self.pet.geometry()
-        screen = QApplication.primaryScreen().availableGeometry()
 
-        x = pet_rect.left() - self.width() - 15
-        if x < screen.left():
-            x = pet_rect.right() + 15
-        y = max(screen.top() + 20, min(screen.bottom() - self.height() - 20, pet_rect.top()))
+        pet_rect = self.pet.geometry()
+        screen = QGuiApplication.screenAt(pet_rect.center()) or QGuiApplication.primaryScreen()
+        geo = screen.availableGeometry()
+        w = self.width()
+        h = self.height()
+
+        # 當寵物位於螢幕右側時，彈在寵物左側（內側）；位於左側時，彈在寵物右側（內側）
+        if pet_rect.center().x() > geo.center().x():
+            target_x = pet_rect.left() - w - 16
+        else:
+            target_x = pet_rect.right() + 16
+
+        # 垂直對齊寵物中心
+        target_y = pet_rect.center().y() - h // 2
+
+        # 100% 邊界夾持演算法杜絕被螢幕邊緣遮擋
+        x = max(geo.left() + 16, min(target_x, geo.right() - w - 16))
+        y = max(geo.top() + 16, min(target_y, geo.bottom() - h - 16))
         self.move(x, y)
+        try:
+            from . import winapi
+            winapi.set_topmost(int(self.winId()), True)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------- Menu & Dialogs
     def _open_menu(self):
@@ -1751,6 +2250,7 @@ class ChatDialog(QDialog):
             ("standard", "標準對話模式"),
             ("reasoner", "深度思考模式 (Reasoner)"),
             ("voice", "語音陪伴模式 (自動朗讀)"),
+            ("agent", "系統助手 Agent 模式 (Agent)"),
         ]
         for mode_key, mode_name in modes:
             act = m.addAction(mode_name)
@@ -1769,6 +2269,10 @@ class ChatDialog(QDialog):
             self.btn_mode.setText("語音 ▾")
             self.btn_mode.setIcon(get_icon("volume_up", "#38bdf8", 15))
             self.btn_mode.setToolTip("語音陪伴模式：AI 回覆將自動以語音朗讀")
+        elif mode_key == "agent":
+            self.btn_mode.setText("助手 ▾")
+            self.btn_mode.setIcon(get_icon("shield", "#10b981", 15))
+            self.btn_mode.setToolTip("系統助手 Agent 模式：執行系統指令與任務")
         else:
             self.btn_mode.setText("標準 ▾")
             self.btn_mode.setIcon(get_icon("forum", "#94a3b8", 15))
@@ -1782,6 +2286,8 @@ class ChatDialog(QDialog):
             self.show_floating_notice("已切換為【深度思考模式】：AI 將進行深入邏輯剖析")
         elif mode_key == "voice":
             self.show_floating_notice("已切換為【語音陪伴模式】：AI 回覆將自動以語音朗讀")
+        elif mode_key == "agent":
+            self.show_floating_notice("已切換為【系統助手 Agent 模式】：可執行系統任務與輔助指令")
         else:
             self.show_floating_notice("已切換為【標準對話模式】")
 
@@ -1832,6 +2338,7 @@ class ChatDialog(QDialog):
         self.history_view.clear()
         self.cfg.set("short_memory", [])
         self.lb_status.setText("對話記錄已清除")
+        self.set_history_expanded(False, animate=True)
 
     # ------------------------------------------------------------- Profile & Memory Sync
     def sync_profiles(self):
@@ -1880,10 +2387,10 @@ class ChatDialog(QDialog):
             for item in short:
                 role = item.get("role", "")
                 who = "你" if role == "user" else "角色"
-                self.add_history_entry(who, item.get("content", ""))
+                self.add_history_entry(who, item.get("content", ""), auto_expand=False)
 
     # ------------------------------------------------------------- Messaging
-    def add_history_entry(self, who: str, text: str):
+    def add_history_entry(self, who: str, text: str, auto_expand: bool = True):
         is_user = (who == "你")
         align = "right" if is_user else "left"
         bg_col = "#202532" if is_user else "#1e2026"
@@ -1911,18 +2418,36 @@ class ChatDialog(QDialog):
         if sb:
             sb.setValue(sb.maximum())
 
+        if auto_expand and not self.history_expanded:
+            self.set_history_expanded(True, animate=True)
+
     def _build_prompt(self, user_text: str) -> str:
         long_mem = self.cfg.get("long_memory", [])
         short_mem = self.cfg.get("short_memory", [])
         char_name = self.pet.character
 
-        parts = [
-            f"你是桌面上的可愛角色（目前外觀：{char_name}）。請以繁體中文回答，簡短自然親切，字數在 150 字以內，不要輸出任何思考過程標籤或 markdown 表情符號。"
-        ]
+        custom_prompt = self.cfg.get("custom_system_prompt", "").strip()
+        if custom_prompt:
+            base_prompt = custom_prompt
+        else:
+            base_prompt = (
+                f"你是一個客觀、簡潔且真實的桌面智慧助手（目前外觀：{char_name}）。"
+                "請以繁體中文回答，保持簡潔真實、條理分明、無廢話，直接給予最精確有用的內容。"
+                "嚴格禁止輸出任何思考標籤或表情符號 (No Emojis)。"
+            )
+
+        parts = [base_prompt]
         if self.current_mode == "reasoner":
             parts.append("【深度思考模式】請針對使用者的問題進行全方位、深度且邏輯嚴謹的剖析，列出關鍵步驟與深入見解。輸出條理分明、結構清晰。")
         elif self.current_mode == "voice":
             parts.append("【語音陪伴模式】請以生動、親切、自然且溫暖的口吻簡短回應（不超過 100 字），適合口語朗讀，避免使用複雜符號或表格。")
+        elif self.current_mode == "agent":
+            parts.append(
+                "【系統助手 Agent 模式】\n"
+                "你是一個具備系統指令與輔助任務執行能力的桌面智慧助手。若使用者的要求需要執行本機系統指令或查詢，請以標準格式輸出要執行的指令，格式如下：\n"
+                "[EXECUTE: 指令內容]\n"
+                "請嚴格遵從安全最小權限原則。若僅為一般諮詢，則直接以繁體中文客觀簡短回應。"
+            )
 
         if long_mem:
             parts.append("長期記憶（手動設定，請適時參考）：\n" + "\n".join(f"- {x}" for x in long_mem))
@@ -1930,7 +2455,7 @@ class ChatDialog(QDialog):
             recent_turns = short_mem[-10:]
             history_lines = []
             for item in recent_turns:
-                prefix = "使用者：" if item.get("role") == "user" else "角色："
+                prefix = "使用者：" if item.get("role") == "user" else "助手："
                 history_lines.append(prefix + item.get("content", ""))
             parts.append("最近對話歷史：\n" + "\n".join(history_lines))
 
@@ -1958,7 +2483,7 @@ class ChatDialog(QDialog):
 
     def _on_chat_done(self, ok: bool, reply: str, err: str):
         self.chat_worker = None
-        self.add_history_entry("角色", reply)
+        self.add_history_entry("助手", reply)
         self._remember("assistant", reply)
 
         # Synchronously display speech bubble above pet's head
@@ -1971,6 +2496,71 @@ class ChatDialog(QDialog):
 
         # Trigger TTS if configured or in voice mode
         self._speak(reply)
+
+        # Agent 模式指令執行與安全規則檢驗
+        if ok and self.current_mode == "agent" and "[EXECUTE:" in reply:
+            match = re.search(r'\[EXECUTE:\s*(.+?)\]', reply, re.DOTALL)
+            if match:
+                cmd = match.group(1).strip()
+                self._handle_agent_command(cmd)
+
+    def _handle_agent_command(self, cmd: str):
+        if not cmd:
+            return
+
+        # 1. 檢查黑名單指令
+        blacklist = self.cfg.get("security_blacklist_commands", [])
+        cmd_lower = cmd.lower()
+        for bl in blacklist:
+            if bl.lower() in cmd_lower:
+                self.show_floating_notice(f"【安全攔截】指令包含危險黑名單關鍵字「{bl}」，已自動拒絕執行！", is_error=True)
+                self.add_history_entry("安全核心", f"已攔截危險指令：{cmd}\n原因：符合黑名單規則「{bl}」")
+                return
+
+        # 2. 檢查敏感目錄保護
+        sensitive_paths = self.cfg.get("security_sensitive_paths", [])
+        for sp in sensitive_paths:
+            if sp.lower() in cmd_lower and any(op in cmd_lower for op in ("del", "rm", "format", "write", "new-item", "remove-item")):
+                self.show_floating_notice(f"【安全攔截】指令試圖修改受保護敏感目錄「{sp}」，已自動拒絕執行！", is_error=True)
+                self.add_history_entry("安全核心", f"已攔截指令：{cmd}\n原因：試圖修改敏感目錄「{sp}」")
+                return
+
+        # 3. 檢查白名單安全指令
+        whitelist = self.cfg.get("security_whitelist_commands", [])
+        tokens = cmd.strip().split()
+        first_token = tokens[0].lower() if tokens else ""
+        is_whitelisted = (first_token in [w.lower() for w in whitelist]) or (cmd.strip().lower() in [w.lower() for w in whitelist])
+
+        auto_approve = self.cfg.get("agent_auto_approve_whitelist", False)
+        if is_whitelisted and auto_approve:
+            self._execute_agent_command_process(cmd)
+            return
+
+        # 4. 若不在白名單（或白名單需確認），彈出精緻小型確認彈窗 AgentConfirmDialog (380x220)
+        from .dialogs import AgentConfirmDialog
+        dlg = AgentConfirmDialog(self, command=cmd, theme=self.cfg.get("theme", "dark"))
+        if dlg.exec() and dlg.confirmed:
+            self._execute_agent_command_process(cmd)
+        else:
+            self.show_floating_notice("已取消執行 Agent 指令")
+            self.add_history_entry("系統", f"使用者已取消或拒絕執行指令：{cmd}")
+
+    def _execute_agent_command_process(self, cmd: str):
+        import subprocess
+        self.show_floating_notice(f"正在執行指令：{cmd[:30]}...")
+        try:
+            res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
+            out = res.stdout.strip() or res.stderr.strip() or "指令執行完成，無輸出內容。"
+            if len(out) > 800:
+                out = out[:800] + "\n...(輸出過長已截斷)"
+            self.add_history_entry("執行結果", out)
+            self.pet.show_speech_bubble("指令執行完成", thought=False)
+        except subprocess.TimeoutExpired:
+            self.show_floating_notice("指令執行逾時 (15秒)", is_error=True)
+            self.add_history_entry("執行結果", "錯誤：指令執行逾時")
+        except Exception as e:
+            self.show_floating_notice(f"執行失敗: {e}", is_error=True)
+            self.add_history_entry("執行結果", f"執行錯誤: {e}")
 
     def _remember(self, role: str, content: str):
         items = list(self.cfg.get("short_memory", []))

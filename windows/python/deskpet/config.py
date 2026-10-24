@@ -11,21 +11,47 @@ from pathlib import Path
 
 from .winapi import dpapi_decrypt, dpapi_encrypt
 
-if getattr(sys, "frozen", False):
-    EXE_DIR = Path(sys.executable).resolve().parent
-    BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", EXE_DIR))
-    APP_DIR = EXE_DIR
-    if (BUNDLE_DIR / "assets").exists():
-        ASSETS = BUNDLE_DIR / "assets"
-    elif (EXE_DIR / "assets").exists():
-        ASSETS = EXE_DIR / "assets"
+def _get_base_dirs() -> tuple[Path, Path]:
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        bundle_dir = Path(getattr(sys, "_MEIPASS", exe_dir))
+
+        is_writable = False
+        test_file = exe_dir / ".perm_check"
+        try:
+            test_file.touch(exist_ok=True)
+            test_file.unlink(missing_ok=True)
+            is_writable = True
+        except Exception:
+            is_writable = False
+
+        if is_writable:
+            app_dir = exe_dir
+        else:
+            appdata = os.environ.get("LOCALAPPDATA")
+            if appdata:
+                app_dir = Path(appdata) / "DesktopPet"
+                app_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                app_dir = exe_dir
+
+        if (bundle_dir / "assets").exists():
+            assets_dir = bundle_dir / "assets"
+        elif (exe_dir / "assets").exists():
+            assets_dir = exe_dir / "assets"
+        elif (exe_dir / "_internal" / "assets").exists():
+            assets_dir = exe_dir / "_internal" / "assets"
+        else:
+            assets_dir = bundle_dir / "assets"
+
+        return app_dir, assets_dir
     else:
-        ASSETS = BUNDLE_DIR / "assets"
-else:
-    APP_DIR = Path(__file__).resolve().parent.parent
-    ASSETS = APP_DIR / "assets"
+        root_dir = Path(__file__).resolve().parent.parent
+        return root_dir, root_dir / "assets"
+
+
+APP_DIR, ASSETS = _get_base_dirs()
 CUSTOM_CHARS_DIR = APP_DIR / "custom_characters"
-CUSTOM_Q_DIR = APP_DIR / "custom_q"
 SOUND_LIB_DIR = APP_DIR / "custom_sounds"
 CONFIG_PATH = APP_DIR / "pet_config.json"
 PROVIDER_INI_PATH = APP_DIR / "provider.ini"
@@ -105,10 +131,39 @@ DEFAULTS = {
     "character": "deepseek",  # deepseek / claude / gemini / gpt / custom_<name>
     "variant": "square",      # square (1024x1024) / tail (1536x1024)
     "theme": "light",         # control-panel theme: light / dark
-    # Q-version characters
-    "q_dark": False,          # DS Q-character dark mode
-    "q_height": 170,          # Q character height in px
-    "q_chars": [],            # persisted active walkers: [{"type": "ds"|"custom", "dark": bool, "id": str}]
+    # performance & rendering
+    "disable_transparency": False,
+    "disable_blur": False,
+    "animations_enabled": True,
+    "performance_mode": False,
+    "target_fps": 60,         # 10, 15, 20, 24, 30, 45, 60, 90, 120, 144, 240, 0=unlimited
+    "vsync_mode": 1,          # 0=off, 1=standard vsync, -1=adaptive/triple buffering
+    "rendering_backend": "opengl",  # opengl, d3d11, d3d12, vulkan, software
+    # privacy & guardrails
+    "privacy_mode": True,
+    "zero_data_retention": True,
+    # agent mode & security rules
+    "chat_dialog_mode": "standard",  # standard / reasoner / voice / agent
+    "agent_enabled": True,
+    "agent_auto_approve_whitelist": False,
+    "security_whitelist_commands": [
+        "dir", "echo", "date", "time", "whoami", "hostname", "ver",
+        "systeminfo", "tasklist", "ipconfig", "ping", "netstat",
+        "get-process", "get-service", "get-date", "get-command"
+    ],
+    "security_blacklist_commands": [
+        "format", "del /f /s /q", "rmdir /s /q", "rm -rf", "reg delete",
+        "diskpart", "shutdown", "reboot", "stop-computer", "drop database",
+        "vssadmin", "bcdedit", "cipher /w"
+    ],
+    "security_sensitive_paths": [
+        "C:\\Windows\\System32",
+        "C:\\Windows",
+        "C:\\Program Files",
+        "C:\\Program Files (x86)",
+    ],
+    # custom prompt
+    "custom_system_prompt": "",
     # sound
     "sound": True,
     "volume": 80,
@@ -139,7 +194,7 @@ DEFAULTS = {
         {"name": "DeepSeek 預設", "provider": "DeepSeek", "key": "", "endpoint": "https://api.deepseek.com", "model": "deepseek-chat"},
         {"name": "OpenAI 預設", "provider": "OpenAI", "key": "", "endpoint": "https://api.openai.com/v1", "model": "gpt-4o-mini"},
         {"name": "Claude 預設", "provider": "Anthropic", "key": "", "endpoint": "https://api.anthropic.com", "model": "claude-3-5-haiku-latest"},
-        {"name": "Gemini 預設", "provider": "Google Gemini", "key": "", "endpoint": "https://generativelanguage.googleapis.com/v1beta", "model": "gemini-flash-latest"},
+        {"name": "Gemini 預設", "provider": "Google Gemini", "key": "", "endpoint": "https://generativelanguage.googleapis.com/v1beta", "model": "gemini-3.5-flash-lite"},
     ],
     "active_profile": 0,
     # memory

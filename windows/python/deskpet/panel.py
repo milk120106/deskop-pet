@@ -33,7 +33,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -49,6 +48,7 @@ from .chat import ApiProfileDialog, MemoryDialog, ModelListWorker, VoiceSettings
 from .config import (
     APP_DIR,
     APP_VERSION,
+    ASSETS,
     CUSTOM_CHARS_DIR,
     GITHUB_RELEASES_API,
     GITHUB_RELEASES_URL,
@@ -57,7 +57,7 @@ from .config import (
     PROV_NAMES,
     SOUND_LIB_DIR,
 )
-from .dialogs import CharPickerDialog, CustomQDialog, SoundLibraryDialog
+from .dialogs import CharPickerDialog, ModernMessageBox, SoundLibraryDialog
 from .font_manager import (
     apply_global_font,
     get_system_fonts,
@@ -68,6 +68,9 @@ from .icons import get_icon
 from .logger import LOGS_DIR, check_crash, clear_memory_buffer, get_recent_logs
 from .model_catalog import PROVIDERS, ModelCatalogError, discover_models
 from .titlebar import CustomTitleBar
+
+ARROW_DOWN_DARK = (ASSETS / "arrow_down_dark.svg").as_posix()
+ARROW_DOWN_LIGHT = (ASSETS / "arrow_down_light.svg").as_posix()
 
 # ========================================================= Material Design 3 Stylesheets
 LIGHT_MD3_QSS = """
@@ -116,7 +119,7 @@ QListWidget#NavList::item:selected {
     color: #1d4ed8;
     font-weight: bold;
 }
-QScrollArea, #CardContainer, #CardViewport {
+QScrollArea, QScrollArea > QWidget, #CardContainer, #CardViewport {
     background-color: #f8f9fa;
     border: none;
 }
@@ -205,15 +208,41 @@ QPushButton#danger:hover {
 QPushButton#danger:pressed {
     background-color: #b91c1c;
 }
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+QLineEdit, QSpinBox, QDoubleSpinBox {
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     padding: 6px 10px;
     color: #0f172a;
 }
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #2563eb;
+}
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 30px 6px 12px;
+    color: #0f172a;
+}
+QComboBox:hover {
+    border-color: #94a3b8;
+}
+QComboBox:focus {
+    border: 2px solid #2563eb;
+    padding: 5px 29px 5px 11px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_LIGHT__");
+    width: 10px;
+    height: 7px;
 }
 QComboBox QAbstractItemView {
     background-color: #ffffff;
@@ -223,6 +252,7 @@ QComboBox QAbstractItemView {
     selection-color: #1d4ed8;
     padding: 4px;
     outline: none;
+    color: #0f172a;
 }
 QSlider::groove:horizontal {
     height: 6px;
@@ -273,11 +303,24 @@ QScrollBar::handle:vertical {
     border-radius: 4px;
     margin: 2px;
 }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+QScrollBar:horizontal {
+    border: none;
+    background-color: #f8f9fa;
+    height: 8px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background-color: #cbd5e1;
+    min-width: 28px;
+    border-radius: 4px;
+    margin: 2px;
+}
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0;
     height: 0;
     background: none;
 }
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+QScrollBar::add-page, QScrollBar::sub-page {
     background: none;
 }
 QAbstractScrollArea::corner {
@@ -340,7 +383,7 @@ QListWidget#NavList::item:selected {
     color: #93c5fd;
     font-weight: bold;
 }
-QScrollArea, #CardContainer, #CardViewport {
+QScrollArea, QScrollArea > QWidget, #CardContainer, #CardViewport {
     background-color: #16181d;
     border: none;
 }
@@ -429,15 +472,41 @@ QPushButton#danger:hover {
 QPushButton#danger:pressed {
     background-color: #991b1b;
 }
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+QLineEdit, QSpinBox, QDoubleSpinBox {
     background-color: #1f232b;
     border: 1px solid #3b404d;
     border-radius: 8px;
     padding: 6px 10px;
     color: #ffffff;
 }
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #3b82f6;
+}
+QComboBox {
+    background-color: #1f232b;
+    border: 1px solid #3b404d;
+    border-radius: 8px;
+    padding: 6px 30px 6px 12px;
+    color: #ffffff;
+}
+QComboBox:hover {
+    border-color: #555b6d;
+}
+QComboBox:focus {
+    border: 2px solid #3b82f6;
+    padding: 5px 29px 5px 11px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_DARK__");
+    width: 10px;
+    height: 7px;
 }
 QComboBox QAbstractItemView {
     background-color: #1f232b;
@@ -447,6 +516,7 @@ QComboBox QAbstractItemView {
     selection-color: #93c5fd;
     padding: 4px;
     outline: none;
+    color: #ffffff;
 }
 QSlider::groove:horizontal {
     height: 6px;
@@ -497,11 +567,24 @@ QScrollBar::handle:vertical {
     border-radius: 4px;
     margin: 2px;
 }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+QScrollBar:horizontal {
+    border: none;
+    background-color: #16181d;
+    height: 8px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background-color: #3b404d;
+    min-width: 28px;
+    border-radius: 4px;
+    margin: 2px;
+}
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0;
     height: 0;
     background: none;
 }
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+QScrollBar::add-page, QScrollBar::sub-page {
     background: none;
 }
 QAbstractScrollArea::corner {
@@ -517,6 +600,9 @@ QTextEdit#LogViewer {
     color: #e2e2e6;
 }
 """
+
+LIGHT_MD3_QSS = LIGHT_MD3_QSS.replace("__ARROW_DOWN_LIGHT__", ARROW_DOWN_LIGHT)
+DARK_MD3_QSS = DARK_MD3_QSS.replace("__ARROW_DOWN_DARK__", ARROW_DOWN_DARK)
 
 
 # ========================================================= Background Update Worker
@@ -568,6 +654,9 @@ def _page_wrapper(page_widget: QWidget) -> QScrollArea:
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     scroll.setFrameShape(QFrame.NoFrame)
+    if scroll.viewport():
+        scroll.viewport().setObjectName("CardViewport")
+        scroll.viewport().setAttribute(Qt.WA_StyledBackground, True)
     container = QWidget()
     container.setObjectName("CardContainer")
     container.setAttribute(Qt.WA_StyledBackground, True)
@@ -585,7 +674,7 @@ class ControlPanel(QWidget):
         super().__init__(None, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
         self.app = app
         self.cfg = app.cfg
-        self.setWindowTitle("桌面寵物 控制中心")
+        self.setWindowTitle("桌面寵物 設定中心")
         self.setFixedSize(960, 650)
         self._lock = False
         self._disc_worker = None
@@ -598,7 +687,7 @@ class ControlPanel(QWidget):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        self.title_bar = CustomTitleBar(self, "桌面寵物 控制中心", has_min=True, has_close=True, theme="dark" if is_dark else "light")
+        self.title_bar = CustomTitleBar(self, "桌面寵物 設定中心", has_min=True, has_close=True, theme="dark" if is_dark else "light")
         root_layout.addWidget(self.title_bar)
 
         body_widget = QWidget()
@@ -620,7 +709,7 @@ class ControlPanel(QWidget):
         title_lbl.setObjectName("AppTitle")
         sb_lay.addWidget(title_lbl)
 
-        sub_lbl = QLabel("控制台中心 · MD3")
+        sub_lbl = QLabel("設定中心")
         sub_lbl.setObjectName("AppSubtitle")
         sb_lay.addWidget(sub_lbl)
 
@@ -629,7 +718,8 @@ class ControlPanel(QWidget):
         nav_items = [
             "視窗設定",
             "角色與形態",
-            "Q 版夥伴",
+            "效能與渲染",
+            "隱私與 Agent",
             "互動演示",
             "聲音設定",
             "AI 對話與語音",
@@ -646,6 +736,11 @@ class ControlPanel(QWidget):
         sb_lay.addWidget(self.nav_list, 1)
 
         # Bottom actions in sidebar
+        btn_qml = QPushButton("QML 現代動效版")
+        btn_qml.setIcon(get_icon("settings", "#3b82f6", 16))
+        btn_qml.clicked.connect(self._open_qml_panel)
+        sb_lay.addWidget(btn_qml)
+
         btn_theme = QPushButton("切換主題")
         btn_theme.setIcon(get_icon("palette", "#64748b", 16))
         btn_theme.clicked.connect(self._toggle_theme)
@@ -670,10 +765,11 @@ class ControlPanel(QWidget):
         self.fade_anim.setDuration(180)
         self.fade_anim.setEasingCurve(QEasingCurve.OutCubic)
 
-        # Add 10 Pages
+        # Add 11 Pages
         self.stack.addWidget(_page_wrapper(self._tab_window()))
         self.stack.addWidget(_page_wrapper(self._tab_character()))
-        self.stack.addWidget(_page_wrapper(self._tab_q()))
+        self.stack.addWidget(_page_wrapper(self._tab_performance()))
+        self.stack.addWidget(_page_wrapper(self._tab_privacy_agent()))
         self.stack.addWidget(_page_wrapper(self._tab_demo()))
         self.stack.addWidget(_page_wrapper(self._tab_sound()))
         self.stack.addWidget(_page_wrapper(self._tab_ai_voice()))
@@ -723,6 +819,9 @@ class ControlPanel(QWidget):
             else:
                 self.log_timer.stop()
 
+    def _open_qml_panel(self):
+        self.app.show_qml_panel()
+
     def _toggle_theme(self):
         cur = self.cfg.get("theme", "light")
         next_t = "dark" if cur == "light" else "light"
@@ -737,9 +836,9 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("視窗行為、外觀與字體系統")
+        t_lbl = QLabel("視窗行為、大小與字體")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("設定桌面寵物的常駐、穿透、貼邊、透明度與自訂文字排版引擎")
+        d_lbl = QLabel("設定桌面寵物之視窗行為、大小與字體。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -819,13 +918,13 @@ class ControlPanel(QWidget):
         f2.addLayout(r2)
         lay.addWidget(g2)
 
-        # 3. 自訂字體系統 (Typography System)
-        g_font = QGroupBox("自訂字體系統 (Typography && Fonts)")
+        # 3. 自訂字體
+        g_font = QGroupBox("自訂字體 (Typography)")
         f_font = QVBoxLayout(g_font)
         f_font.setContentsMargins(16, 18, 16, 16)
         f_font.setSpacing(12)
 
-        f_font.addWidget(_hint("支援系統安裝字型選取或自訂 .ttf / .otf 檔案匯入，全域即時套用並儲存偏好設定。"))
+        f_font.addWidget(_hint("支援系統安裝字型選取或自訂 .ttf / .otf 檔案匯入，套用後即時生效。"))
 
         r_fmode = QHBoxLayout()
         self.rb_font_sys = QRadioButton("模式一：從系統讀取並選擇字體")
@@ -882,14 +981,14 @@ class ControlPanel(QWidget):
         b_apply_font = QPushButton("套用選定字體")
         b_apply_font.setObjectName("primary")
         b_apply_font.clicked.connect(self._apply_selected_font)
-        b_reset_font = QPushButton("重設為現代預設字體")
+        b_reset_font = QPushButton("重設為預設字體")
         b_reset_font.clicked.connect(self._reset_default_font)
         r_fbtns.addWidget(b_apply_font)
         r_fbtns.addWidget(b_reset_font)
         r_fbtns.addStretch(1)
         f_font.addLayout(r_fbtns)
 
-        self.lb_font_status = QLabel("目前狀態：使用現代預設字體堆疊")
+        self.lb_font_status = QLabel("目前狀態：使用預設字體")
         self.lb_font_status.setStyleSheet("color: #64748b; font-size: 12px;")
         f_font.addWidget(self.lb_font_status)
 
@@ -945,18 +1044,18 @@ class ControlPanel(QWidget):
         if self.rb_font_file.isChecked():
             path = self.ed_font_path.text().strip()
             if not path or not Path(path).exists():
-                QMessageBox.warning(self, "提示", "請先選取有效的 .ttf 或 .otf 字體檔案。")
+                ModernMessageBox.warning(self, "提示", "請先選取有效的 .ttf 或 .otf 字體檔案。")
                 return
             ok, fam, err = load_font_file(path)
             if not ok:
-                QMessageBox.warning(self, "字體載入失敗", err)
+                ModernMessageBox.warning(self, "字體載入失敗", err)
                 return
             apply_global_font(fam)
             self.cfg.set("font_mode", "custom_file", save=False)
             self.cfg.set("custom_font_path", path, save=False)
             self.cfg.set("font_family", fam, save=True)
             self.lb_font_status.setText(f"目前狀態：已套用自訂字體 [{fam}]")
-            QMessageBox.information(self, "字體設定", f"已成功全域套用自訂字體：{fam}")
+            ModernMessageBox.information(self, "字體設定", f"已成功全域套用自訂字體：{fam}")
         else:
             fam = self.cmb_sys_fonts.currentText().strip()
             if not fam:
@@ -965,7 +1064,7 @@ class ControlPanel(QWidget):
             self.cfg.set("font_mode", "system", save=False)
             self.cfg.set("font_family", fam, save=True)
             self.lb_font_status.setText(f"目前狀態：已套用系統字體 [{fam}]")
-            QMessageBox.information(self, "字體設定", f"已成功全域套用系統字體：{fam}")
+            ModernMessageBox.information(self, "字體設定", f"已成功全域套用系統字體：{fam}")
 
     def _reset_default_font(self):
         best = resolve_best_default_font()
@@ -977,9 +1076,9 @@ class ControlPanel(QWidget):
         idx = self.cmb_sys_fonts.findText(best)
         if idx >= 0:
             self.cmb_sys_fonts.setCurrentIndex(idx)
-        self.lb_font_status.setText(f"目前狀態：已還原為現代預設字體 [{best}]")
+        self.lb_font_status.setText(f"目前狀態：已還原為預設字體 [{best}]")
         self._update_font_preview()
-        QMessageBox.information(self, "字體設定", f"已還原為現代排版預設字體：{best}")
+        ModernMessageBox.information(self, "字體設定", f"已還原為預設字體：{best}")
 
     # ------------------------------------------------------------- 2. 角色與形態
     def _tab_character(self) -> QWidget:
@@ -990,12 +1089,12 @@ class ControlPanel(QWidget):
 
         t_lbl = QLabel("角色設定與比例形態")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("切換桌面寵物角色立繪或調整正方形與寬屏比例")
+        d_lbl = QLabel("切換桌面寵物立繪與顯示比例。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
 
-        g = QGroupBox("目前角色資訊")
+        g = QGroupBox("目前角色")
         f = QVBoxLayout(g)
         f.setContentsMargins(16, 18, 16, 16)
         f.setSpacing(12)
@@ -1011,7 +1110,7 @@ class ControlPanel(QWidget):
         f.addWidget(b_picker)
         lay.addWidget(g)
 
-        g2 = QGroupBox("寵物形態比例（正方形 1:1 vs 完整立繪 1.5:1）")
+        g2 = QGroupBox("寵物形態比例")
         f2 = QVBoxLayout(g2)
         f2.setContentsMargins(16, 18, 16, 16)
         f2.setSpacing(12)
@@ -1024,7 +1123,7 @@ class ControlPanel(QWidget):
         r.addWidget(self.rb_var_square)
         r.addWidget(self.rb_var_tail)
         f2.addLayout(r)
-        f2.addWidget(_hint("提供標準正方形 (1:1) 與完整立繪寬屏 (1.5:1) 兩種比例形態，手持平板與視窗邊界將自動精準適配。"))
+        f2.addWidget(_hint("提供標準正方形 (1:1) 與完整立繪寬屏 (1.5:1) 兩種比例形態，手持平板與視窗邊界將自動適配。"))
         lay.addWidget(g2)
 
         lay.addStretch(1)
@@ -1036,76 +1135,168 @@ class ControlPanel(QWidget):
         dlg.exec()
         self.sync()
 
-    # ------------------------------------------------------------- 3. Q版角色
-    def _tab_q(self) -> QWidget:
+    # ------------------------------------------------------------- 3. 效能與渲染設定
+    def _tab_performance(self) -> QWidget:
         w = QWidget()
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("Q 版桌面夥伴")
+        t_lbl = QLabel("效能與渲染優化")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("管理在桌面漫步巡邏的 Q 版夥伴與暗黑模式風格")
+        d_lbl = QLabel("針對低配電腦、省電模式與不同顯示晶片調整更新率、垂直同步與動效。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
 
-        g = QGroupBox("黑化風格模式（限 DeepSeek Q 版角色）")
-        f = QVBoxLayout(g)
-        f.setContentsMargins(16, 18, 16, 16)
-        f.setSpacing(12)
+        g1 = QGroupBox("效能模式與畫面調度")
+        f1 = QVBoxLayout(g1)
+        f1.setContentsMargins(16, 18, 16, 16)
+        f1.setSpacing(10)
 
-        self.cb_dark = QCheckBox("啟用黑化模式：DeepSeek Q 版夥伴切換為暗黑立繪")
-        self.cb_dark.toggled.connect(lambda v: self._do(self.app.set_q_dark, v))
-        f.addWidget(self.cb_dark)
-        f.addWidget(_hint("功能說明：開啟後 DeepSeek 角色將啟用暗色調立繪風格與暗紅光暈特效；扣費互動時將呈現專屬跳躍反饋。"))
-        lay.addWidget(g)
+        self.cb_perf_mode = QCheckBox("啟用極致效能模式 (幀率降至 30 FPS、關閉愛心粒子與飄字上升動效)")
+        self.cb_perf_mode.toggled.connect(lambda v: self._do(self.app.set_performance_mode, v))
+        f1.addWidget(self.cb_perf_mode)
 
-        g2 = QGroupBox("桌面巡邏夥伴管理")
+        self.cb_disable_trans = QCheckBox("停用半透明背景 (改用純色背景緩衝，透明度鎖定 1.0，大幅減輕 GPU 負擔)")
+        self.cb_disable_trans.toggled.connect(lambda v: self._do(self.app.set_disable_transparency, v))
+        f1.addWidget(self.cb_disable_trans)
+
+        self.cb_anims_enabled = QCheckBox("啟用角色撫摸形變與物理彈跳動效")
+        self.cb_anims_enabled.toggled.connect(lambda v: self._do(self.app.set_animations_enabled, v))
+        f1.addWidget(self.cb_anims_enabled)
+
+        self.cb_disable_blur = QCheckBox("停用背景模糊特效 (減少視窗合成負擔)")
+        self.cb_disable_blur.toggled.connect(lambda v: self._do(self.app.set_disable_blur, v))
+        f1.addWidget(self.cb_disable_blur)
+        lay.addWidget(g1)
+
+        g2 = QGroupBox("更新率與底層渲染 API")
         f2 = QVBoxLayout(g2)
         f2.setContentsMargins(16, 18, 16, 16)
         f2.setSpacing(12)
 
-        self.lb_qcount = QLabel("在場角色: 0")
-        f2.addWidget(self.lb_qcount)
+        r_fps = QHBoxLayout()
+        r_fps.addWidget(QLabel("目標幀率 (Target FPS)："))
+        self.cmb_fps = QComboBox()
+        self.fps_options = [10, 15, 20, 24, 30, 45, 60, 90, 120, 144, 240, 0]
+        for fps in self.fps_options:
+            self.cmb_fps.addItem(f"{fps} FPS" if fps > 0 else "無限制 (0)")
+        self.cmb_fps.currentIndexChanged.connect(
+            lambda idx: self._do(self.app.set_target_fps, self.fps_options[idx])
+        )
+        r_fps.addWidget(self.cmb_fps, 1)
+        f2.addLayout(r_fps)
 
-        r = QHBoxLayout()
-        b_ds_norm = QPushButton("召喚 DeepSeek Q版 (一般)")
-        b_ds_norm.clicked.connect(lambda: self.app.add_q(kind="ds", dark=False))
-        b_ds_dark = QPushButton("召喚 DeepSeek Q版 (黑化)")
-        b_ds_dark.clicked.connect(lambda: self.app.add_q(kind="ds", dark=True))
-        r.addWidget(b_ds_norm)
-        r.addWidget(b_ds_dark)
-        f2.addLayout(r)
+        r_vsync = QHBoxLayout()
+        r_vsync.addWidget(QLabel("垂直同步模式 (V-Sync)："))
+        self.cmb_vsync = QComboBox()
+        self.vsync_options = [
+            (1, "標準垂直同步 (1) - 推薦預設"),
+            (0, "關閉垂直同步 (0) - 最低延遲"),
+            (-1, "自適應 / 三重緩衝 (-1)"),
+        ]
+        for mode, label in self.vsync_options:
+            self.cmb_vsync.addItem(label, mode)
+        self.cmb_vsync.currentIndexChanged.connect(
+            lambda idx: self._do(self.app.set_vsync_mode, self.vsync_options[idx][0])
+        )
+        r_vsync.addWidget(self.cmb_vsync, 1)
+        f2.addLayout(r_vsync)
 
-        r2 = QHBoxLayout()
-        b_custom = QPushButton("管理與匯入自訂 Q 版人物...")
-        b_custom.clicked.connect(self._open_custom_q)
-        b_clear = QPushButton("移除所有桌面 Q 版角色")
-        b_clear.setObjectName("danger")
-        b_clear.clicked.connect(self.app.remove_all_q)
-        r2.addWidget(b_custom)
-        r2.addWidget(b_clear)
-        f2.addLayout(r2)
-
-        r3 = QHBoxLayout()
-        r3.addWidget(QLabel("Q版人物高度"))
-        self.sl_qh = _slider(90, 320, 170, lambda v: self._do(self.app.set_q_height, v))
-        self.lb_qh = QLabel("170 px")
-        self.lb_qh.setFixedWidth(55)
-        r3.addWidget(self.sl_qh, 1)
-        r3.addWidget(self.lb_qh)
-        f2.addLayout(r3)
+        r_rhi = QHBoxLayout()
+        r_rhi.addWidget(QLabel("Qt 渲染後端 (QSG_RHI_BACKEND)："))
+        self.cmb_backend = QComboBox()
+        self.backend_options = [
+            ("opengl", "OpenGL (預設，相容性最佳)"),
+            ("d3d11", "Direct3D 11 (Windows 原生流暢)"),
+            ("d3d12", "Direct3D 12 (現代低延遲)"),
+            ("vulkan", "Vulkan (高效能跨平台)"),
+            ("software", "Software (純軟體光柵化，無顯卡加速)"),
+        ]
+        for b_id, b_label in self.backend_options:
+            self.cmb_backend.addItem(b_label, b_id)
+        self.cmb_backend.currentIndexChanged.connect(
+            lambda idx: self._do(self.app.set_rendering_backend, self.backend_options[idx][0])
+        )
+        r_rhi.addWidget(self.cmb_backend, 1)
+        f2.addLayout(r_rhi)
+        f2.addWidget(_hint("變更 Qt 渲染後端需重新啟動軟體方可完整生效。"))
         lay.addWidget(g2)
 
         lay.addStretch(1)
         return w
 
-    def _open_custom_q(self):
-        parent = self if self.isVisible() else None
-        dlg = CustomQDialog(self.app, parent)
-        dlg.exec()
-        self.sync()
+    # ------------------------------------------------------------- 4. 隱私與 Agent 規則
+    def _tab_privacy_agent(self) -> QWidget:
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(14)
+
+        t_lbl = QLabel("推論隱私與 Agent 規則")
+        t_lbl.setObjectName("PageTitle")
+        d_lbl = QLabel("管理個資脫敏過濾器、第三方零儲存參數與系統助手安全防護。")
+        d_lbl.setObjectName("PageDesc")
+        lay.addWidget(t_lbl)
+        lay.addWidget(d_lbl)
+
+        g_priv = QGroupBox("第三方推論隱私優先保護")
+        f_priv = QVBoxLayout(g_priv)
+        f_priv.setContentsMargins(16, 18, 16, 16)
+        f_priv.setSpacing(10)
+
+        self.cb_privacy_mode = QCheckBox("啟用本機資料脫敏過濾器 (自動遮蔽本機路徑、API Key、私有 IP 及使用者名稱)")
+        self.cb_privacy_mode.toggled.connect(lambda v: self._do(self.app.set_privacy_mode, v))
+        f_priv.addWidget(self.cb_privacy_mode)
+
+        f_priv.addWidget(_hint("送出前將自動將路徑轉為 [本機檔案路徑]、IP 轉為 [私有IP位址]、憑證轉為 [金鑰憑證]。"))
+
+        btn_openrouter_byok = QPushButton("開啟 OpenRouter 儀表板 Guardrails 與 BYOK 設定")
+        btn_openrouter_byok.setIcon(get_icon("security", "#3b82f6", 16))
+        btn_openrouter_byok.clicked.connect(lambda: webbrowser.open("https://openrouter.ai/settings/privacy"))
+        f_priv.addWidget(btn_openrouter_byok)
+
+        info_box = QLabel(
+            "OpenRouter 具備強大雲端隱私與安全機制：\n"
+            "1. 多 Key 聚合 (BYOK)：可自帶各家廠商原始 API Key，由 OpenRouter 統一代理調度。\n"
+            "2. 雲端 PII 自動遮蔽：在推論前自動對個資與敏感資訊進行遮蔽與脫敏防護。\n"
+            "3. 強制零資料保留 (Zero Data Retention, ZDR)：保證第三方模型供應商絕不保留或訓練使用者之對話數據。"
+        )
+        info_box.setWordWrap(True)
+        info_box.setStyleSheet(
+            "background-color: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); "
+            "border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.45;"
+        )
+        f_priv.addWidget(info_box)
+        lay.addWidget(g_priv)
+
+        g_agent = QGroupBox("系統助手 (Agent) 安全規則引擎")
+        f_agent = QVBoxLayout(g_agent)
+        f_agent.setContentsMargins(16, 18, 16, 16)
+        f_agent.setSpacing(10)
+
+        self.cb_agent_auto = QCheckBox("自動允許白名單指令執行 (若未勾選則每次執行指令皆需使用者確認)")
+        self.cb_agent_auto.toggled.connect(lambda v: self._do(lambda x: self.cfg.set("agent_auto_approve_whitelist", x), v))
+        f_agent.addWidget(self.cb_agent_auto)
+
+        rules_lbl = QLabel(
+            "安全防護規格：\n"
+            "• 白名單指令 (15項)：dir, echo, date, time, whoami, hostname, ver, systeminfo, tasklist, ipconfig, ping, netstat 等\n"
+            "• 黑名單指令 (嚴格禁止)：format, del /f /s /q, rmdir /s /q, rm -rf, reg delete, diskpart, shutdown 等\n"
+            "• 敏感目錄防護：C:\\Windows, C:\\Program Files 等受寫入與刪除嚴格保護\n"
+            "• 遇非白名單命令時，一律彈出精緻小彈窗 (380x220) 授權確認，絕不彈出全螢幕警報！"
+        )
+        rules_lbl.setWordWrap(True)
+        rules_lbl.setStyleSheet(
+            "background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); "
+            "border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.45;"
+        )
+        f_agent.addWidget(rules_lbl)
+        lay.addWidget(g_agent)
+
+        lay.addStretch(1)
+        return w
 
     # ------------------------------------------------------------- 4. 互動演示
     def _tab_demo(self) -> QWidget:
@@ -1114,14 +1305,14 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("互動與特效演示")
+        t_lbl = QLabel("互動與動作測試")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("即時觸發扣費動畫、充值掉飯盆、物理碰撞與雷達吸附")
+        d_lbl = QLabel("測試扣費動畫、充值掉落飯盆、物理碰撞與吸附效果。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
 
-        g = QGroupBox("模擬扣費互動（動態飄字金額）")
+        g = QGroupBox("模擬扣費互動")
         f = QVBoxLayout(g)
         f.setContentsMargins(16, 18, 16, 16)
         f.setSpacing(12)
@@ -1145,7 +1336,7 @@ class ControlPanel(QWidget):
         f.addLayout(r_custom)
         lay.addWidget(g)
 
-        g2 = QGroupBox("模擬充值餵食（物理重力碰撞飯盆）")
+        g2 = QGroupBox("模擬充值餵食")
         f2 = QVBoxLayout(g2)
         f2.setContentsMargins(16, 18, 16, 16)
         f2.setSpacing(12)
@@ -1161,15 +1352,15 @@ class ControlPanel(QWidget):
         r_top.addWidget(self.sp_topup, 1)
         r_top.addWidget(b_drop)
         f2.addLayout(r_top)
-        f2.addWidget(_hint("飯盆掉落後具備重力、地面回彈與多盆互斥碰撞體積；拖曳到角色身上即可餵食；閒置 10 秒將被火控雷達鎖定自動吸入。"))
+        f2.addWidget(_hint("飯盆掉落後具備重力與地面回彈效果；拖曳到角色身上即可餵食；閒置 10 秒將自動吸入。"))
         lay.addWidget(g2)
 
-        g3 = QGroupBox("道具與雷達控制")
+        g3 = QGroupBox("道具控制")
         f3 = QVBoxLayout(g3)
         f3.setContentsMargins(16, 18, 16, 16)
         f3.setSpacing(12)
 
-        b_radar = QPushButton("開啟火控雷達（提前顯示目標航向與距離名牌）")
+        b_radar = QPushButton("觸發道具吸附")
         b_radar.clicked.connect(self.app.pet.props.lock_now)
         f3.addWidget(b_radar)
 
@@ -1189,14 +1380,14 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("音效系統設定")
+        t_lbl = QLabel("聲音與音效設定")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("調整提示音量或透過音效庫更換個別音訊檔案")
+        d_lbl = QLabel("調整提示音量或透過音效庫更換個別音訊檔案。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
 
-        g = QGroupBox("聲音主要設定")
+        g = QGroupBox("音量與音效")
         f = QVBoxLayout(g)
         f.setContentsMargins(16, 18, 16, 16)
         f.setSpacing(12)
@@ -1217,7 +1408,7 @@ class ControlPanel(QWidget):
         r_btn = QHBoxLayout()
         b_test = QPushButton("試聽扣費音效")
         b_test.clicked.connect(lambda: self.app.sounds.play("hit"))
-        b_lib = QPushButton("開啟自訂音效庫（四個提示音獨立調音與更換）...")
+        b_lib = QPushButton("自訂音效庫設定...")
         b_lib.clicked.connect(self._open_sound_lib)
         r_btn.addWidget(b_test)
         r_btn.addWidget(b_lib)
@@ -1241,13 +1432,13 @@ class ControlPanel(QWidget):
 
         t_lbl = QLabel("AI 對話與語音設定")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("管理陪伴對話、語音辨識、Gemini Live 純語音與線上模型探索")
+        d_lbl = QLabel("設定陪伴對話、語音辨識、Gemini Live 與模型選項。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
 
         # 1. AI 對話與設定檔
-        g_core = QGroupBox("AI 核心與設定檔")
+        g_core = QGroupBox("AI 對話與設定檔")
         f_core = QVBoxLayout(g_core)
         f_core.setContentsMargins(16, 18, 16, 16)
         f_core.setSpacing(12)
@@ -1309,7 +1500,7 @@ class ControlPanel(QWidget):
         lay.addWidget(g_voice)
 
         # 3. Gemini Live 設定
-        g_live = QGroupBox("Gemini Live 純語音模式")
+        g_live = QGroupBox("Gemini Live 語音模式")
         f_live = QVBoxLayout(g_live)
         f_live.setContentsMargins(16, 18, 16, 16)
         f_live.setSpacing(12)
@@ -1341,12 +1532,12 @@ class ControlPanel(QWidget):
         lay.addWidget(g_live)
 
         # 4. 線上模型探索
-        g_disc = QGroupBox("線上模型清單探索 (Remote Model Discovery)")
+        g_disc = QGroupBox("線上模型探索 (Remote Model Discovery)")
         f_disc = QVBoxLayout(g_disc)
         f_disc.setContentsMargins(16, 18, 16, 16)
         f_disc.setSpacing(12)
 
-        f_disc.addWidget(_hint("向廠商 API 端點發送探測請求，即時取得該帳號所有可用的遠端模型清單，支援一鍵套用。"))
+        f_disc.addWidget(_hint("向廠商 API 端點發送請求，取得該帳號可用的模型清單並支援套用。"))
 
         r_disc_top = QHBoxLayout()
         r_disc_top.addWidget(QLabel("廠商:"))
@@ -1446,28 +1637,28 @@ class ControlPanel(QWidget):
     def _apply_disc_to_live(self):
         mid = self.cmb_disc_models.currentData() or self.cmb_disc_models.currentText()
         if not mid or mid.startswith("（"):
-            QMessageBox.warning(self, "提示", "尚未選擇有效的模型 ID。")
+            ModernMessageBox.warning(self, "提示", "尚未選擇有效的模型 ID。")
             return
         self.ed_live_model.setText(mid)
         self.cfg.set("gemini_live_model", mid, save=True)
-        QMessageBox.information(self, "已套用", f"已將 Gemini Live 模型設定為: {mid}")
+        ModernMessageBox.information(self, "已套用", f"已將 Gemini Live 模型設定為: {mid}")
 
     def _apply_disc_to_active_profile(self):
         mid = self.cmb_disc_models.currentData() or self.cmb_disc_models.currentText()
         if not mid or mid.startswith("（"):
-            QMessageBox.warning(self, "提示", "尚未選擇有效的模型 ID。")
+            ModernMessageBox.warning(self, "提示", "尚未選擇有效的模型 ID。")
             return
         profiles = [dict(x) for x in self.cfg.get("api_profiles", [])]
         act_idx = max(0, min(self.cmb_active_profile.currentIndex(), len(profiles) - 1))
         if profiles:
             profiles[act_idx]["model"] = mid
             self.cfg.set("api_profiles", profiles, save=True)
-            QMessageBox.information(self, "已套用", f"已更新目前設定檔的模型 ID 為: {mid}")
+            ModernMessageBox.information(self, "已套用", f"已更新目前設定檔的模型 ID 為: {mid}")
 
     def _save_live_settings(self):
         self.cfg.set("gemini_live_model", self.ed_live_model.text().strip(), save=False)
         self.cfg.set("gemini_live_voice", self.cmb_live_voice.currentText().strip(), save=True)
-        QMessageBox.information(self, "儲存成功", "Gemini Live 設定已更新。")
+        ModernMessageBox.information(self, "儲存成功", "Gemini Live 設定已更新。")
 
     def _on_active_profile_changed(self, idx: int):
         if idx >= 0:
@@ -1494,9 +1685,9 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("API 廠商與餘額監控")
+        t_lbl = QLabel("API 與餘額監控")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("連接官方 API 即時監控模型額度，或啟用模擬模式進行測試")
+        d_lbl = QLabel("連接 API 即時監控餘額，或使用模擬模式進行測試。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -1609,7 +1800,7 @@ class ControlPanel(QWidget):
 
         self.cfg.set("provider", pid, save=True)
         self.app.ledger.set_provider(pid)
-        QMessageBox.information(self, "已儲存", f"{PROV_NAMES[idx]} 設定已儲存並套用。")
+        ModernMessageBox.information(self, "已儲存", f"{PROV_NAMES[idx]} 設定已儲存並套用。")
 
     # ------------------------------------------------------------- 8. 網頁儀表板
     def _tab_web(self) -> QWidget:
@@ -1618,9 +1809,9 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("本機網頁面板 (Web Dashboard)")
+        t_lbl = QLabel("網頁儀表板 (Web Dashboard)")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("在網頁瀏覽器中即時檢視圖表趨勢、消費紀錄與匯出 CSV")
+        d_lbl = QLabel("在瀏覽器中檢視餘額趨勢、消費紀錄與匯出報表。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -1642,7 +1833,7 @@ class ControlPanel(QWidget):
 
         f.addWidget(
             _hint(
-                "網頁伺服器僅綁定本機 127.0.0.1 迴圈地址，唯讀安全。支援在同一介面檢視多模型即時餘額、今日花費/充值統計、即時趨勢圖表，並支援一鍵匯出 CSV 報表。"
+                "網頁伺服器僅綁定本機 127.0.0.1，安全唯讀。支援檢視多模型即時餘額、花費統計、趨勢圖表與匯出 CSV。"
             )
         )
         lay.addWidget(g)
@@ -1661,9 +1852,9 @@ class ControlPanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
 
-        t_lbl = QLabel("全域日誌流 (Global Logs)")
+        t_lbl = QLabel("系統日誌 (Logs)")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("整合 logger.py 核心，支援等級過濾、即時搜尋與記憶體日誌串流")
+        d_lbl = QLabel("檢視系統運作日誌，支援等級過濾與關鍵字搜尋。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -1773,7 +1964,7 @@ class ControlPanel(QWidget):
 
         t_lbl = QLabel("關於 Desktop Pet 桌面寵物")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("專案版本、官方開源倉庫、版本更新檢查與社群美術資源徵求")
+        d_lbl = QLabel("專案版本、官方開源倉庫、更新檢查與社群美術資源。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -1785,17 +1976,17 @@ class ControlPanel(QWidget):
         c1_lay.setContentsMargins(18, 16, 18, 16)
         c1_lay.setSpacing(10)
 
-        h1 = QLabel(f"Desktop Pet {APP_VERSION}")
+        h1 = QLabel(f"Desktop Pet 桌面寵物 {APP_VERSION}")
         h1.setStyleSheet("font-size: 16px; font-weight: bold; color: #3b82f6;")
         c1_lay.addWidget(h1)
 
         intro = QLabel(
-            "你用就完事了，我懶得打字"
+            "桌面餘額監控與互動寵物。支援 DeepSeek、Claude、OpenAI、Gemini 餘額顯示與互動。"
         )
         intro.setWordWrap(True)
         c1_lay.addWidget(intro)
 
-        repo_info = QLabel(f"官方開源倉庫網址：{GITHUB_REPO_URL}")
+        repo_info = QLabel(f"官方開源倉庫：{GITHUB_REPO_URL}")
         repo_info.setStyleSheet("color: #64748b; font-size: 12px;")
         repo_info.setWordWrap(True)
         c1_lay.addWidget(repo_info)
@@ -1829,12 +2020,17 @@ class ControlPanel(QWidget):
         c_art_lay.setContentsMargins(18, 16, 18, 16)
         c_art_lay.setSpacing(10)
 
-        h_art = QLabel("徵求圖片與美術資源(?")
+        h_art = QLabel("美術與音效資源徵求 (Art & Asset Invitation)")
         h_art.setStyleSheet("font-size: 15px; font-weight: bold; color: #10b981;")
         c_art_lay.addWidget(h_art)
 
         art_desc = QLabel(
-            "gemini hyw？"
+            "歡迎提供角色立繪、表情差分或自訂道具，可至 GitHub 提交 Pull Request 或 Issue：\n"
+            "· 角色立繪（支援 1:1 標準正方形與 1.5:1 寬屏立繪）\n"
+            "· 表情差分素材包\n"
+            "· 摸頭互動回饋與特殊動作素材\n"
+            "· 桌面道具素材（如米飯盆、頭頂鐵盆等）\n"
+            "歡迎透過 GitHub 提交 Pull Request 或 Issue 分享您的作品，作品將署名列入感謝名單。"
         )
         art_desc.setWordWrap(True)
         c_art_lay.addWidget(art_desc)
@@ -1867,14 +2063,14 @@ class ControlPanel(QWidget):
         c3_lay.setContentsMargins(18, 16, 18, 16)
         c3_lay.setSpacing(10)
 
-        h3 = QLabel("開源許可協議與系統健康診斷")
+        h3 = QLabel("開源協議與系統狀態")
         h3.setStyleSheet("font-size: 14px; font-weight: bold;")
         c3_lay.addWidget(h3)
 
         lic_lbl = QLabel(
             "本專案程式碼採用 MIT License 開源許可協議發布。\n"
-            "按鈕圖示整合 Google Material Symbols，遵循 Apache License 2.0 協議。\n"
-            "所有原創角色立繪、插畫與音訊素材著作權歸原創作者所有。"
+            "圖示採用 Google Material Symbols（Apache License 2.0）。\n"
+            "角色立繪與音訊素材著作權歸原創作者所有。"
         )
         lic_lbl.setWordWrap(True)
         c3_lay.addWidget(lic_lbl)
@@ -1998,8 +2194,6 @@ class ControlPanel(QWidget):
         else:
             self.lb_prov_status.setText(f"離線：{led.error or '未連線'}")
 
-        self.lb_qcount.setText(f"目前在場 Q 版角色：{len(self.app.qchars.chars)} / 8")
-
         port = self.app.web.port if self.app.web else 0
         if port:
             self.lb_web_status.setText(
@@ -2027,10 +2221,27 @@ class ControlPanel(QWidget):
             self.rb_var_square.setChecked(c.get("variant", "square") == "square")
             self.rb_var_tail.setChecked(c.get("variant", "square") == "tail")
 
-            # Q dark
-            self.cb_dark.setChecked(bool(c.get("q_dark", False)))
-            self.sl_qh.setValue(int(c.get("q_height", 170)))
-            self.lb_qh.setText(f"{int(c.get('q_height', 170))} px")
+            # Performance & Rendering
+            self.cb_perf_mode.setChecked(bool(c.get("performance_mode", False)))
+            self.cb_disable_trans.setChecked(bool(c.get("disable_transparency", False)))
+            self.cb_anims_enabled.setChecked(bool(c.get("animations_enabled", True)))
+            self.cb_disable_blur.setChecked(bool(c.get("disable_blur", False)))
+
+            fps_val = int(c.get("target_fps", 60))
+            if fps_val in self.fps_options:
+                self.cmb_fps.setCurrentIndex(self.fps_options.index(fps_val))
+
+            vsync_val = int(c.get("vsync_mode", 1))
+            vsync_idx = next((i for i, opt in enumerate(self.vsync_options) if opt[0] == vsync_val), 0)
+            self.cmb_vsync.setCurrentIndex(vsync_idx)
+
+            backend_val = str(c.get("rendering_backend", "opengl")).strip().lower()
+            backend_idx = next((i for i, opt in enumerate(self.backend_options) if opt[0] == backend_val), 0)
+            self.cmb_backend.setCurrentIndex(backend_idx)
+
+            # Privacy & Agent
+            self.cb_privacy_mode.setChecked(bool(c.get("privacy_mode", True)))
+            self.cb_agent_auto.setChecked(bool(c.get("agent_auto_approve_whitelist", False)))
 
             # Sound
             self.cb_sound.setChecked(bool(c.get("sound", True)))

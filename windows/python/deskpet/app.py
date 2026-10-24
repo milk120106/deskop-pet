@@ -11,57 +11,14 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 from . import winapi
 from .audio import Sounds
 from .balance import Ledger
-from .config import Config, asset, log
+from .config import ASSETS, Config, asset, log
 from .dialogs import CharPickerDialog, SoundLibraryDialog
 from .panel import ControlPanel
 from .pet import PetWindow
+from .qml_ui import QmlControlWindow
 from .web import WebServer
 
 MAX_CHARS = 8
-
-
-class _DummyQCharManager:
-    """Q版角色功能重構過渡期解耦佔位器。"""
-
-    def __init__(self, *args, **kwargs):
-        self.menu_cb = None
-        self.chars: list = []
-
-    def restore(self):
-        pass
-
-    def hide_all(self):
-        pass
-
-    def show_all(self):
-        pass
-
-    def set_click_through(self, on: bool):
-        pass
-
-    def apply_topmost(self):
-        pass
-
-    def set_dark_mode(self, on: bool):
-        pass
-
-    def remove_all(self):
-        pass
-
-    def remove(self, ch):
-        pass
-
-    def toggle_one(self, ch):
-        pass
-
-    def list_custom_q(self) -> list[str]:
-        return []
-
-    def import_custom_q(self, name: str, source_path: str):
-        return False, "Q 版角色功能目前暫時停用並進行重構升級中，敬請期待後續版本開放！"
-
-    def delete_custom_q(self, name: str):
-        pass
 
 BALANCE_PET_SPECS = {
     "deepseek": {"name": "DeepSeek", "title": "DeepSeek 餘額", "prov": "deepseek"},
@@ -69,6 +26,95 @@ BALANCE_PET_SPECS = {
     "gpt": {"name": "OpenAI", "title": "OpenAI 餘額", "prov": "openai"},
     "gemini": {"name": "Gemini", "title": "Gemini 餘額", "prov": "gemini"},
 }
+
+
+def get_menu_qss(theme: str = "light") -> str:
+    chk_dark = (ASSETS / "menu_check_dark.svg").as_posix()
+    chk_light = (ASSETS / "menu_check_light.svg").as_posix()
+    if theme == "dark":
+        return f"""
+        QMenu {{
+            background-color: #16181d;
+            color: #e2e8f0;
+            border: 1px solid #2d313b;
+            border-radius: 10px;
+            padding: 6px 4px;
+            font-family: "Microsoft JhengHei UI", sans-serif;
+            font-size: 13px;
+        }}
+        QMenu::item {{
+            background-color: transparent;
+            padding: 7px 24px 7px 28px;
+            border-radius: 6px;
+            margin: 1px 4px;
+            color: #e2e8f0;
+        }}
+        QMenu::item:selected {{
+            background-color: #2b303c;
+            color: #ffffff;
+        }}
+        QMenu::item:disabled {{
+            color: #64748b;
+        }}
+        QMenu::separator {{
+            height: 1px;
+            background-color: #2d313b;
+            margin: 5px 8px;
+        }}
+        QMenu::indicator {{
+            width: 14px;
+            height: 14px;
+            left: 8px;
+        }}
+        QMenu::indicator:checked {{
+            image: url("{chk_dark}");
+        }}
+        QMenu::indicator:unchecked {{
+            image: none;
+        }}
+        """
+    else:
+        return f"""
+        QMenu {{
+            background-color: #ffffff;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 6px 4px;
+            font-family: "Microsoft JhengHei UI", sans-serif;
+            font-size: 13px;
+        }}
+        QMenu::item {{
+            background-color: transparent;
+            padding: 7px 24px 7px 28px;
+            border-radius: 6px;
+            margin: 1px 4px;
+            color: #0f172a;
+        }}
+        QMenu::item:selected {{
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }}
+        QMenu::item:disabled {{
+            color: #94a3b8;
+        }}
+        QMenu::separator {{
+            height: 1px;
+            background-color: #e2e8f0;
+            margin: 5px 8px;
+        }}
+        QMenu::indicator {{
+            width: 14px;
+            height: 14px;
+            left: 8px;
+        }}
+        QMenu::indicator:checked {{
+            image: url("{chk_light}");
+        }}
+        QMenu::indicator:unchecked {{
+            image: none;
+        }}
+        """
 
 
 class App(QObject):
@@ -95,11 +141,10 @@ class App(QObject):
         self.pure_voice_worker = None
         self.pure_voice_pet: PetWindow | None = None
 
-        self.qchars = _DummyQCharManager()
-        self.qchars.menu_cb = self.q_menu
         self.pet.props._menu_cb = self.prop_menu
         self.pet.context_requested.connect(lambda gpos: self.pet_menu(gpos, pet=self.pet))
         self.panel: ControlPanel | None = None
+        self.qml_panel: QmlControlWindow | None = None
 
         # Start background WebServer (default port 8765..8775)
         self.web = WebServer(self)
@@ -107,6 +152,10 @@ class App(QObject):
         self.tray = QSystemTrayIcon(QIcon(asset("tray.ico")), self)
         self.tray.setToolTip("Desktop Pet")
         self.tray_menu = QMenu()
+        theme = self.cfg.get("theme", "light")
+        self.tray_menu.setStyleSheet(get_menu_qss(theme))
+        self.tray_menu.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.tray_menu.setWindowFlags(self.tray_menu.windowFlags() | Qt.FramelessWindowHint)
         self.tray_menu.aboutToShow.connect(lambda: self._fill_menu(self.tray_menu, tray=True))
         self.tray.setContextMenu(self.tray_menu)
         self.tray.activated.connect(self._tray_activated)
@@ -114,7 +163,6 @@ class App(QObject):
 
         self.pet.place_initial()
         self.pet.show()
-        self.qchars.restore()
         self._restore_extra_pets()
         self._tutorial_dlg = None
         if not self.cfg.get("tutorial_shown", False) and "--selftest" not in sys.argv:
@@ -122,6 +170,10 @@ class App(QObject):
         qapp.aboutToQuit.connect(self._cleanup)
 
     def _cleanup(self):
+        try:
+            self.stop_pure_voice()
+        except Exception:
+            pass
         try:
             self.dismiss_all_balance_pets()
         except Exception:
@@ -215,12 +267,19 @@ class App(QObject):
             self.chat_dialog = ChatDialog(self, target)
         else:
             self.chat_dialog.pet = target
-        self._center_and_raise(self.chat_dialog)
+        self.chat_dialog.show_beside_pet()
 
     def start_pure_voice(self, target_pet: PetWindow | None = None):
         """啟動 Gemini Live 純語音即時連線（絕不彈出文字對話框）。"""
         cur_pet = target_pet or self.pet
         self.pure_voice_pet = cur_pet
+
+        cur_pet.show_speech_bubble(
+            "現在是語音模式ㄛ",
+            thought=True,
+            persistent=True,
+            on_click=self.stop_pure_voice,
+        )
 
         # 1. 檢查 Google Gemini API Key
         profiles = self.cfg.get("api_profiles", [])
@@ -235,6 +294,7 @@ class App(QObject):
                 }
         if not gemini_prof:
             cur_pet.show_speech_bubble("純語音模式需要 Google Gemini API Key，請先於設定中配置。")
+            self.pure_voice_active = False
             return
 
         # 2. 檢查音訊輸入裝置
@@ -244,9 +304,11 @@ class App(QObject):
             has_input = any(d.get("max_input_channels", 0) > 0 for d in devs)
             if not has_input:
                 cur_pet.show_speech_bubble("未檢測到可用的麥克風輸入裝置。")
+                self.pure_voice_active = False
                 return
         except Exception as e:
             cur_pet.show_speech_bubble(f"音訊模組載入失敗：{e}")
+            self.pure_voice_active = False
             return
 
         self.pure_voice_active = True
@@ -259,8 +321,8 @@ class App(QObject):
         from .chat import VoiceRecorder
 
         self.pure_voice_pet.show_speech_bubble(
-            "純語音模式：正在聆聽...（點擊氣泡可結束）",
-            thought=False,
+            "現在是語音模式ㄛ",
+            thought=True,
             persistent=True,
             on_click=self.stop_pure_voice,
         )
@@ -282,7 +344,7 @@ class App(QObject):
             return
 
         self.pure_voice_pet.show_speech_bubble(
-            "純語音模式：思考中...（點擊氣泡可結束）",
+            "思考中...",
             thought=True,
             persistent=True,
             on_click=self.stop_pure_voice,
@@ -332,27 +394,78 @@ class App(QObject):
             reply = "我聽到了，但暫時無法生成回應。"
 
         # 播放語音回覆
+        has_audio = False
         if data.get("audio"):
-            self.pure_voice_pet.sounds.play_file(data["audio"])
+            try:
+                self.pure_voice_pet.sounds.play_file(data["audio"])
+                has_audio = True
+            except Exception:
+                has_audio = False
 
-        # 顯示頭頂語音氣泡
+        # 顯示頭頂 AI 回覆文字（thought=False）
         self.pure_voice_pet.show_speech_bubble(
             reply,
             thought=False,
-            timeout_ms=8000,
+            timeout_ms=0,
+            persistent=False,
             on_click=self.stop_pure_voice,
         )
 
-        # 8.5 秒後若仍處於純語音模式，自動回到聆聽狀態
-        QTimer.singleShot(8500, self._check_resume_pure_voice_listening)
+        # 語音播放完畢後，若仍處於純語音模式，自動切回 _start_pure_voice_listening
+        self._wait_audio_then_resume(has_audio=has_audio, text_len=len(reply))
 
-    def _check_resume_pure_voice_listening(self):
-        if self.pure_voice_active and self.pure_voice_pet:
-            self._start_pure_voice_listening()
+    def _wait_audio_then_resume(self, has_audio: bool, text_len: int):
+        if hasattr(self, "_pure_voice_resume_timer") and self._pure_voice_resume_timer:
+            self._pure_voice_resume_timer.stop()
+            self._pure_voice_resume_timer = None
+
+        self._pure_voice_wait_count = 0
+        self._pure_voice_resume_timer = QTimer(self)
+        self._pure_voice_resume_timer.setInterval(250)
+
+        # 最少閱讀停留時間（無音訊時以字數計算，有音訊時至少 1.5 秒）
+        min_display_ticks = 6 if has_audio else max(10, min(32, text_len // 2))
+
+        def _check_status():
+            if not self.pure_voice_active or not self.pure_voice_pet:
+                if self._pure_voice_resume_timer:
+                    self._pure_voice_resume_timer.stop()
+                    self._pure_voice_resume_timer = None
+                return
+
+            self._pure_voice_wait_count += 1
+            is_playing = False
+            if has_audio and hasattr(self.pure_voice_pet.sounds, "is_file_playing"):
+                try:
+                    is_playing = self.pure_voice_pet.sounds.is_file_playing()
+                except Exception:
+                    is_playing = False
+
+            # 若仍在播放且未超過 40 秒（安全上限），繼續等待
+            if is_playing and self._pure_voice_wait_count < 160:
+                return
+
+            # 若未達到最少顯示時間，繼續等待
+            if self._pure_voice_wait_count < min_display_ticks:
+                return
+
+            # 播放完畢且顯示時間充足，停止計時並自動切回聆聽狀態
+            if self._pure_voice_resume_timer:
+                self._pure_voice_resume_timer.stop()
+                self._pure_voice_resume_timer = None
+
+            if self.pure_voice_active and self.pure_voice_pet:
+                self._start_pure_voice_listening()
+
+        self._pure_voice_resume_timer.timeout.connect(_check_status)
+        self._pure_voice_resume_timer.start()
 
     def stop_pure_voice(self):
         """關閉純語音模式"""
         self.pure_voice_active = False
+        if hasattr(self, "_pure_voice_resume_timer") and self._pure_voice_resume_timer:
+            self._pure_voice_resume_timer.stop()
+            self._pure_voice_resume_timer = None
         if self.pure_voice_recorder and self.pure_voice_recorder.isRunning():
             self.pure_voice_recorder.stop()
             self.pure_voice_recorder = None
@@ -376,6 +489,10 @@ class App(QObject):
         m.clear()
         c = self.cfg
         cur_pet = pet or self.pet
+        theme = self.cfg.get("theme", "light")
+        m.setStyleSheet(get_menu_qss(theme))
+        m.setAttribute(Qt.WA_TranslucentBackground, True)
+        m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
 
         def act(text, fn, checked=None, enabled=True):
             a = QAction(text, m)
@@ -389,22 +506,23 @@ class App(QObject):
             m.addAction(a)
             return a
 
-        act("AI 對話視窗...", lambda: self.open_chat_dialog(target_pet=cur_pet))
+        act("AI 對話", lambda: self.open_chat_dialog(target_pet=cur_pet))
         if self.pure_voice_active:
             act("關閉純語音模式 (Gemini Live)", self.stop_pure_voice)
         else:
-            act("純語音模式 (Gemini Live)...", lambda: self.start_pure_voice(target_pet=cur_pet))
+            act("純語音模式 (Gemini Live)", lambda: self.start_pure_voice(target_pet=cur_pet))
         m.addSeparator()
 
-        act("控制台", self.show_panel)
-        act("角色選擇視窗...", self.open_char_picker)
-        act("音效庫設定...", self.open_sound_library)
+        act("設定", self.open_settings)
         act("開啟網頁儀表板", self.open_web_ui)
         m.addSeparator()
 
         # Multi-pet balance summons
         total_balance_pets = len(self.extra_pets) + (1 if self.pet.character in BALANCE_PET_SPECS else 0)
-        sub_balance = m.addMenu(f"餘額寵物管理（在場 {total_balance_pets}/4）")
+        sub_balance = m.addMenu(f"召喚餘額寵物（在場 {total_balance_pets}/4）")
+        sub_balance.setStyleSheet(m.styleSheet())
+        sub_balance.setAttribute(Qt.WA_TranslucentBackground, True)
+        sub_balance.setWindowFlags(sub_balance.windowFlags() | Qt.FramelessWindowHint)
         for cid, spec in BALANCE_PET_SPECS.items():
             is_main = (cid == self.pet.character)
             is_active = (is_main or cid in self.extra_pets)
@@ -430,40 +548,6 @@ class App(QObject):
 
         act("滑鼠穿透", self.set_click_through, c["click_through"])
         act("自動貼邊", self.set_auto_snap, c["auto_snap"])
-        m.addSeparator()
-
-        sub = m.addMenu("Q 版角色（維護中）")
-        a_info = sub.addAction("Q 版角色功能重構升級中（暫時停用）")
-        a_info.triggered.connect(self._show_qchars_maintenance_dialog)
-        sub.addSeparator()
-        a_ds = sub.addAction("新增 Q 版角色")
-        a_ds.setEnabled(False)
-        a_ds.triggered.connect(self._show_qchars_maintenance_dialog)
-        a_custom = sub.addAction("自訂 Q 版角色管理...")
-        a_custom.setEnabled(False)
-        a_custom.triggered.connect(self._show_qchars_maintenance_dialog)
-
-        sub = m.addMenu("演示 / 道具")
-        sub.addAction("扣費 -0.01").triggered.connect(lambda: cur_pet.ledger.sim_charge(1))
-        sub.addAction("扣費 -0.10").triggered.connect(lambda: cur_pet.ledger.sim_charge(10))
-        sub.addAction("充值 +3.00（掉飯盆）").triggered.connect(lambda: cur_pet.ledger.sim_topup(3.0))
-        sub.addAction("打開火控雷達").triggered.connect(cur_pet.props.lock_now)
-        sub.addSeparator()
-        sub.addAction("清除場上所有飯盆（金額入帳）").triggered.connect(self.clear_all_rice_bowls)
-        sub.addAction("清除場上所有鐵盆").triggered.connect(self.clear_all_iron_bowls)
-        if cur_pet.iron_worn:
-            sub.addAction(f"取下頭頂鐵盆（剩餘 {cur_pet.iron_count} 個）").triggered.connect(
-                lambda: cur_pet.remove_iron(all_pots=True)
-            )
-
-        sub = m.addMenu("尺寸")
-        for name, px in (("中杯 340", 340), ("大杯 454", 454), ("超大杯 624", 624)):
-            a = sub.addAction(name)
-            a.setCheckable(True)
-            a.setChecked(cur_pet.size_px == px)
-            a.triggered.connect(lambda _=False, v=px: self.set_size(v))
-
-        m.addSeparator()
         act("回到角落", lambda: self.go_corner(c["snap_corner"]))
         act("聲音開關", self.set_sound, c["sound"])
         act(
@@ -474,14 +558,12 @@ class App(QObject):
             act("隱藏寵物", self.hide_pet)
         else:
             act("顯示寵物" if not self.pet.isVisible() else "隱藏寵物", self.toggle_pet_visible)
-            act("新手教學...", self.open_tutorial)
         m.addSeparator()
         act("退出程式", self.quit)
 
     def hide_pet(self):
         self.pet.hide()
         self.pet.props.hide_all()
-        self.qchars.hide_all()
         self.sounds.set_muted(True)
         for ep in self.extra_pets.values():
             ep.hide()
@@ -491,7 +573,6 @@ class App(QObject):
     def show_pet(self):
         self.pet.show()
         self.pet.props.show_all()
-        self.qchars.show_all()
         self.sounds.set_muted(False)
         for ep in self.extra_pets.values():
             ep.show()
@@ -504,13 +585,24 @@ class App(QObject):
         else:
             self.show_pet()
 
+    def clamp_to_screen(self, win: QWidget, target_x: int, target_y: int, scr=None) -> tuple[int, int]:
+        target_scr = scr or QGuiApplication.screenAt(self.pet.frameGeometry().center()) or QGuiApplication.primaryScreen()
+        geo = target_scr.availableGeometry() if target_scr else QGuiApplication.primaryScreen().availableGeometry()
+        w = win.width()
+        h = win.height()
+        x = max(geo.left() + 16, min(target_x, geo.right() - w - 16))
+        y = max(geo.top() + 16, min(target_y, geo.bottom() - h - 16))
+        return x, y
+
     def _center_and_raise(self, win: QWidget):
         scr = QGuiApplication.screenAt(self.pet.frameGeometry().center()) or QGuiApplication.primaryScreen()
-        if scr:
-            geo = scr.availableGeometry()
-            x = geo.x() + (geo.width() - win.width()) // 2
-            y = geo.y() + (geo.height() - win.height()) // 2
-            win.move(x, y)
+        geo = scr.availableGeometry() if scr else QGuiApplication.primaryScreen().availableGeometry()
+        w = win.width()
+        h = win.height()
+        cx = geo.x() + (geo.width() - w) // 2
+        cy = geo.y() + (geo.height() - h) // 2
+        x, y = self.clamp_to_screen(win, cx, cy, scr=scr)
+        win.move(x, y)
         win.show()
         win.raise_()
         win.activateWindow()
@@ -522,17 +614,22 @@ class App(QObject):
     def pet_menu(self, gpos: QPoint, pet: PetWindow | None = None):
         target = pet or self.pet
         m = QMenu()
+        theme = self.cfg.get("theme", "light")
+        m.setStyleSheet(get_menu_qss(theme))
+        m.setAttribute(Qt.WA_TranslucentBackground, True)
+        m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
         self._fill_menu(m, pet=target)
         self._active_menu = m
-        if "--selftest" in sys.argv:
+        if "--selftest" in sys.argv or any("selftest" in arg for arg in sys.argv):
             QTimer.singleShot(10, m.close)
         QTimer.singleShot(0, lambda: m.exec(gpos))
 
-    def q_menu(self, ch, gpos: QPoint):
-        pass
-
     def prop_menu(self, prop, gpos: QPoint):
         m = QMenu()
+        theme = self.cfg.get("theme", "light")
+        m.setStyleSheet(get_menu_qss(theme))
+        m.setAttribute(Qt.WA_TranslucentBackground, True)
+        m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
         cur_sym = "¥" if self.ledger.currency == "CNY" else "$"
         if prop.kind == "rice":
             m.addAction(f"清除此飯盆（{cur_sym}{prop.amount:.2f} 入帳）").triggered.connect(
@@ -548,7 +645,11 @@ class App(QObject):
             m.addAction("清除此鐵盆").triggered.connect(lambda: self._clear_prop(prop))
             m.addAction("清除場上全部鐵盆").triggered.connect(self.clear_all_iron_bowls)
         self._active_menu = m
-        if "--selftest" in sys.argv:
+        if "--selftest" in sys.argv or any("selftest" in arg for arg in sys.argv):
+            QTimer.singleShot(10, m.close)
+        QTimer.singleShot(0, lambda: m.exec(gpos))
+        self._active_menu = m
+        if "--selftest" in sys.argv or any("selftest" in arg for arg in sys.argv):
             QTimer.singleShot(10, m.close)
         QTimer.singleShot(0, lambda: m.exec(gpos))
 
@@ -581,6 +682,13 @@ class App(QObject):
 
     def _tray_activated(self, reason):
         if reason in (QSystemTrayIcon.DoubleClick, QSystemTrayIcon.Trigger):
+            self.open_settings()
+
+    def open_settings(self):
+        try:
+            self.show_qml_panel()
+        except Exception as e:
+            log(f"開啟 QML 設定視窗失敗，改開啟控制台: {e}")
             self.show_panel()
 
     def show_panel(self):
@@ -588,29 +696,19 @@ class App(QObject):
             self.panel = ControlPanel(self)
         self._center_and_raise(self.panel)
 
+    def show_qml_panel(self, tab: int | None = None):
+        if self.qml_panel is None:
+            self.qml_panel = QmlControlWindow(self)
+        if tab is not None:
+            self.qml_panel.switch_tab(tab)
+        self._center_and_raise(self.qml_panel)
+
     # ------------------------------------------------------------- Dialog openers
     def open_char_picker(self):
-        parent = self.panel if (self.panel and self.panel.isVisible()) else None
-        dlg = CharPickerDialog(self, parent)
-        self._center_and_raise(dlg)
-        dlg.exec()
+        self.show_qml_panel(tab=0)
 
     def open_sound_library(self):
-        parent = self.panel if (self.panel and self.panel.isVisible()) else None
-        dlg = SoundLibraryDialog(self, parent)
-        self._center_and_raise(dlg)
-        dlg.exec()
-
-    def _show_qchars_maintenance_dialog(self):
-        from .dialogs import ModernMessageBox
-        ModernMessageBox.information(
-            self.panel or self.pet,
-            "提示",
-            "Q 版角色功能目前暫時停用並進行重構升級中，敬請期待後續版本開放！",
-        )
-
-    def open_custom_q_dialog(self):
-        self._show_qchars_maintenance_dialog()
+        self.show_qml_panel(tab=1)
 
     def open_tutorial(self):
         self.cfg.set("tutorial_shown", True)
@@ -648,7 +746,6 @@ class App(QObject):
         self.pet.apply_click_through(bool(on))
         for ep in self.extra_pets.values():
             ep.apply_click_through(bool(on))
-        self.qchars.set_click_through(bool(on))
         self._changed()
 
     def set_auto_snap(self, on: bool):
@@ -673,7 +770,6 @@ class App(QObject):
         winapi.set_topmost(int(self.pet.winId()), bool(on))
         for ep in self.extra_pets.values():
             winapi.set_topmost(int(ep.winId()), bool(on))
-        self.qchars.apply_topmost()
         self._changed()
 
     def set_pat(self, on: bool):
@@ -702,24 +798,61 @@ class App(QObject):
         self.cfg.set("theme", t)
         if self.panel:
             self.panel.apply_theme()
+        if self.qml_panel:
+            self.qml_panel.apply_theme()
         if self.chat_dialog:
-            from .chat import _get_qss
-            self.chat_dialog.setStyleSheet(_get_qss(t))
+            self.chat_dialog.apply_theme(t)
+        if hasattr(self, "tray_menu") and self.tray_menu:
+            self.tray_menu.setStyleSheet(get_menu_qss(t))
         self._changed()
 
-    def set_q_dark(self, on: bool):
-        self.qchars.set_dark_mode(bool(on))
+    # 效能、FPS、垂直同步與渲染後端配置
+    def set_disable_transparency(self, on: bool):
+        self.cfg.set("disable_transparency", bool(on))
+        self.pet.set_disable_transparency(bool(on))
+        for ep in self.extra_pets.values():
+            ep.set_disable_transparency(bool(on))
         self._changed()
 
-    def add_q(self, dark: bool | None = None, kind: str = "ds", custom_id: str = ""):
-        self._show_qchars_maintenance_dialog()
-
-    def remove_all_q(self):
-        self.qchars.remove_all()
+    def set_disable_blur(self, on: bool):
+        self.cfg.set("disable_blur", bool(on))
         self._changed()
 
-    def set_q_height(self, h: int):
-        self.cfg.set("q_height", int(h))
+    def set_animations_enabled(self, on: bool):
+        self.cfg.set("animations_enabled", bool(on))
+        self.pet.update_fps_timer()
+        for ep in self.extra_pets.values():
+            ep.update_fps_timer()
+        self._changed()
+
+    def set_performance_mode(self, on: bool):
+        self.cfg.set("performance_mode", bool(on))
+        self.pet.update_fps_timer()
+        for ep in self.extra_pets.values():
+            ep.update_fps_timer()
+        self._changed()
+
+    def set_target_fps(self, fps: int):
+        self.cfg.set("target_fps", int(fps))
+        self.pet.update_fps_timer()
+        for ep in self.extra_pets.values():
+            ep.update_fps_timer()
+        self._changed()
+
+    def set_vsync_mode(self, mode: int):
+        self.cfg.set("vsync_mode", int(mode))
+        self._changed()
+
+    def set_rendering_backend(self, backend: str):
+        self.cfg.set("rendering_backend", str(backend).strip().lower())
+        self._changed()
+
+    def set_privacy_mode(self, on: bool):
+        self.cfg.set("privacy_mode", bool(on))
+        self._changed()
+
+    def set_custom_system_prompt(self, prompt: str):
+        self.cfg.set("custom_system_prompt", str(prompt).strip())
         self._changed()
 
     def set_sound(self, on: bool):

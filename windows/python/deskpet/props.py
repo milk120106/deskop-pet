@@ -341,7 +341,8 @@ class PropManager:
                 self.pet.feed(b.amount, c)
                 self.remove(b)
         else:
-            if self.pet.head_zone_global().contains(c) and self.pet.iron_count < 5:
+            head = self.pet.head_zone_global()
+            if (head.contains(c) or head.intersects(b.art_rect())) and self.pet.iron_count < 5:
                 self.pet.wear_iron()
                 self.remove(b)
 
@@ -516,7 +517,9 @@ class PropManager:
         # Iron bowl dropped onto head from above
         if b.kind == "iron" and b.vy > 30 and self.pet.iron_count < 5:
             head = self.pet.head_zone_global()
-            if head.contains(QPointF(b.x, b.y + b.ah * 0.15)):
+            test_pt = QPointF(b.x, b.y + b.ah * 0.25)
+            swept_catch = (head.left() <= b.x <= head.right() and (b.y - b.vy * dt) <= head.top() <= (b.y + b.ah * 0.5))
+            if head.contains(test_pt) or head.intersects(b.art_rect()) or swept_catch:
                 self.pet.wear_iron()
                 self.remove(b)
                 return False

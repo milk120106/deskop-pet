@@ -1,0 +1,1 @@
+.\.venv\Scripts\pyinstaller.exe --onefile --windowed --exclude-module tkinter --exclude-module matplotlib --exclude-module scipy --add-data "deskpet;deskpet" --add-data "assets;assets" --add-data "custom_sounds;custom_sounds" --add-data "models;models" --add-data "pet_config.json;." --add-data "provider.ini;." --add-data "character.txt;." main.py

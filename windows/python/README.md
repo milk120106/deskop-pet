@@ -244,41 +244,40 @@ windows/python/
 
 ---
 
-## v2.1.0 重大架構更新亮點
+## v2.1.0 更新內容
 
-1. 企業級金鑰安全防護（Windows DPAPI 與本機 PIN 驗證）
-   - 原生 DPAPI 密文持久化：全面告別明文金鑰儲存，所有 API 金鑰在儲存至設定檔時均透過 Windows 系統原生 DPAPI (CryptProtectData) 加密為密文，杜絕明文外洩。
-   - Windows 原生 PIN / 密碼身分驗證：可開啟「要求 Windows 身分驗證」防護，於檢視、解鎖修改或更動安全設定時，直接調用 Windows 原生憑證對話方塊 (CredUIPromptForWindowsCredentialsW) 驗證操作者身分。
-   - 密碼遮蔽顯示模式：提供 API Key 遮蔽開關，支援密碼隱藏（顯示為圓點）與一鍵切換明暗檢視。
+1. 金鑰安全防護（Windows DPAPI 與本機 PIN 驗證）
+   - DPAPI 密文持久化：API 金鑰儲存至設定檔時透過 Windows DPAPI (CryptProtectData) 加密，不以明文留存。
+   - Windows 原生 PIN / 密碼身分驗證：可開啟「要求 Windows 身分驗證」防護，檢視或修改金鑰前調用本機 PIN 或密碼驗證。
+   - 密碼遮蔽顯示模式：提供 API Key 遮蔽開關，支援密碼隱藏（顯示為圓點）與切換檢視。
 
 2. 多 API Key 自動備援輪替機制
    - 每個模型供應商支援配置多組 API Key（以逗號、分號或換行分隔輸入）。
-   - 於對話或餘額查詢遭遇 429（額度超限/速率限制）、401（未授權/失效）或網路驗證錯誤時，系統自動輪替至下一組備援金鑰重試，確保高可用性與不中斷體驗。
+   - 於對話或餘額查詢遭遇 429（額度超限/速率限制）或 401（未授權/失效）錯誤時，系統自動輪替至下一組備援金鑰重試。
 
-3. 最新動態模型導向與線上探索
-   - 全廠商模型自動對齊最新動態別名：
+3. 動態模型導向與線上探索
+   - 模型預設指向最新動態別名：
      - Google Gemini：gemini-flash-latest、gemini-flash-lite-latest、gemini-pro-latest、gemini-3.8-live。
      - OpenAI：gpt-4o、gpt-4o-mini、o3-mini、o1。
      - Anthropic (Claude)：claude-3-5-sonnet-latest、claude-3-5-haiku-latest、claude-3-7-sonnet-latest。
      - DeepSeek：deepseek-chat（動態對齊 V3）、deepseek-reasoner（動態對齊 R1）。
-   - 支援線上非同步動態探測模型清單（discover_models），取得遠端最新支援模型。
+   - 支援線上探測模型清單（discover_models），取得遠端支援模型。
 
-4. 極簡膠囊對話視窗與動態對話氣泡
-   - 依據極簡現代風格重構對話介面，移除多餘記憶分頁，採用深灰圓角膠囊容器。
-   - 上方透明輸入框、底部整合加號選單、無框模型切換膠囊、模式切換、語音麥克風與圓形發送鈕。
-   - AI 回覆訊息時同步在寵物頭頂上方飄出即時對話氣泡。
+4. 簡潔對話視窗與動態對話氣泡
+   - 簡約對話介面，移除多餘分頁，採用深灰圓角膠囊容器。
+   - 整合模型選擇、模式切換、語音輸入與發送按鈕。
+   - AI 回覆訊息時同步在寵物頭頂上方顯示即時對話氣泡。
 
 5. 雙模式自訂字體系統
-   - 模式一：自動讀取本機系統字體清單（過濾無效字體並排序），下拉即選即用。
-   - 模式二：支援自訂匯入 .ttf / .otf / .ttc 字型檔案並動態註冊載入。
-   - 預設升級 Segoe UI Variable Text / 微軟正黑體現代排版字體堆疊。
+   - 模式一：自動讀取本機系統字體清單，下拉即選即用。
+   - 模式二：支援自訂匯入 .ttf / .otf / .ttc 字型檔案並動態載入。
 
-6. 現代化無邊框自訂標題列
-   - 全面為控制台與各大彈窗導入自訂拖曳標題列（CustomTitleBar），內建最小化按鈕與高亮關閉按鈕，徹底解決 Windows DWM 視窗標題列反白禁用無法關閉的系統問題。
+6. 自訂視窗標題列
+   - 控制台與彈窗採用自訂標題列（CustomTitleBar），提供最小化與關閉按鈕，解決視窗標題列在部分環境反白無法關閉的問題。
 
 7. Google Material Symbols 開源圖示整合
-   - 依據 Apache 2.0 協議整合 Google Material Symbols 向量圖示，支援任意 DPI 高清向量繪製，介面無任何表情符號 (Emoji-free)。
+   - 依據 Apache 2.0 協議整合 Google Material Symbols 向量圖示，介面無 Emoji。
 
-8. 支援最多 4 隻餘額寵物同時常駐
-   - 可同時在桌面召喚 DeepSeek、Claude、OpenAI、Gemini 四隻寵物，各自獨立顯示即時餘額。
+8. 支援多隻餘額寵物同時常駐
+   - 可在桌面召喚多隻寵物，各自獨立顯示即時餘額。
 

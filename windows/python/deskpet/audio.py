@@ -179,6 +179,7 @@ class Sounds:
         self.cfg = cfg
         SOUND_LIB_DIR.mkdir(parents=True, exist_ok=True)
         self.pools: dict[str, CuePool] = {}
+        self._file_voice: MciVoice | None = None
         self._muted = False
         try:
             self.pools["hit"] = CuePool("hit", 3)
@@ -284,10 +285,37 @@ class Sounds:
             self.apply()
             log_info(f"已恢復預設提示音: {key}", source="Audio")
 
+    def play_file(self, file_path: str, volume: int | None = None):
+        """播放任意音訊檔案（MP3/WAV），用於語音辨識回應、TTS 或 Gemini Live 串流回覆。"""
+        if not file_path or not os.path.exists(file_path):
+            return
+        master_vol = int(self.cfg.get("volume", 80))
+        vol = master_vol if volume is None else int((volume * master_vol) / 100.0)
+        if self._muted or vol <= 0:
+            return
+        try:
+            if self._file_voice is None:
+                self._file_voice = MciVoice("pet_playback_voice")
+            self._file_voice.open(file_path, vol)
+            self._file_voice.play()
+        except Exception as e:
+            log_error(f"播放語音檔案失敗 ({file_path}): {e}", source="Audio")
+
+    def stop_file(self):
+        """停止目前正在播放的語音檔案。"""
+        try:
+            if self._file_voice:
+                self._file_voice.stop()
+                self._file_voice.close()
+        except Exception:
+            pass
+
     def close_all(self):
         """Close all opened MCI voices."""
         try:
             for p in self.pools.values():
                 p.close()
+            if self._file_voice:
+                self._file_voice.close()
         except Exception:
             pass

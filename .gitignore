@@ -42,3 +42,6 @@ __pycache__/
 selftest_out/
 logs/
 windows/backup_qchars/
+
+*.zip
+*.exe

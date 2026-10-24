@@ -307,12 +307,76 @@ def run(qapp) -> int:
 
     # ========================================================= 11. Pet Variants (1024 Square vs 1536 Tail)
     check("default variant is square (1:1)", pet.variant == "square" and pet.aspect_ratio == 1.0)
+    # Check square mode head zone and iron bowl center alignment
+    sq_cx_normal = pet.sprite_origin().x() + pet.art_w * 0.60
+    check("square normal head zone center matches iron bowl cx", abs(pet.head_zone_global().center().x() - sq_cx_normal) < 1e-4)
+    pet.set_snap_right(True)
+    sq_cx_mirrored = pet.sprite_origin().x() + pet.art_w * 0.40
+    check("square mirrored head zone center matches iron bowl cx", abs(pet.head_zone_global().center().x() - sq_cx_mirrored) < 1e-4)
+    pet.set_snap_right(False)
+
     w_sq = pet.art_w
     app.set_variant("tail")
     wait(300)
     check("switched to tail variant (1.5:1)", pet.variant == "tail" and pet.aspect_ratio == 1.5)
     check("tail variant widens art width", pet.art_w == int(pet.size_px * 1.5) and pet.art_w > w_sq)
     pet.grab().save(str(OUT / "11_variant_tail.png"))
+
+    # Tail mode head zone and iron bowl center alignment
+    tail_cx_normal = pet.sprite_origin().x() + pet.art_w * 0.672
+    check("tail normal head zone center matches iron bowl cx", abs(pet.head_zone_global().center().x() - tail_cx_normal) < 1e-4)
+    pet.set_snap_right(True)
+    tail_cx_mirrored = pet.sprite_origin().x() + pet.art_w * (1.0 - 0.672)
+    check("tail mirrored head zone center matches iron bowl cx", abs(pet.head_zone_global().center().x() - tail_cx_mirrored) < 1e-4)
+
+    # Falling iron bowl onto head in tail mirrored mode (verifying no drop-through to tablet/floor)
+    from deskpet.props import Prop
+    b_tail = Prop(pet.props, "iron", pet.props.bowl_width(), 0.0)
+    h_tail = pet.head_zone_global()
+    b_tail.x = h_tail.center().x()
+    b_tail.y = h_tail.top() - 40
+    b_tail.vy = 260.0
+    pet.props._add(b_tail)
+    for _ in range(60):
+        pet.props.step()
+        if pet.iron_count > 0:
+            break
+        wait(16)
+    check("falling iron bowl caught on head in tail mirrored mode", pet.iron_worn and pet.iron_count == 1)
+    pet.grab().save(str(OUT / "11_tail_mirrored_iron.png"))
+
+    # When iron bowl is worn in tail mirrored mode, petting directly DOES NOT trigger
+    pet._wig_pos = None
+    pet.pat_active = False
+    head_c_tail = pet.head_zone_global().center()
+    local_head_tail = pet.mapFromGlobal(head_c_tail.toPoint())
+    for i in range(16):
+        pos = local_head_tail + QPoint((i % 2) * 20, 0)
+        ev = QMouseEvent(QEvent.MouseMove, QPointF(pos), pet.mapToGlobal(pos), Qt.NoButton, Qt.NoButton, Qt.NoModifier)
+        pet.mouseMoveEvent(ev)
+        wait(40)
+    check("tail mirrored: iron bowl worn petting DOES NOT trigger", not pet.pat_active and pet.iron_worn)
+
+    # Remove iron bowl in tail mirrored mode
+    pet.remove_iron(all_pots=True)
+    check("tail mirrored: iron bowl removed", pet.iron_count == 0)
+
+    # Petting in tail mirrored mode now triggers smoothly
+    pet._wig_pos = None
+    pet.pat_cooldown = 0.0
+    head_c_tail = pet.head_zone_global().center()
+    local_head_tail = pet.mapFromGlobal(head_c_tail.toPoint())
+    for i in range(16):
+        pos = local_head_tail + QPoint((i % 2) * 20, 0)
+        ev = QMouseEvent(QEvent.MouseMove, QPointF(pos), pet.mapToGlobal(pos), Qt.NoButton, Qt.NoButton, Qt.NoModifier)
+        pet.mouseMoveEvent(ev)
+        wait(40)
+    check("tail mirrored: head pat triggers when iron bowl is removed", pet.pat_active)
+    pet.grab().save(str(OUT / "11_tail_mirrored_pat.png"))
+    wait(400)
+    check("tail mirrored: pat ends after stopping", not pet.pat_active)
+
+    pet.set_snap_right(False)
     app.set_variant("square")
     wait(200)
     check("restored square variant", pet.variant == "square" and pet.aspect_ratio == 1.0)

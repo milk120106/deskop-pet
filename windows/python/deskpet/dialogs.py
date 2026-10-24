@@ -3,6 +3,7 @@ Material Design 3 style with dark/light theme switching and screen auto-centerin
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 from pathlib import Path
@@ -29,8 +30,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .config import APP_DIR, CUSTOM_CHARS_DIR, SOUND_LIB_DIR, asset, log
+from .config import APP_DIR, ASSETS, CUSTOM_CHARS_DIR, SOUND_LIB_DIR, asset, log
+from .icons import get_icon
 from .titlebar import CustomTitleBar
+
+ARROW_DOWN_DARK = (ASSETS / "arrow_down_dark.svg").as_posix()
+ARROW_DOWN_LIGHT = (ASSETS / "arrow_down_light.svg").as_posix()
 
 BUILTIN_CHARS = [
     ("deepseek", "藍色大肥魚 (DeepSeek)"),
@@ -132,14 +137,40 @@ QPushButton#danger:hover {
 QPushButton#danger:pressed {
     background-color: #b91c1c;
 }
-QComboBox, QLineEdit, QSpinBox {
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    color: #0f172a;
+}
+QComboBox:hover {
+    border-color: #94a3b8;
+}
+QComboBox:focus {
+    border: 2px solid #2563eb;
+    padding: 5px 27px 5px 9px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_LIGHT__");
+    width: 10px;
+    height: 7px;
+}
+QLineEdit, QSpinBox {
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     padding: 6px 10px;
     color: #0f172a;
 }
-QComboBox:focus, QLineEdit:focus, QSpinBox:focus {
+QLineEdit:focus, QSpinBox:focus {
     border: 2px solid #2563eb;
 }
 QComboBox QAbstractItemView {
@@ -150,6 +181,7 @@ QComboBox QAbstractItemView {
     selection-color: #1d4ed8;
     padding: 4px;
     outline: none;
+    color: #0f172a;
 }
 QSlider::groove:horizontal {
     height: 6px;
@@ -275,14 +307,40 @@ QPushButton#danger:hover {
 QPushButton#danger:pressed {
     background-color: #991b1b;
 }
-QComboBox, QLineEdit, QSpinBox {
+QComboBox {
+    background-color: #242731;
+    border: 1px solid #3c4252;
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    color: #f1f5f9;
+}
+QComboBox:hover {
+    border-color: #555b6d;
+}
+QComboBox:focus {
+    border: 2px solid #60a5fa;
+    padding: 5px 27px 5px 9px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_DARK__");
+    width: 10px;
+    height: 7px;
+}
+QLineEdit, QSpinBox {
     background-color: #242731;
     border: 1px solid #3c4252;
     border-radius: 8px;
     padding: 6px 10px;
     color: #f1f5f9;
 }
-QComboBox:focus, QLineEdit:focus, QSpinBox:focus {
+QLineEdit:focus, QSpinBox:focus {
     border: 2px solid #60a5fa;
 }
 QComboBox QAbstractItemView {
@@ -327,6 +385,9 @@ QScrollBar::handle:vertical {
 }
 """
 
+DIALOG_LIGHT_QSS = DIALOG_LIGHT_QSS.replace("__ARROW_DOWN_LIGHT__", ARROW_DOWN_LIGHT)
+DIALOG_DARK_QSS = DIALOG_DARK_QSS.replace("__ARROW_DOWN_DARK__", ARROW_DOWN_DARK)
+
 
 def center_dialog(dialog: QDialog):
     screen = QApplication.primaryScreen()
@@ -335,6 +396,147 @@ def center_dialog(dialog: QDialog):
         x = geo.x() + max(0, (geo.width() - dialog.width()) // 2)
         y = geo.y() + max(0, (geo.height() - dialog.height()) // 2)
         dialog.move(x, y)
+
+
+class ModernMessageBox(QDialog):
+    """現代化全客製無邊框對話框，具備深淺主題切換、自訂標題列與向量圖示。
+    提供與 QMessageBox 相同之 information、warning、question 靜態呼叫介面。
+    """
+    Ok = QMessageBox.StandardButton.Ok
+    Cancel = QMessageBox.StandardButton.Cancel
+    Yes = QMessageBox.StandardButton.Yes
+    No = QMessageBox.StandardButton.No
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        title: str = "提示",
+        text: str = "",
+        buttons=QMessageBox.StandardButton.Ok,
+        icon_type: str = "info",
+        theme: str | None = None,
+    ):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.result_button = QMessageBox.StandardButton.Cancel if (buttons & QMessageBox.StandardButton.Cancel) else (
+            QMessageBox.StandardButton.No if (buttons & QMessageBox.StandardButton.No) else QMessageBox.StandardButton.Ok
+        )
+
+        if not theme:
+            if hasattr(parent, "cfg") and hasattr(parent.cfg, "get"):
+                theme = parent.cfg.get("theme", "light")
+            elif hasattr(parent, "app") and hasattr(parent.app, "cfg"):
+                theme = parent.app.cfg.get("theme", "light")
+            else:
+                from .config import CONFIG_PATH
+                try:
+                    if CONFIG_PATH.exists():
+                        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                            theme = json.load(f).get("theme", "light")
+                    else:
+                        theme = "light"
+                except Exception:
+                    theme = "light"
+
+        is_dark = (theme == "dark")
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+        self.setMinimumWidth(380)
+        self.setMaximumWidth(540)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, title, has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(22, 18, 22, 18)
+        lay.setSpacing(16)
+
+        msg_lay = QHBoxLayout()
+        msg_lay.setSpacing(14)
+
+        icon_map = {
+            "info": ("info", "#3b82f6" if is_dark else "#2563eb"),
+            "warning": ("warning", "#fbbf24" if is_dark else "#d97706"),
+            "question": ("help", "#60a5fa" if is_dark else "#1d4ed8"),
+            "success": ("check", "#10b981" if is_dark else "#059669"),
+        }
+        icon_name, icon_color = icon_map.get(icon_type, ("info", "#3b82f6"))
+        lb_icon = QLabel()
+        lb_icon.setPixmap(get_icon(icon_name, icon_color, 32).pixmap(32, 32))
+        lb_icon.setFixedSize(36, 36)
+        lb_icon.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        msg_lay.addWidget(lb_icon)
+
+        lb_text = QLabel(text)
+        lb_text.setWordWrap(True)
+        lb_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        lb_text.setStyleSheet(
+            f"color: {'#e2e2e6' if is_dark else '#1f2937'}; font-size: 13px; line-height: 1.45;"
+        )
+        msg_lay.addWidget(lb_text, 1)
+        lay.addLayout(msg_lay)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_row.addStretch(1)
+
+        if buttons & (QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No):
+            b_yes = QPushButton("確定")
+            b_yes.setObjectName("primary")
+            b_yes.setMinimumWidth(80)
+            b_yes.clicked.connect(lambda: self._choose(QMessageBox.StandardButton.Yes))
+            btn_row.addWidget(b_yes)
+
+            b_no = QPushButton("取消")
+            b_no.setMinimumWidth(80)
+            b_no.clicked.connect(lambda: self._choose(QMessageBox.StandardButton.No))
+            btn_row.addWidget(b_no)
+        else:
+            if buttons & QMessageBox.StandardButton.Ok:
+                b_ok = QPushButton("確定")
+                b_ok.setObjectName("primary")
+                b_ok.setMinimumWidth(80)
+                b_ok.clicked.connect(lambda: self._choose(QMessageBox.StandardButton.Ok))
+                btn_row.addWidget(b_ok)
+            if buttons & QMessageBox.StandardButton.Cancel:
+                b_cancel = QPushButton("取消")
+                b_cancel.setMinimumWidth(80)
+                b_cancel.clicked.connect(lambda: self._choose(QMessageBox.StandardButton.Cancel))
+                btn_row.addWidget(b_cancel)
+
+        lay.addLayout(btn_row)
+        outer.addWidget(content, 1)
+
+    def _choose(self, btn: QMessageBox.StandardButton):
+        self.result_button = btn
+        self.accept()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+    @classmethod
+    def information(cls, parent: QWidget | None, title: str, text: str, buttons=QMessageBox.StandardButton.Ok) -> QMessageBox.StandardButton:
+        dlg = cls(parent, title=title, text=text, buttons=buttons, icon_type="info")
+        dlg.exec()
+        return dlg.result_button
+
+    @classmethod
+    def warning(cls, parent: QWidget | None, title: str, text: str, buttons=QMessageBox.StandardButton.Ok) -> QMessageBox.StandardButton:
+        dlg = cls(parent, title=title, text=text, buttons=buttons, icon_type="warning")
+        dlg.exec()
+        return dlg.result_button
+
+    @classmethod
+    def question(cls, parent: QWidget | None, title: str, text: str, buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) -> QMessageBox.StandardButton:
+        dlg = cls(parent, title=title, text=text, buttons=buttons, icon_type="question")
+        dlg.exec()
+        return dlg.result_button
 
 
 class CharPickerDialog(QDialog):
@@ -519,7 +721,7 @@ class CharPickerDialog(QDialog):
 
         safe_name = "".join(c for c in name if c.isalnum() or c in ("_", "-")).strip()
         if not safe_name:
-            QMessageBox.warning(self, "名稱錯誤", "請輸入有效的名稱。")
+            ModernMessageBox.warning(self, "名稱錯誤", "請輸入有效的名稱。")
             return
 
         cid = f"custom_{safe_name}"
@@ -544,10 +746,10 @@ class CharPickerDialog(QDialog):
             # Default tablet quad: centered at bottom
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
         except Exception as e:
-            QMessageBox.warning(self, "建立失敗", f"無法建立自訂角色: {e}")
+            ModernMessageBox.warning(self, "建立失敗", f"無法建立自訂角色: {e}")
             return
 
-        QMessageBox.information(self, "成功", f"自訂角色「{safe_name}」已新增！\n若角色手上有拿平板，可手動修改\n{dest_dir / 'tablet.txt'}\n的四角座標（1024×1024 座標系）。")
+        ModernMessageBox.information(self, "成功", f"自訂角色「{safe_name}」已新增！\n若角色手上有拿平板，可手動修改\n{dest_dir / 'tablet.txt'}\n的四角座標（1024×1024 座標系）。")
         self.selected_id = cid
         self._refresh_list()
 
@@ -555,7 +757,7 @@ class CharPickerDialog(QDialog):
         cid = self.selected_id
         if not cid.startswith("custom_"):
             return
-        if QMessageBox.question(self, "確認刪除", f"確定要刪除自訂角色「{cid}」嗎？") != QMessageBox.Yes:
+        if ModernMessageBox.question(self, "確認刪除", f"確定要刪除自訂角色「{cid}」嗎？") != ModernMessageBox.Yes:
             return
         d = CUSTOM_CHARS_DIR / cid
         if d.exists():
@@ -678,7 +880,7 @@ class SoundLibraryDialog(QDialog):
             return
         ok, msg = self.sounds.set_custom_cue(key, path)
         if not ok:
-            QMessageBox.warning(self, "更換失敗", msg)
+            ModernMessageBox.warning(self, "更換失敗", msg)
         else:
             self.file_labels[key].setText(f"檔案: {msg}")
 
@@ -763,15 +965,15 @@ class CustomQDialog(QDialog):
             return
         ok, msg = self.qchars.import_custom_q(name.strip(), path)
         if not ok:
-            QMessageBox.warning(self, "匯入失敗", msg)
+            ModernMessageBox.warning(self, "匯入失敗", msg)
         else:
-            QMessageBox.information(self, "匯入成功", f"Q 版角色「{msg}」已建立！")
+            ModernMessageBox.information(self, "匯入成功", f"Q 版角色「{msg}」已建立！")
             self._refresh()
 
     def _spawn(self):
         item = self.list_widget.currentItem()
         if not item:
-            QMessageBox.information(self, "提示", "請先選擇一個角色。")
+            ModernMessageBox.information(self, "提示", "請先選擇一個角色。")
             return
         name = item.text()
         self.app.add_q(kind="custom", custom_id=name)
@@ -781,6 +983,6 @@ class CustomQDialog(QDialog):
         if not item:
             return
         name = item.text()
-        if QMessageBox.question(self, "確認刪除", f"確定要刪除 Q 版角色「{name}」嗎？") == QMessageBox.Yes:
+        if ModernMessageBox.question(self, "確認刪除", f"確定要刪除 Q 版角色「{name}」嗎？") == ModernMessageBox.Yes:
             self.qchars.delete_custom_q(name)
             self._refresh()

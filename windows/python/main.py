@@ -3,7 +3,17 @@ import os
 import sys
 import traceback
 
+# 1. 先讓 Python 模組路徑正確載入
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 2. 終極路徑切換邏輯
+if getattr(sys, 'frozen', False):
+    # onefile 模式：切換到解壓暫存區以讀取包在內部的 assets/deskpet 等
+    if hasattr(sys, '_MEIPASS'):
+        os.chdir(sys._MEIPASS)
+    else:
+        # onedir/MSI/ZIP 模式：保持在執行檔所在目錄
+        os.chdir(os.path.dirname(sys.executable))
 
 
 def main() -> int:

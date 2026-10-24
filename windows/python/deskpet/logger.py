@@ -17,7 +17,10 @@ from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
 
-APP_DIR = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    APP_DIR = Path(sys.executable).resolve().parent
+else:
+    APP_DIR = Path(__file__).resolve().parent.parent
 LOGS_DIR = APP_DIR / "logs"
 CRASH_LOG_PATH = LOGS_DIR / "crash.log"
 STATE_FILE_PATH = LOGS_DIR / ".session_state.json"

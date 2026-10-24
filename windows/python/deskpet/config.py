@@ -11,8 +11,19 @@ from pathlib import Path
 
 from .winapi import dpapi_decrypt, dpapi_encrypt
 
-APP_DIR = Path(__file__).resolve().parent.parent
-ASSETS = APP_DIR / "assets"
+if getattr(sys, "frozen", False):
+    EXE_DIR = Path(sys.executable).resolve().parent
+    BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", EXE_DIR))
+    APP_DIR = EXE_DIR
+    if (BUNDLE_DIR / "assets").exists():
+        ASSETS = BUNDLE_DIR / "assets"
+    elif (EXE_DIR / "assets").exists():
+        ASSETS = EXE_DIR / "assets"
+    else:
+        ASSETS = BUNDLE_DIR / "assets"
+else:
+    APP_DIR = Path(__file__).resolve().parent.parent
+    ASSETS = APP_DIR / "assets"
 CUSTOM_CHARS_DIR = APP_DIR / "custom_characters"
 CUSTOM_Q_DIR = APP_DIR / "custom_q"
 SOUND_LIB_DIR = APP_DIR / "custom_sounds"

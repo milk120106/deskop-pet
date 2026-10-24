@@ -1785,13 +1785,12 @@ class ControlPanel(QWidget):
         c1_lay.setContentsMargins(18, 16, 18, 16)
         c1_lay.setSpacing(10)
 
-        h1 = QLabel(f"Desktop Pet 桌面寵物 {APP_VERSION}")
+        h1 = QLabel(f"Desktop Pet {APP_VERSION}")
         h1.setStyleSheet("font-size: 16px; font-weight: bold; color: #3b82f6;")
         c1_lay.addWidget(h1)
 
         intro = QLabel(
-            "專為 Windows 桌面環境打造的高性能互動掛件與多模型 API 餘額即時監控助手。\n"
-            "具備極簡深灰高質感膠囊對話視窗、自訂字體系統、動態頭頂氣泡、原生音訊引擎與本機安全儀表板。"
+            "你用就完事了，我懶得打字"
         )
         intro.setWordWrap(True)
         c1_lay.addWidget(intro)
@@ -1830,18 +1829,12 @@ class ControlPanel(QWidget):
         c_art_lay.setContentsMargins(18, 16, 18, 16)
         c_art_lay.setSpacing(10)
 
-        h_art = QLabel("徵求圖片與美術資源 (Community Art & Asset Invitation)")
+        h_art = QLabel("徵求圖片與美術資源(?")
         h_art.setStyleSheet("font-size: 15px; font-weight: bold; color: #10b981;")
         c_art_lay.addWidget(h_art)
 
         art_desc = QLabel(
-            "熱情邀請廣大社群創作者、插畫師與玩家共同參與桌面寵物的豐富生態！\n"
-            "我們熱切徵求各類原創與衍生美術資源：\n"
-            "· 角色全身原畫立繪（支援 1:1 標準正方形與 1.5:1 寬屏帶尾巴立繪）\n"
-            "· 表情差分素材包（開心、警戒、傲嬌、冰冷、受傷等生動表情）\n"
-            "· 摸頭互動回饋動畫與特殊動作幀\n"
-            "· 特色桌寵道具（米飯盆、頭頂鐵盆、專屬配件與場景裝飾）\n"
-            "歡迎透過 GitHub 提交 Pull Request 或 Issue 分享您的作品，作品將署名列入感謝清單！"
+            "gemini hyw？"
         )
         art_desc.setWordWrap(True)
         c_art_lay.addWidget(art_desc)

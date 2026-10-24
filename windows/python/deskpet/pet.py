@@ -380,17 +380,18 @@ class PetWindow(QWidget):
         o = self.sprite_origin()
         W = self.art_w
         H = self.art_h
-        hx = (W - W * 0.60) if self.snap_right else (W * 0.40 if self.is_tail else W * 0.28)
-        x = o.x() + hx
-        y = o.y() - H * 0.04
-        w = W * 0.45
-        h = H * 0.40
+        base_cx = 0.672 if self.is_tail else 0.60
+        cx = o.x() + (W * (1.0 - base_cx) if self.snap_right else W * base_cx)
+        w = H * 0.56
+        x = cx - w / 2.0
+        y = o.y() - H * 0.14
+        h = H * 0.54
         if self.iron_count > 0:
             stack_extra = (self.iron_count - 1) * (H * 0.12)
-            y -= (H * 0.12 + stack_extra)
-            h += (H * 0.16 + stack_extra)
-            x -= W * 0.06
-            w += W * 0.12
+            y -= (H * 0.10 + stack_extra)
+            h += (H * 0.12 + stack_extra)
+            w += H * 0.08
+            x = cx - w / 2.0
         return QRectF(x, y, w, h)
 
     def tablet_zone_global(self) -> QRectF:
@@ -488,11 +489,20 @@ class PetWindow(QWidget):
         self._anim.finished.connect(self._save_pos)
         self._anim.start()
 
-    def show_speech_bubble(self, text: str, thought: bool = False):
+    def show_speech_bubble(self, text: str, thought: bool = False, timeout_ms: int = 6500, persistent: bool = False, on_click=None):
         if self._bubble is None:
             from .chat import SpeechBubble
             self._bubble = SpeechBubble(self)
-        self._bubble.show_message(text, thought=thought)
+        if on_click is not None:
+            self._bubble.set_click_callback(on_click)
+        else:
+            self._bubble.set_click_callback(None)
+        self._bubble.show_message(text, thought=thought, timeout_ms=timeout_ms, persistent=persistent)
+
+    def hide_speech_bubble(self):
+        if self._bubble is not None:
+            self._bubble.hide()
+            self._bubble.set_click_callback(None)
 
     def _save_pos(self):
         if self.is_extra and self.pet_id:
@@ -778,7 +788,7 @@ class PetWindow(QWidget):
         W = self.art_w
         H = self.art_h
         tilt = -IRON_TILT if self.snap_right else IRON_TILT
-        base_cx = (0.40 if self.is_tail else 0.60)
+        base_cx = (0.672 if self.is_tail else 0.60)
         cx = ox + (W * (1.0 - base_cx) if self.snap_right else W * base_cx)
         base_cy = oy + H * 0.19
 
@@ -921,7 +931,7 @@ class PetWindow(QWidget):
         if self.pat_active:
             self.pat_phase = (self.pat_phase + dt * 2.6) % 1.0
             busy = True
-            if now - self._wig_last > 0.15:
+            if now - self._wig_last > 0.25:
                 self.end_pat()
 
         if now < self.nervous_until:
@@ -1095,7 +1105,7 @@ class PetWindow(QWidget):
             return
 
         g = QPointF(self.mapToGlobal(e.position().toPoint()))
-        if self.head_zone_global().contains(g) and self._hit_local(e.position().toPoint()):
+        if self.head_zone_global().contains(g):
             self._track_pat(e.position())
         else:
             if not self.pat_active:

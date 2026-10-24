@@ -89,6 +89,12 @@ class App(QObject):
         self.extra_ledgers: dict[str, Ledger] = {}
         self.chat_dialog = None
 
+        # Gemini Live 純語音模式狀態管理（絕不彈出文字視窗）
+        self.pure_voice_active = False
+        self.pure_voice_recorder = None
+        self.pure_voice_worker = None
+        self.pure_voice_pet: PetWindow | None = None
+
         self.qchars = _DummyQCharManager()
         self.qchars.menu_cb = self.q_menu
         self.pet.props._menu_cb = self.prop_menu
@@ -200,7 +206,7 @@ class App(QObject):
         for cid in list(self.extra_pets.keys()):
             self.dismiss_balance_pet(cid)
 
-    # ------------------------------------------------------------- AI Chat & Gemini Live
+    # ------------------------------------------------------------- AI Chat & Gemini Live 純語音模式
     def open_chat_dialog(self, target_pet: PetWindow | None = None):
         from .chat import ChatDialog
 
@@ -211,10 +217,159 @@ class App(QObject):
             self.chat_dialog.pet = target
         self._center_and_raise(self.chat_dialog)
 
+    def start_pure_voice(self, target_pet: PetWindow | None = None):
+        """啟動 Gemini Live 純語音即時連線（絕不彈出文字對話框）。"""
+        cur_pet = target_pet or self.pet
+        self.pure_voice_pet = cur_pet
+
+        # 1. 檢查 Google Gemini API Key
+        profiles = self.cfg.get("api_profiles", [])
+        gemini_prof = next((p for p in profiles if p.get("provider") == "Google Gemini" and p.get("key", "").strip()), None)
+        if not gemini_prof:
+            k = (self.cfg.get("api_keys") or {}).get("gemini", "").strip()
+            if k:
+                gemini_prof = {
+                    "provider": "Google Gemini",
+                    "key": k,
+                    "model": self.cfg.get("gemini_live_model", "gemini-2.0-flash-exp"),
+                }
+        if not gemini_prof:
+            cur_pet.show_speech_bubble("純語音模式需要 Google Gemini API Key，請先於設定中配置。")
+            return
+
+        # 2. 檢查音訊輸入裝置
+        try:
+            import sounddevice as sd
+            devs = sd.query_devices()
+            has_input = any(d.get("max_input_channels", 0) > 0 for d in devs)
+            if not has_input:
+                cur_pet.show_speech_bubble("未檢測到可用的麥克風輸入裝置。")
+                return
+        except Exception as e:
+            cur_pet.show_speech_bubble(f"音訊模組載入失敗：{e}")
+            return
+
+        self.pure_voice_active = True
+        self._start_pure_voice_listening()
+
+    def _start_pure_voice_listening(self):
+        """進入語音聆聽狀態"""
+        if not self.pure_voice_active or not self.pure_voice_pet:
+            return
+        from .chat import VoiceRecorder
+
+        self.pure_voice_pet.show_speech_bubble(
+            "純語音模式：正在聆聽...（點擊氣泡可結束）",
+            thought=False,
+            persistent=True,
+            on_click=self.stop_pure_voice,
+        )
+
+        self.pure_voice_recorder = VoiceRecorder(traditional=False, vad_enabled=True, parent=self)
+        self.pure_voice_recorder.finished.connect(self._on_pure_voice_recorded)
+        self.pure_voice_recorder.failed.connect(self._on_pure_voice_failed)
+        self.pure_voice_recorder.start()
+
+    def _on_pure_voice_failed(self, err: str):
+        self.pure_voice_recorder = None
+        if self.pure_voice_pet:
+            self.pure_voice_pet.show_speech_bubble(f"純語音錯誤：{err}", timeout_ms=4000)
+        self.pure_voice_active = False
+
+    def _on_pure_voice_recorded(self, path: str):
+        self.pure_voice_recorder = None
+        if not self.pure_voice_active or not self.pure_voice_pet:
+            return
+
+        self.pure_voice_pet.show_speech_bubble(
+            "純語音模式：思考中...（點擊氣泡可結束）",
+            thought=True,
+            persistent=True,
+            on_click=self.stop_pure_voice,
+        )
+
+        from .chat import GeminiLiveWorker
+
+        profiles = self.cfg.get("api_profiles", [])
+        gemini_prof = next((p for p in profiles if p.get("provider") == "Google Gemini" and p.get("key", "").strip()), None)
+        if not gemini_prof:
+            k = (self.cfg.get("api_keys") or {}).get("gemini", "").strip()
+            gemini_prof = {
+                "provider": "Google Gemini",
+                "key": k,
+                "model": self.cfg.get("gemini_live_model", "gemini-2.0-flash-exp"),
+            }
+
+        model = self.cfg.get("gemini_live_model", "gemini-2.0-flash-exp")
+        voice = self.cfg.get("gemini_live_voice", "Kore")
+        char_name = self.pure_voice_pet.character
+        sys_prompt = f"你是桌面上的可愛角色（目前外觀：{char_name}）。請以繁體中文親切回答，簡短自然，字數在 100 字以內，不要輸出任何思考過程標籤或 markdown 表情符號。"
+
+        self.pure_voice_worker = GeminiLiveWorker(path, gemini_prof, sys_prompt, model, voice, self)
+        self.pure_voice_worker.finished.connect(self._on_pure_voice_finished)
+        self.pure_voice_worker.start()
+
+    def _on_pure_voice_finished(self, ok: bool, data: dict):
+        self.pure_voice_worker = None
+        if not self.pure_voice_active or not self.pure_voice_pet:
+            return
+
+        if not ok:
+            err = data.get("error", "未知錯誤")
+            self.pure_voice_pet.show_speech_bubble(f"語音回應異常：{err}", timeout_ms=4000)
+            self.stop_pure_voice()
+            return
+
+        text = data.get("text", "")
+        reply = ""
+        for line in text.splitlines():
+            if line.startswith("Gemini："):
+                reply = line[7:].strip()
+                break
+        if not reply and text:
+            reply = text.strip()
+        if not reply:
+            reply = "我聽到了，但暫時無法生成回應。"
+
+        # 播放語音回覆
+        if data.get("audio"):
+            self.pure_voice_pet.sounds.play_file(data["audio"])
+
+        # 顯示頭頂語音氣泡
+        self.pure_voice_pet.show_speech_bubble(
+            reply,
+            thought=False,
+            timeout_ms=8000,
+            on_click=self.stop_pure_voice,
+        )
+
+        # 8.5 秒後若仍處於純語音模式，自動回到聆聽狀態
+        QTimer.singleShot(8500, self._check_resume_pure_voice_listening)
+
+    def _check_resume_pure_voice_listening(self):
+        if self.pure_voice_active and self.pure_voice_pet:
+            self._start_pure_voice_listening()
+
+    def stop_pure_voice(self):
+        """關閉純語音模式"""
+        self.pure_voice_active = False
+        if self.pure_voice_recorder and self.pure_voice_recorder.isRunning():
+            self.pure_voice_recorder.stop()
+            self.pure_voice_recorder = None
+        if self.pure_voice_worker and self.pure_voice_worker.isRunning():
+            self.pure_voice_worker.cancel()
+            self.pure_voice_worker = None
+        if self.pure_voice_pet:
+            self.pure_voice_pet.sounds.stop_file()
+            self.pure_voice_pet.show_speech_bubble("已關閉純語音模式", timeout_ms=2500)
+            self.pure_voice_pet = None
+
     def open_gemini_live(self, target_pet: PetWindow | None = None):
-        self.open_chat_dialog(target_pet=target_pet)
-        if self.chat_dialog:
-            self.chat_dialog.toggle_gemini_live()
+        """純語音模式切換（相容舊介面呼叫，絕不彈出文字視窗）"""
+        if self.pure_voice_active:
+            self.stop_pure_voice()
+        else:
+            self.start_pure_voice(target_pet=target_pet)
 
     # ------------------------------------------------------------- menus
     def _fill_menu(self, m: QMenu, tray: bool = False, pet: PetWindow | None = None):
@@ -235,7 +390,10 @@ class App(QObject):
             return a
 
         act("AI 對話視窗...", lambda: self.open_chat_dialog(target_pet=cur_pet))
-        act("純語音模式 (Gemini Live)...", lambda: self.open_gemini_live(target_pet=cur_pet))
+        if self.pure_voice_active:
+            act("關閉純語音模式 (Gemini Live)", self.stop_pure_voice)
+        else:
+            act("純語音模式 (Gemini Live)...", lambda: self.start_pure_voice(target_pet=cur_pet))
         m.addSeparator()
 
         act("控制台", self.show_panel)
@@ -444,8 +602,8 @@ class App(QObject):
         dlg.exec()
 
     def _show_qchars_maintenance_dialog(self):
-        from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(
+        from .dialogs import ModernMessageBox
+        ModernMessageBox.information(
             self.panel or self.pet,
             "提示",
             "Q 版角色功能目前暫時停用並進行重構升級中，敬請期待後續版本開放！",

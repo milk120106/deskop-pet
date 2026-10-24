@@ -1,6 +1,5 @@
 """AI 對話視窗、語音錄音與語音合成、記憶系統與背景工作執行緒。
 完全遵循純文字與繁體中文排版，嚴格禁止任何表情符號 (No Emojis)。
-極簡深灰高質感膠囊容器設計，完美契合現代介面審美。
 """
 from __future__ import annotations
 
@@ -35,7 +34,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMenu,
-    QMessageBox,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -45,10 +43,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .config import APP_DIR, Config, log
+from .config import APP_DIR, ASSETS, Config, log
+from .dialogs import ModernMessageBox
 from .icons import get_icon
 from .model_catalog import OPENAI_BASES, PROVIDERS, ModelCatalogError, discover_models
 from .titlebar import CustomTitleBar
+
+ARROW_DOWN_DARK = (ASSETS / "arrow_down_dark.svg").as_posix()
+ARROW_DOWN_LIGHT = (ASSETS / "arrow_down_light.svg").as_posix()
 
 VOICE_DIR = APP_DIR / "voice_cache"
 VOSK_MODEL = APP_DIR / "models" / "vosk-model-small-cn-0.22"
@@ -76,7 +78,7 @@ QLabel {
     color: #1a1c1e;
     font-size: 13px;
 }
-QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox {
     background: #f1f4f9;
     color: #1a1c1e;
     border: 1px solid #74777f;
@@ -85,9 +87,48 @@ QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     selection-background-color: #0b57d0;
     selection-color: #ffffff;
 }
-QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #0b57d0;
     background: #ffffff;
+}
+QComboBox {
+    background: #f1f4f9;
+    color: #1a1c1e;
+    border: 1px solid #74777f;
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    selection-background-color: #0b57d0;
+    selection-color: #ffffff;
+}
+QComboBox:hover {
+    border-color: #0b57d0;
+}
+QComboBox:focus {
+    border: 2px solid #0b57d0;
+    background: #ffffff;
+    padding: 5px 27px 5px 9px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_LIGHT__");
+    width: 10px;
+    height: 7px;
+}
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #74777f;
+    border-radius: 8px;
+    selection-background-color: #dbeafe;
+    selection-color: #1d4ed8;
+    padding: 4px;
+    outline: none;
+    color: #1a1c1e;
 }
 QPushButton {
     background: #0b57d0;
@@ -155,7 +196,7 @@ QLabel {
     color: #e6e0e9;
     font-size: 13px;
 }
-QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox {
     background: #211f26;
     color: #e6e0e9;
     border: 1px solid #79747e;
@@ -164,9 +205,48 @@ QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     selection-background-color: #a8c7fa;
     selection-color: #041e49;
 }
-QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #a8c7fa;
     background: #2b2930;
+}
+QComboBox {
+    background: #211f26;
+    color: #e6e0e9;
+    border: 1px solid #79747e;
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    selection-background-color: #a8c7fa;
+    selection-color: #041e49;
+}
+QComboBox:hover {
+    border-color: #a8c7fa;
+}
+QComboBox:focus {
+    border: 2px solid #a8c7fa;
+    background: #2b2930;
+    padding: 5px 27px 5px 9px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border: none;
+    background-color: transparent;
+}
+QComboBox::down-arrow {
+    image: url("__ARROW_DOWN_DARK__");
+    width: 10px;
+    height: 7px;
+}
+QComboBox QAbstractItemView {
+    background-color: #211f26;
+    border: 1px solid #79747e;
+    border-radius: 8px;
+    selection-background-color: #2c3954;
+    selection-color: #93c5fd;
+    padding: 4px;
+    outline: none;
+    color: #e6e0e9;
 }
 QPushButton {
     background: #a8c7fa;
@@ -222,6 +302,9 @@ QScrollBar::handle:vertical {
     min-height: 24px;
 }
 """
+
+MD3_LIGHT = MD3_LIGHT.replace("__ARROW_DOWN_LIGHT__", ARROW_DOWN_LIGHT)
+MD3_DARK = MD3_DARK.replace("__ARROW_DOWN_DARK__", ARROW_DOWN_DARK)
 
 
 def _get_qss(theme: str) -> str:
@@ -466,11 +549,14 @@ class VoiceRecorder(QThread):
     level = Signal(int)
     failed = Signal(str)
 
-    def __init__(self, traditional: bool = False, parent=None):
+    def __init__(self, traditional: bool = False, vad_enabled: bool = False, parent=None):
         super().__init__(parent)
         self.traditional = traditional
+        self.vad_enabled = vad_enabled
         self.stop_event = threading.Event()
         self.frames = []
+        self._has_spoken = False
+        self._last_speech_time = 0.0
 
     def run(self):
         try:
@@ -482,6 +568,13 @@ class VoiceRecorder(QThread):
             return
 
         try:
+            # 檢查可用輸入設備
+            devs = sd.query_devices()
+            has_input = any(d.get("max_input_channels", 0) > 0 for d in devs)
+            if not has_input:
+                self.failed.emit("未檢測到可用的麥克風輸入裝置")
+                return
+
             recognizer = None
             _json = None
             if self.traditional and VOSK_MODEL.exists():
@@ -500,6 +593,15 @@ class VoiceRecorder(QThread):
                 self.frames.append(indata.copy())
                 vol = min(100, int(float(np.abs(indata).mean()) * 900))
                 self.level.emit(vol)
+
+                if self.vad_enabled:
+                    now = time.monotonic()
+                    if vol >= 10:
+                        self._has_spoken = True
+                        self._last_speech_time = now
+                    elif self._has_spoken and (now - self._last_speech_time > 1.8):
+                        self.stop_event.set()
+
                 if recognizer and _json:
                     recognizer.AcceptWaveform((indata[:, 0] * 32767).astype(np.int16).tobytes())
                     partial = _json.loads(recognizer.PartialResult()).get("partial", "")
@@ -525,17 +627,18 @@ class VoiceRecorder(QThread):
 class VoiceTranscriber(QThread):
     finished = Signal(bool, str)
 
-    def __init__(self, path: str, mode: str, profile: dict, parent=None):
+    def __init__(self, path: str, mode: str, profile: dict, all_profiles: list | None = None, parent=None):
         super().__init__(parent)
         self.path = path
         self.mode = mode
         self.profile = profile
+        self.all_profiles = all_profiles or []
 
     def run(self):
         try:
-            if self.mode == "traditional":
-                if not VOSK_MODEL.exists():
-                    raise RuntimeError("找不到本機 Vosk 模型，請下載 vosk-model-small-cn-0.22 至 models 目錄")
+            text = ""
+            # 優先嘗試本機 Vosk（若設定為 traditional 且模型目錄存在）
+            if self.mode == "traditional" and VOSK_MODEL.exists():
                 import wave
                 import vosk
 
@@ -547,22 +650,58 @@ class VoiceTranscriber(QThread):
                     if not data:
                         break
                     rec.AcceptWaveform(data)
-                text = json.loads(rec.FinalResult()).get("text", "")
+                res = json.loads(rec.FinalResult())
+                text = (res.get("text", "") or "").replace(" ", "")
             else:
-                try:
+                # 雲端 AI 語音辨識（或 traditional 缺少模型時自動降級至可用金鑰）
+                prof = self.profile
+                if not prof.get("key", "").strip():
+                    for p in self.all_profiles:
+                        if p.get("key", "").strip() and p.get("provider") in ("Google Gemini", "OpenAI"):
+                            prof = p
+                            break
+
+                prov = prof.get("provider", "")
+                raw_key = prof.get("key", "").strip()
+                keys = parse_api_keys(raw_key) if raw_key else []
+
+                if prov == "Google Gemini" and keys:
+                    from google import genai
+                    from google.genai import types
+
+                    client = genai.Client(api_key=keys[0])
+                    with open(self.path, "rb") as f:
+                        audio_data = f.read()
+                    resp = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=[
+                            types.Part.from_bytes(data=audio_data, mime_type="audio/wav"),
+                            "請將這段語音轉錄為純文字繁體中文。請只輸出轉錄文字內容，不可包含任何說明、問候、標籤或 Markdown 符號。"
+                        ]
+                    )
+                    text = (resp.text or "").strip()
+                elif keys:
                     from litellm import transcription
 
                     with open(self.path, "rb") as f:
                         result = transcription(
-                            model=self.profile.get("stt_model") or "whisper-1",
+                            model=prof.get("stt_model") or "whisper-1",
                             file=f,
-                            api_key=self.profile.get("key") or None,
-                            api_base=self.profile.get("endpoint") or None,
+                            api_key=keys[0] or None,
+                            api_base=prof.get("endpoint") or None,
                         )
                     text = getattr(result, "text", "") or (result.get("text", "") if isinstance(result, dict) else "")
-                except Exception as e:
-                    raise RuntimeError(f"AI 語音辨識錯誤：{e}") from e
-            self.finished.emit(True, text.strip())
+                    text = (text or "").strip()
+                else:
+                    if self.mode == "traditional":
+                        raise RuntimeError("找不到本機 Vosk 模型（請執行 download_voice_model.bat），且未設定雲端 API 金鑰。")
+                    else:
+                        raise RuntimeError("雲端語音辨識需要 Google Gemini 或 OpenAI API Key，請先於設定中配置。")
+
+            if text:
+                self.finished.emit(True, text.strip())
+            else:
+                self.finished.emit(False, "語音內容過短或未能識別清晰文字")
         except Exception as e:
             self.finished.emit(False, str(e))
 
@@ -664,63 +803,87 @@ class GeminiLiveWorker(QThread):
         user_text = []
         model_text = []
 
-        with wave.open(self.path, "rb") as wf:
-            rate = wf.getframerate()
-            live_config = {
-                "response_modalities": ["AUDIO"],
-                "input_audio_transcription": {},
-                "output_audio_transcription": {},
-                "speech_config": {"voice_config": {"prebuilt_voice_config": {"voice_name": self.voice}}},
-            }
-            if self.system_instruction.strip():
-                live_config["system_instruction"] = self.system_instruction
+        live_model = self.model
+        if "3.8" in live_model or "latest" in live_model or not live_model.startswith("gemini-"):
+            live_model = "gemini-2.0-flash-exp"
 
-            async with client.aio.live.connect(model=self.model, config=live_config) as session:
-                while True:
-                    if self.cancel_event.is_set():
-                        return {"audio": None, "text": "", "cancelled": True}
-                    chunk = wf.readframes(2048)
-                    if not chunk:
-                        break
-                    await session.send_realtime_input(audio=types.Blob(data=chunk, mime_type=f"audio/pcm;rate={rate}"))
-                await session.send_realtime_input(audio_stream_end=True)
+        live_failed = False
+        try:
+            with wave.open(self.path, "rb") as wf:
+                rate = wf.getframerate()
+                live_config = {
+                    "response_modalities": ["AUDIO"],
+                    "input_audio_transcription": {},
+                    "output_audio_transcription": {},
+                    "speech_config": {"voice_config": {"prebuilt_voice_config": {"voice_name": self.voice}}},
+                }
+                if self.system_instruction.strip():
+                    live_config["system_instruction"] = self.system_instruction
 
-                receiver = session.receive()
-                deadline = time.monotonic() + self.timeout_seconds
-                pending = None
-                done_turn = False
-                try:
-                    while time.monotonic() < deadline and not self.cancel_event.is_set() and not done_turn:
-                        if pending is None:
-                            pending = asyncio.ensure_future(receiver.__anext__())
-                        finished, _ = await asyncio.wait({pending}, timeout=1.0)
-                        if not finished:
-                            continue
-                        task = pending
-                        pending = None
-                        try:
-                            response = task.result()
-                        except StopAsyncIteration:
+                async with client.aio.live.connect(model=live_model, config=live_config) as session:
+                    while True:
+                        if self.cancel_event.is_set():
+                            return {"audio": None, "text": "", "cancelled": True}
+                        chunk = wf.readframes(2048)
+                        if not chunk:
                             break
-                        content = getattr(response, "server_content", None)
-                        if content:
-                            inp = getattr(content, "input_transcription", None)
-                            out = getattr(content, "output_transcription", None)
-                            if inp and getattr(inp, "text", None):
-                                user_text.append(inp.text)
-                            if out and getattr(out, "text", None):
-                                model_text.append(out.text)
-                            turn = getattr(content, "model_turn", None)
-                            if turn:
-                                for part in getattr(turn, "parts", []) or []:
-                                    inline = getattr(part, "inline_data", None)
-                                    if inline and getattr(inline, "data", None):
-                                        pcm.append(inline.data)
-                            if getattr(content, "turn_complete", False):
-                                done_turn = True
-                finally:
-                    if pending is not None:
-                        pending.cancel()
+                        await session.send_realtime_input(audio=types.Blob(data=chunk, mime_type=f"audio/pcm;rate={rate}"))
+                    await session.send_realtime_input(audio_stream_end=True)
+
+                    receiver = session.receive()
+                    deadline = time.monotonic() + self.timeout_seconds
+                    pending = None
+                    done_turn = False
+                    try:
+                        while time.monotonic() < deadline and not self.cancel_event.is_set() and not done_turn:
+                            if pending is None:
+                                pending = asyncio.ensure_future(receiver.__anext__())
+                            finished, _ = await asyncio.wait({pending}, timeout=1.0)
+                            if not finished:
+                                continue
+                            task = pending
+                            pending = None
+                            try:
+                                response = task.result()
+                            except StopAsyncIteration:
+                                break
+                            content = getattr(response, "server_content", None)
+                            if content:
+                                inp = getattr(content, "input_transcription", None)
+                                out = getattr(content, "output_transcription", None)
+                                if inp and getattr(inp, "text", None):
+                                    user_text.append(inp.text)
+                                if out and getattr(out, "text", None):
+                                    model_text.append(out.text)
+                                turn = getattr(content, "model_turn", None)
+                                if turn:
+                                    for part in getattr(turn, "parts", []) or []:
+                                        inline = getattr(part, "inline_data", None)
+                                        if inline and getattr(inline, "data", None):
+                                            pcm.append(inline.data)
+                                if getattr(content, "turn_complete", False):
+                                    done_turn = True
+                    finally:
+                        if pending is not None:
+                            pending.cancel()
+        except Exception as live_err:
+            log(f"[Gemini Live] 即時串流連線失敗 ({live_err})，自動切換至 Gemini 多模態語音降級")
+            live_failed = True
+
+        if live_failed or (not pcm and not model_text):
+            with open(self.path, "rb") as af:
+                audio_bytes = af.read()
+            prompt = self.system_instruction or "你是桌面上可愛的寵物。請以繁體中文親切簡短地回答（100字以內，不要包含表情符號或Markdown標籤）。"
+            resp = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                    prompt,
+                ]
+            )
+            fallback_reply = (resp.text or "").strip()
+            if fallback_reply:
+                model_text.append(fallback_reply)
 
         if user_text:
             transcript.append("使用者：" + "".join(user_text).strip())
@@ -738,6 +901,16 @@ class GeminiLiveWorker(QThread):
                 out.setsampwidth(2)
                 out.setframerate(24000)
                 out.writeframes(b"".join(pcm))
+        elif model_text:
+            try:
+                import pyttsx3
+                tts_engine = pyttsx3.init()
+                VOICE_DIR.mkdir(parents=True, exist_ok=True)
+                out_path = VOICE_DIR / f"gemini_live_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+                tts_engine.save_to_file("".join(model_text).strip(), str(out_path))
+                tts_engine.runAndWait()
+            except Exception:
+                out_path = None
 
         return {"audio": str(out_path) if out_path else None, "text": "\n".join(transcript)}
 
@@ -766,12 +939,31 @@ class SpeechBubble(QLabel):
     def __init__(self, pet):
         super().__init__(pet)
         self.pet = pet
+        self._click_cb = None
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self.hide)
         self.setWordWrap(True)
         self.setAlignment(Qt.AlignCenter)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.hide()
 
-    def show_message(self, text: str, thought: bool = False):
+    def set_click_callback(self, cb):
+        self._click_cb = cb
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, cb is None)
+        if cb is not None:
+            self.setCursor(Qt.PointingHandCursor)
+        else:
+            self.unsetCursor()
+
+    def mousePressEvent(self, e):
+        if self._click_cb and e.button() == Qt.LeftButton:
+            self._click_cb()
+            e.accept()
+        else:
+            super().mousePressEvent(e)
+
+    def show_message(self, text: str, thought: bool = False, timeout_ms: int = 6500, persistent: bool = False):
         self.setText(text)
         theme = self.pet.cfg.get("theme", "light")
         if theme == "dark":
@@ -796,7 +988,9 @@ class SpeechBubble(QLabel):
         self.move(max(6, (self.pet.width() - w) // 2), 10)
         self.raise_()
         self.show()
-        QTimer.singleShot(6500, self.hide)
+        self._timer.stop()
+        if not persistent and timeout_ms > 0:
+            self._timer.start(timeout_ms)
 
 
 # ==============================================================================
@@ -1195,13 +1389,18 @@ class ChatDialog(QDialog):
         self.voice_transcriber = None
         self.tts_worker = None
         self.live_worker = None
-        self.current_mode = "Turbo"
+        self.current_mode = self.cfg.get("chat_dialog_mode", "standard")
+        if self.current_mode not in ("standard", "reasoner", "voice"):
+            self.current_mode = "standard"
+        self._toast_label = None
+        self._toast_timer = None
 
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setMinimumSize(480, 420)
         self.resize(580, 520)
 
         self._setup_ui()
+        self._apply_mode_ui(self.current_mode)
         self.sync_profiles()
         self.sync_memory_info()
 
@@ -1359,10 +1558,10 @@ class ChatDialog(QDialog):
 
         ctrl_row.addStretch(1)
 
-        # Right: Mode Capsule (e.g. "Turbo ▾")
-        self.btn_mode = QPushButton("Turbo ▾")
-        self.btn_mode.setIcon(get_icon("shield", "#94a3b8", 15))
-        self.btn_mode.setToolTip("對話模式")
+        # Right: Mode Capsule (切換「標準對話」、「深度思考」、「語音陪伴」)
+        self.btn_mode = QPushButton("標準 ▾")
+        self.btn_mode.setIcon(get_icon("forum", "#94a3b8", 15))
+        self.btn_mode.setToolTip("切換對話模式")
         self.btn_mode.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -1386,7 +1585,7 @@ class ChatDialog(QDialog):
         self.btn_mic.setIcon(get_icon("mic", "#94a3b8", 18))
         self.btn_mic.setFixedSize(30, 30)
         self.btn_mic.setCheckable(True)
-        self.btn_mic.setToolTip("語音輸入")
+        self.btn_mic.setToolTip("語音輸入（點擊開始錄音）")
         self.btn_mic.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -1549,9 +1748,9 @@ class ChatDialog(QDialog):
             }
         """)
         modes = [
-            ("Turbo", "極速模式 (Turbo)"),
-            ("Live", "Gemini Live 純語音"),
-            ("Companion", "純文字陪伴模式"),
+            ("standard", "標準對話模式"),
+            ("reasoner", "深度思考模式 (Reasoner)"),
+            ("voice", "語音陪伴模式 (自動朗讀)"),
         ]
         for mode_key, mode_name in modes:
             act = m.addAction(mode_name)
@@ -1561,18 +1760,59 @@ class ChatDialog(QDialog):
         pos = self.btn_mode.mapToGlobal(QPoint(0, self.btn_mode.height()))
         m.exec(pos)
 
+    def _apply_mode_ui(self, mode_key: str):
+        if mode_key == "reasoner":
+            self.btn_mode.setText("思考 ▾")
+            self.btn_mode.setIcon(get_icon("psychology", "#a78bfa", 15))
+            self.btn_mode.setToolTip("深度思考模式：AI 將進行深入邏輯剖析")
+        elif mode_key == "voice":
+            self.btn_mode.setText("語音 ▾")
+            self.btn_mode.setIcon(get_icon("volume_up", "#38bdf8", 15))
+            self.btn_mode.setToolTip("語音陪伴模式：AI 回覆將自動以語音朗讀")
+        else:
+            self.btn_mode.setText("標準 ▾")
+            self.btn_mode.setIcon(get_icon("forum", "#94a3b8", 15))
+            self.btn_mode.setToolTip("標準對話模式")
+
     def _set_mode(self, mode_key: str):
         self.current_mode = mode_key
-        if mode_key == "Live":
-            self.btn_mode.setText("Live ▾")
-            self.btn_mode.setIcon(get_icon("bolt", "#60a5fa", 15))
-            self.toggle_gemini_live()
-        elif mode_key == "Companion":
-            self.btn_mode.setText("陪伴 ▾")
-            self.btn_mode.setIcon(get_icon("shield", "#94a3b8", 15))
+        self.cfg.set("chat_dialog_mode", mode_key)
+        self._apply_mode_ui(mode_key)
+        if mode_key == "reasoner":
+            self.show_floating_notice("已切換為【深度思考模式】：AI 將進行深入邏輯剖析")
+        elif mode_key == "voice":
+            self.show_floating_notice("已切換為【語音陪伴模式】：AI 回覆將自動以語音朗讀")
         else:
-            self.btn_mode.setText("Turbo ▾")
-            self.btn_mode.setIcon(get_icon("shield", "#94a3b8", 15))
+            self.show_floating_notice("已切換為【標準對話模式】")
+
+    def show_floating_notice(self, text: str, is_error: bool = False):
+        """在膠囊對話視窗內顯示浮動提示氣泡，清晰醒目且平滑消失。"""
+        if self._toast_label is None:
+            self._toast_label = QLabel(self)
+            self._toast_label.setAlignment(Qt.AlignCenter)
+            self._toast_label.setWordWrap(True)
+            self._toast_timer = QTimer(self)
+            self._toast_timer.setSingleShot(True)
+            self._toast_timer.timeout.connect(self._toast_label.hide)
+
+        bg = "#2d1618" if is_error else "#162338"
+        border = "#ef4444" if is_error else "#3b82f6"
+        fg = "#fee2e2" if is_error else "#dbeafe"
+        self._toast_label.setStyleSheet(
+            f"QLabel {{ background-color: {bg}; color: {fg}; border: 1.5px solid {border}; "
+            f"border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: bold; }}"
+        )
+        self._toast_label.setText(text)
+        self._toast_label.adjustSize()
+        w = min(self.width() - 40, max(240, self._toast_label.sizeHint().width() + 20))
+        h = max(36, self._toast_label.sizeHint().height() + 10)
+        self._toast_label.resize(w, h)
+        x = (self.width() - w) // 2
+        y = self.height() - self.capsule.height() - h - 16
+        self._toast_label.move(x, max(60, y))
+        self._toast_label.raise_()
+        self._toast_label.show()
+        self._toast_timer.start(4500)
 
     def _open_api_profiles(self):
         dlg = ApiProfileDialog(self.cfg, self)
@@ -1679,6 +1919,11 @@ class ChatDialog(QDialog):
         parts = [
             f"你是桌面上的可愛角色（目前外觀：{char_name}）。請以繁體中文回答，簡短自然親切，字數在 150 字以內，不要輸出任何思考過程標籤或 markdown 表情符號。"
         ]
+        if self.current_mode == "reasoner":
+            parts.append("【深度思考模式】請針對使用者的問題進行全方位、深度且邏輯嚴謹的剖析，列出關鍵步驟與深入見解。輸出條理分明、結構清晰。")
+        elif self.current_mode == "voice":
+            parts.append("【語音陪伴模式】請以生動、親切、自然且溫暖的口吻簡短回應（不超過 100 字），適合口語朗讀，避免使用複雜符號或表格。")
+
         if long_mem:
             parts.append("長期記憶（手動設定，請適時參考）：\n" + "\n".join(f"- {x}" for x in long_mem))
         if short_mem:
@@ -1724,7 +1969,7 @@ class ChatDialog(QDialog):
         else:
             self.lb_status.setText(f"AI 回覆失敗，已採用陪伴語句：{err}")
 
-        # Trigger TTS if configured
+        # Trigger TTS if configured or in voice mode
         self._speak(reply)
 
     def _remember(self, role: str, content: str):
@@ -1737,6 +1982,8 @@ class ChatDialog(QDialog):
     # ------------------------------------------------------------- Voice & TTS
     def _speak(self, text: str):
         mode = self.cfg.get("tts_mode", "off")
+        if self.current_mode == "voice" and mode == "off":
+            mode = "traditional"
         if mode == "off" or not text.strip():
             return
         profile = self.current_profile()
@@ -1753,50 +2000,81 @@ class ChatDialog(QDialog):
         if self.voice_recorder and self.voice_recorder.isRunning():
             self.btn_mic.setIcon(get_icon("mic", "#94a3b8", 18))
             self.btn_mic.setChecked(False)
+            self.btn_mic.setToolTip("語音輸入（點擊開始錄音）")
             self.lb_status.setText("語音錄製完成，正在辨識...")
+            self.show_floating_notice("語音錄製完成，正在進行辨識...", is_error=False)
             self.voice_recorder.stop()
             return
 
+        # 預先檢測麥克風設備與依賴庫
+        try:
+            import sounddevice as sd
+            devs = sd.query_devices()
+            has_input = any(d.get("max_input_channels", 0) > 0 for d in devs)
+            if not has_input:
+                self.btn_mic.setChecked(False)
+                self.show_floating_notice("未檢測到可用的麥克風輸入裝置", is_error=True)
+                self.lb_status.setText("語音錯誤：未檢測到麥克風輸入裝置")
+                return
+        except Exception as exc:
+            self.btn_mic.setChecked(False)
+            self.show_floating_notice(f"音訊模組載入失敗: {exc}", is_error=True)
+            self.lb_status.setText(f"語音錯誤：{exc}")
+            return
+
         mode = self.cfg.get("voice_input_mode", "traditional")
-        self.voice_recorder = VoiceRecorder(traditional=(mode == "traditional"), parent=self)
+        self.voice_recorder = VoiceRecorder(traditional=(mode == "traditional"), vad_enabled=False, parent=self)
         self.voice_recorder.partial.connect(lambda t: self.ed_input.setText(t))
-        self.voice_recorder.level.connect(lambda v: self.lb_status.setText(f"錄音中... 音量: {v}%"))
+        self.voice_recorder.level.connect(lambda v: self.lb_status.setText(f"正在錄音... 音量: {v}%（點擊送出）"))
         self.voice_recorder.finished.connect(self._on_recorded)
         self.voice_recorder.failed.connect(self._on_voice_failed)
         self.voice_recorder.start()
 
         self.btn_mic.setChecked(True)
-        self.btn_mic.setIcon(get_icon("mic", "#ffffff", 18))
-        self.lb_status.setText("錄音中...")
+        self.btn_mic.setIcon(get_icon("circle", "#ffffff", 14))
+        self.btn_mic.setToolTip("正在錄音... / 點擊送出")
+        self.lb_status.setText("正在錄音...（點擊麥克風完成送出）")
+        self.show_floating_notice("正在錄音中... 請對麥克風說話，完成後點擊麥克風送出", is_error=False)
 
     def _on_voice_failed(self, err: str):
         self.voice_recorder = None
         self.btn_mic.setChecked(False)
         self.btn_mic.setIcon(get_icon("mic", "#94a3b8", 18))
+        self.btn_mic.setToolTip("語音輸入（點擊開始錄音）")
         self.btn_live.setChecked(False)
+        self.show_floating_notice(f"語音錯誤：{err}", is_error=True)
         self.lb_status.setText(f"語音錯誤：{err}")
 
     def _on_recorded(self, path: str):
         self.voice_recorder = None
         self.btn_mic.setChecked(False)
         self.btn_mic.setIcon(get_icon("mic", "#94a3b8", 18))
+        self.btn_mic.setToolTip("正在進行語音辨識...")
         self.lb_status.setText("正在進行語音辨識...")
 
         mode = self.cfg.get("voice_input_mode", "traditional")
         profile = self.current_profile()
         profile["stt_model"] = self.cfg.get("stt_model", "whisper-1")
+        all_profiles = self.cfg.get("api_profiles", [])
 
-        self.voice_transcriber = VoiceTranscriber(path, mode, profile, self)
+        self.voice_transcriber = VoiceTranscriber(path, mode, profile, all_profiles=all_profiles, parent=self)
         self.voice_transcriber.finished.connect(self._on_transcribed)
         self.voice_transcriber.start()
 
     def _on_transcribed(self, ok: bool, text: str):
         self.voice_transcriber = None
+        self.btn_mic.setChecked(False)
+        self.btn_mic.setIcon(get_icon("mic", "#94a3b8", 18))
+        self.btn_mic.setToolTip("語音輸入（點擊開始錄音）")
+
         if not ok:
+            self.show_floating_notice(f"語音辨識失敗：{text}", is_error=True)
             self.lb_status.setText(f"語音辨識失敗：{text}")
             return
+
         self.ed_input.setText(text)
         self.lb_status.setText("語音辨識完成")
+        self.show_floating_notice(f"語音辨識完成：{text[:30]}", is_error=False)
         if self.cfg.get("voice_auto_send", True) and text.strip():
             self.send_message()
 
@@ -1805,7 +2083,7 @@ class ChatDialog(QDialog):
         if self.live_worker and self.live_worker.isRunning():
             self.live_worker.cancel()
             self.btn_live.setChecked(False)
-            self.btn_mode.setText("Turbo ▾")
+            self._apply_mode_ui(self.current_mode)
             self.lb_status.setText("已中斷 Gemini Live")
             return
 
@@ -1832,7 +2110,7 @@ class ChatDialog(QDialog):
         if not gemini_prof:
             gemini_prof = self.current_profile()
 
-        model = self.cfg.get("gemini_live_model", "gemini-flash-latest")
+        model = self.cfg.get("gemini_live_model", "gemini-2.0-flash-exp")
         voice = self.cfg.get("gemini_live_voice", "Kore")
 
         self.live_worker = GeminiLiveWorker(path, gemini_prof, self._build_prompt(""), model, voice, self)
@@ -1842,7 +2120,7 @@ class ChatDialog(QDialog):
     def _on_live_finished(self, ok: bool, data: dict):
         self.live_worker = None
         self.btn_live.setChecked(False)
-        self.btn_mode.setText("Turbo ▾")
+        self._apply_mode_ui(self.current_mode)
 
         if not ok:
             err = data.get("error", "未知錯誤")

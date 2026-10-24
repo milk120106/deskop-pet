@@ -148,6 +148,21 @@ class PetWindow(QWidget):
         self._anim: QPropertyAnimation | None = None
         self._last_tick = time.monotonic()
 
+        # Paper Mario 2D 物理動態狀態
+        self.paper_flip_t = 0.0
+        self.paper_flip_active = False
+        self.paper_scale_x = 1.0
+        self.target_snap_right = self.snap_right
+        self.flutter_angle = 0.0
+        self.paper_land_t = 0.0
+        self.is_dragging = False
+        self.drag_prev_x = 0
+
+        # 平板亮屏呼吸閃爍狀態 (鬧鐘)
+        self.alarm_glowing = False
+        self.alarm_glow_t = 0.0
+        self.alarm_glow_name = ""
+
         self.timer = QTimer(self)
         self.timer.setInterval(16)
         self.timer.setTimerType(Qt.PreciseTimer)
@@ -303,14 +318,22 @@ class PetWindow(QWidget):
         return self._src[key]
 
     def _sprite(self, expr: str):
-        key = (self.character, self.variant, expr, self.size_px, self.snap_right)
+        mini_pixel = bool(self.cfg.get("mini_pixel_mode", False)) and (self.size_px <= 140)
+        key = (self.character, self.variant, expr, self.size_px, self.snap_right, mini_pixel)
         if key not in self._scaled:
-            src = self._load(expr)
-            img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
-                QImage.Format_ARGB32_Premultiplied
-            )
-            if self.snap_right:
-                img = img.mirrored(True, False)
+            if mini_pixel:
+                from .pixel_chibi import PixelChibiRenderer
+                chibi_pm = PixelChibiRenderer.get_pixmap(self.character, "idle", facing_right=self.snap_right, scale=max(1, self.art_h // 24))
+                img = chibi_pm.toImage().scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.FastTransformation).convertToFormat(
+                    QImage.Format_ARGB32_Premultiplied
+                )
+            else:
+                src = self._load(expr)
+                img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
+                    QImage.Format_ARGB32_Premultiplied
+                )
+                if self.snap_right:
+                    img = img.mirrored(True, False)
             red = QImage(img)
             qp = QPainter(red)
             qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
@@ -377,7 +400,7 @@ class PetWindow(QWidget):
         self._heart_pix = None
 
     def set_size(self, px: int):
-        px = max(200, min(1400, int(px)))
+        px = max(80, min(1024, int(px)))
         if px == self.size_px:
             return
         old_bc = QPoint(self.x() + M_L + self.art_w // 2, self.y() + M_T + self.art_h)
@@ -393,6 +416,13 @@ class PetWindow(QWidget):
     def set_snap_right(self, right: bool):
         if self.snap_right == right and self.cfg.get("snap_corner") == ("right" if right else "left"):
             return
+        # Paper Flip 2D 動態：120ms 內平滑執行 1.0 -> 0.05 -> -1.0 翻轉
+        if self.snap_right != right:
+            self.paper_flip_active = True
+            self.paper_flip_t = 0.0
+            self.paper_scale_x = 1.0
+            self.target_snap_right = right
+            self.wake()
         self.snap_right = right
         self.cfg.set("snap_corner", "right" if right else "left", save=True)
         self._update_tablet_transform()
@@ -618,14 +648,61 @@ class PetWindow(QWidget):
             self._save_pos()
 
     # ====================================================== Tablet Screen Rendering
+    def is_deepseek_active(self) -> bool:
+        ch = (self.character or "").lower()
+        if ch in ("claude", "gpt", "gemini") or "claude" in ch or "gpt" in ch or "gemini" in ch:
+            return False
+        if "deepseek" in ch:
+            return True
+        prov = (self.ledger.provider or "").lower()
+        active_prof_prov = ""
+        try:
+            profs = self.cfg.get("api_profiles", [])
+            act = int(self.cfg.get("active_profile", 0))
+            if 0 <= act < len(profs):
+                active_prof_prov = str(profs[act].get("provider", "")).lower()
+        except Exception:
+            pass
+        return ("deepseek" in prov) or ("deepseek" in active_prof_prov)
+
+    def next_tablet_page(self):
+        """四分頁輪替：非 DeepSeek 角色自動跳過第 1 頁（峰谷頁）。"""
+        deepseek_ok = self.is_deepseek_active()
+        valid_pages = [0, 1, 2, 3] if deepseek_ok else [0, 2, 3]
+        try:
+            cur_idx = valid_pages.index(self.page)
+            self.page = valid_pages[(cur_idx + 1) % len(valid_pages)]
+        except ValueError:
+            self.page = 0
+        self._build_screen()
+
+    def trigger_alarm_glow(self, alarm_name: str = ""):
+        self.alarm_glowing = True
+        self.alarm_glow_name = alarm_name
+        self.alarm_glow_t = 0.0
+        if not self.clock_timer.isActive():
+            self.clock_timer.start()
+        self._build_screen()
+        self.wake()
+
+    def stop_alarm_glow(self):
+        self.alarm_glowing = False
+        self.alarm_glow_name = ""
+        self._build_screen()
+        self.update()
+
     def _build_screen(self):
         img = QImage(SCREEN_W, SCREEN_H, QImage.Format_ARGB32_Premultiplied)
         img.fill(Qt.transparent)
         p = QPainter(img)
         p.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
 
+        # 若當前為第 1 頁但非 DeepSeek，自動跳至第 2 頁
+        if self.page == 1 and not self.is_deepseek_active():
+            self.page = 2
+
         if self.page == 0:
-            # Page 0: Balance
+            # 第 0 頁：寵物餘額（通用）
             prov = (self.ledger.provider or "").lower()
             ch = (self.character or "").lower()
             if "deepseek" in ch or "deepseek" in prov:
@@ -654,47 +731,73 @@ class PetWindow(QWidget):
                 p.setPen(Qt.NoPen)
                 p.setBrush(QColor(255, 60, 60))
                 p.drawEllipse(QPointF(SCREEN_W - 26, 26), 9, 9)
-        else:
-            # Page 1: Peak / Valley for DeepSeek; Local time & usage for others
-            prov = (self.ledger.provider or "").lower()
-            ch = (self.character or "").lower()
-            if "deepseek" in ch or "deepseek" in prov:
-                bj = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=8)))
-                time_str = bj.strftime("%H:%M:%S")
-                is_off = not is_peak_at(bj)
-                tariff_name = "梁文谷" if is_off else "梁文峰"
-                left, to_peak = until_tariff_switch(bj)
-                cd_label = "距峰時" if to_peak else "距谷時"
-                cd_str = f"{cd_label} {int(left.total_seconds()//3600)}:{int((left.total_seconds()%3600)//60):02d}:{int(left.total_seconds()%60):02d}"
 
-                self._outlined(p, time_str, QRectF(0, 10, SCREEN_W, 60), 36, bold=False)
-                # Tariff line color: green for off-peak, warm gold for peak
-                ink_color = QColor(150, 226, 170) if is_off else QColor(240, 190, 120)
-                self._outlined(p, tariff_name, QRectF(0, 80, SCREEN_W, 90), 54, bold=True, fill_color=ink_color)
-                self._outlined(p, cd_str, QRectF(0, 180, SCREEN_W, 60), 32, bold=False)
-            else:
-                local_time = datetime.now().strftime("%H:%M:%S")
-                prov_id = self.ledger.provider
-                if self.cfg.get("mode") == "sim":
-                    mode_str = "模擬模式"
-                elif prov_id in PROV_IDS:
-                    mode_str = PROV_NAMES[PROV_IDS.index(prov_id)]
+        elif self.page == 1:
+            # 第 1 頁：梁 / 峰谷時段（僅限 DeepSeek 顯示）
+            bj = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=8)))
+            time_str = bj.strftime("%H:%M:%S")
+            is_off = not is_peak_at(bj)
+            tariff_name = "梁文谷" if is_off else "梁文峰"
+            left, to_peak = until_tariff_switch(bj)
+            cd_label = "距峰時" if to_peak else "距谷時"
+            cd_str = f"{cd_label} {int(left.total_seconds()//3600)}:{int((left.total_seconds()%3600)//60):02d}:{int(left.total_seconds()%60):02d}"
+
+            self._outlined(p, time_str, QRectF(0, 10, SCREEN_W, 60), 36, bold=False)
+            ink_color = QColor(150, 226, 170) if is_off else QColor(240, 190, 120)
+            self._outlined(p, tariff_name, QRectF(0, 80, SCREEN_W, 90), 54, bold=True, fill_color=ink_color)
+            self._outlined(p, cd_str, QRectF(0, 180, SCREEN_W, 60), 32, bold=False)
+
+        elif self.page == 2:
+            # 第 2 頁：鬧鐘與倒數（即將響鈴時間、倒數計時器或暫無鬧鐘）
+            alarms = [a for a in self.cfg.get("alarms", []) if a.get("enabled", True)]
+            self._outlined(p, "鬧鐘與倒數", QRectF(0, 12, SCREEN_W, 60), 34, bold=False)
+            if alarms:
+                first = alarms[0]
+                a_name = first.get("name", "提醒")
+                if first.get("type") == "timer":
+                    target_ts = float(first.get("target_ts", 0.0))
+                    rem = max(0, int(target_ts - time.time()))
+                    body_str = f"{rem // 60:02d}:{rem % 60:02d}"
+                    sub_str = f"倒數：{a_name}"
                 else:
-                    mode_str = prov_id
-                used_amt = self.cfg.get("today_used", 0.0)
-                used_str = f"今日已用 {used_amt:.2f}"
+                    body_str = first.get("time", "08:00")
+                    sub_str = f"定時：{a_name}"
+                self._outlined(p, body_str, QRectF(0, 76, SCREEN_W, 90), 52, bold=True, fill_color=QColor(255, 215, 120))
+                self._outlined(p, sub_str, QRectF(0, 178, SCREEN_W, 60), 30, bold=False)
+            else:
+                self._outlined(p, "暫無即將響鈴", QRectF(0, 84, SCREEN_W, 80), 40, bold=True, fill_color=QColor(180, 200, 230))
+                self._outlined(p, "於設定面板新增鬧鐘", QRectF(0, 178, SCREEN_W, 60), 28, bold=False)
 
-                self._outlined(p, local_time, QRectF(0, 14, SCREEN_W, 60), 36, bold=False)
-                self._outlined(p, mode_str, QRectF(0, 86, SCREEN_W, 70), 42, bold=True)
-                self._outlined(p, used_str, QRectF(0, 176, SCREEN_W, 60), 32, bold=False)
+        elif self.page == 3:
+            # 第 3 頁：最新事件通知與狀態（通知紀錄、Webhook 狀態）
+            notes = self.cfg.get("notifications", [])
+            self._outlined(p, "最新事件與狀態", QRectF(0, 12, SCREEN_W, 60), 32, bold=False)
+            if notes:
+                last_note = notes[0]
+                n_msg = last_note.get("title", "事件通知")
+                n_time = last_note.get("timestamp", "")[-8:]
+                self._outlined(p, n_msg, QRectF(0, 76, SCREEN_W, 80), 36, bold=True, fill_color=QColor(140, 230, 255))
+                hook_status = "Webhook 已連動" if (self.cfg.get("discord_webhook_url") or self.cfg.get("telegram_bot_token")) else "本機通知已就緒"
+                self._outlined(p, f"[{n_time}] {hook_status}", QRectF(0, 178, SCREEN_W, 60), 26, bold=False)
+            else:
+                self._outlined(p, "系統運行正常", QRectF(0, 80, SCREEN_W, 80), 42, bold=True, fill_color=QColor(150, 240, 180))
+                hook_status = "Webhook 待命" if (self.cfg.get("discord_webhook_url") or self.cfg.get("telegram_bot_token")) else "通知分發器待命"
+                self._outlined(p, hook_status, QRectF(0, 178, SCREEN_W, 60), 28, bold=False)
+
+        # 鬧鐘響鈴動態：平板亮屏呼吸閃爍外框
+        if self.alarm_glowing:
+            alpha = int(180 + 75 * math.sin(time.monotonic() * 9.0))
+            p.setPen(QPen(QColor(255, 60, 90, alpha), 8))
+            p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(QRectF(4, 4, SCREEN_W - 8, SCREEN_H - 8), 16, 16)
 
         p.end()
         self._screen_img = img
         self.update()
 
-        if self.page == 1 and not self.clock_timer.isActive():
+        if (self.page in (1, 2, 3) or self.alarm_glowing) and not self.clock_timer.isActive():
             self.clock_timer.start()
-        elif self.page == 0:
+        elif self.page == 0 and not self.alarm_glowing:
             self.clock_timer.stop()
 
     @staticmethod
@@ -785,10 +888,20 @@ class PetWindow(QWidget):
             if self.bounce_t > 0:
                 sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
 
+        # Paper Mario 2D 物理動態：著陸回彈 (scaleY 0.88 -> 1.0)
+        paper_squish_y = 1.0
+        if self.paper_land_t > 0:
+            progress = 1.0 - (self.paper_land_t / 0.20)
+            paper_squish_y = 0.88 + 0.12 * math.sin(progress * math.pi / 2)
+
         ox, oy = M_L + dx, M_T + dy
         p.save()
         p.translate(ox + W / 2, oy + H + shift_y)
-        p.scale(sq_x, sq_y)
+        # 紙片懸空飄蕩微幅傾角 (±5 度)
+        if self.flutter_angle != 0.0:
+            p.rotate(self.flutter_angle)
+        # 繪圖矩陣 transform 應用紙片翻轉與壓扁回彈
+        p.scale(self.paper_scale_x * sq_x, paper_squish_y * sq_y)
         p.translate(-(ox + W / 2), -(oy + H))
         p.drawPixmap(int(ox), int(oy), pix)
 
@@ -959,6 +1072,31 @@ class PetWindow(QWidget):
 
         if self.bounce_t > 0:
             self.bounce_t = max(0.0, self.bounce_t - dt)
+            busy = True
+
+        # Paper Flip 2D 動態更新 (120ms)
+        if self.paper_flip_active:
+            self.paper_flip_t += dt / 0.120
+            busy = True
+            if self.paper_flip_t < 0.5:
+                k = self.paper_flip_t / 0.5
+                self.paper_scale_x = max(0.05, 1.0 - 0.95 * k)
+            elif self.paper_flip_t < 1.0:
+                k = (self.paper_flip_t - 0.5) / 0.5
+                self.paper_scale_x = min(1.0, 0.05 + 0.95 * k)
+            else:
+                self.paper_flip_active = False
+                self.paper_flip_t = 0.0
+                self.paper_scale_x = 1.0
+
+        # Paper Landing 著陸壓扁回彈更新
+        if self.paper_land_t > 0:
+            self.paper_land_t = max(0.0, self.paper_land_t - dt)
+            busy = True
+
+        # 平板亮屏呼吸動態更新
+        if self.alarm_glowing:
+            self.alarm_glow_t += dt
             busy = True
 
         if self.iron_fading:
@@ -1136,11 +1274,19 @@ class PetWindow(QWidget):
                 self._anim.stop()
             self._drag_off = e.globalPosition().toPoint() - self.pos()
             self._press_pos = e.globalPosition().toPoint()
+            self.is_dragging = True
+            self.drag_prev_x = self.x()
 
     def mouseMoveEvent(self, e):
         if self._drag_off is not None and e.buttons() & Qt.LeftButton:
             new_pos = e.globalPosition().toPoint() - self._drag_off
+            vx = new_pos.x() - self.drag_prev_x
+            self.drag_prev_x = new_pos.x()
             self.move(new_pos)
+            # 紙片懸空飄蕩：滑鼠提起拖曳時帶有微幅慣性傾角（±5 度紙片飄動）
+            target_tilt = max(-5.0, min(5.0, -vx * 0.8))
+            self.flutter_angle = target_tilt
+            self.wake()
             # Mid-drag turning: check if dragged near left vs right edge
             ag = self.screen_ag()
             mid_x = (new_pos.x() + M_L + self.art_w / 2)
@@ -1158,6 +1304,11 @@ class PetWindow(QWidget):
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.LeftButton and self._drag_off is not None:
             self._drag_off = None
+            self.is_dragging = False
+            self.flutter_angle = 0.0
+            # 落地著陸瞬間產生輕微紙板壓扁回彈（scaleY 0.88 -> 1.0）
+            self.paper_land_t = 0.20
+            self.wake()
             moved = self._press_pos is not None and \
                 (e.globalPosition().toPoint() - self._press_pos).manhattanLength() > 3
             self._press_pos = None
@@ -1187,9 +1338,8 @@ class PetWindow(QWidget):
             return
 
         if self.tablet_zone_global().contains(g):
-            # Double click tablet -> toggle Page 0 (Balance) and Page 1 (Peak/Local Time)
-            self.page = 1 - self.page
-            self._build_screen()
+            # 雙擊平板智慧四分頁輪替
+            self.next_tablet_page()
 
     def leaveEvent(self, e):
         super().leaveEvent(e)

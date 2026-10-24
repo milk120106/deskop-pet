@@ -404,9 +404,12 @@ def error(msg: str, source: str = "Pet", exc_info: bool | BaseException = False)
 def critical(msg: str, source: str = "Pet", exc_info: bool | BaseException = False):
     get_logger().critical(msg, source=source, exc_info=exc_info)
 
-def log(msg: str):
+def log(*args):
     """Backward compatibility with legacy config.log()"""
-    get_logger().info(msg, source="Pet")
+    if len(args) == 1:
+        get_logger().info(str(args[0]), source="Pet")
+    elif len(args) >= 2:
+        get_logger().info(str(args[1]), source=str(args[0]))
 
 def check_crash() -> dict:
     return get_logger().check_crash()

@@ -115,6 +115,13 @@ class QMLBackend(QObject):
     updateStatusChanged = Signal(str)
     tabSwitched = Signal(int)
     noticeMessage = Signal(str, bool)  # text, is_error
+    miniPixelModeChanged = Signal(bool)
+    qChibiChanged = Signal(bool)
+    qClimbWindowsChanged = Signal(bool)
+    qFlightPropChanged = Signal(bool)
+    qFireworksPropChanged = Signal(bool)
+    alarmsChanged = Signal()
+    notificationsChanged = Signal()
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -251,6 +258,21 @@ class QMLBackend(QObject):
     def get_update_status(self) -> str:
         return self._update_status
 
+    def get_mini_pixel_mode(self) -> bool:
+        return bool(self.app.cfg.get("mini_pixel_mode", False))
+
+    def get_q_chibi_enabled(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_enabled", True))
+
+    def get_q_climb_windows(self) -> bool:
+        return bool(self.app.cfg.get("q_climb_windows", False))
+
+    def get_q_flight_prop(self) -> bool:
+        return bool(self.app.cfg.get("q_flight_prop", False))
+
+    def get_q_fireworks_prop(self) -> bool:
+        return bool(self.app.cfg.get("q_fireworks_prop", False))
+
     def _update_logs_cache(self, level: str | None = None, search: str | None = None):
         lvl_arg = None if (not level or "ALL" in level or "全部" in level) else level
         query_arg = search.strip() if search and search.strip() else None
@@ -295,6 +317,11 @@ class QMLBackend(QObject):
     remoteModels = Property(list, get_remote_models, notify=remoteModelsChanged)
     remoteModelStatus = Property(str, get_remote_model_status, notify=remoteModelStatusChanged)
     updateStatus = Property(str, get_update_status, notify=updateStatusChanged)
+    miniPixelMode = Property(bool, get_mini_pixel_mode, notify=miniPixelModeChanged)
+    qChibiEnabled = Property(bool, get_q_chibi_enabled, notify=qChibiChanged)
+    qClimbWindows = Property(bool, get_q_climb_windows, notify=qClimbWindowsChanged)
+    qFlightProp = Property(bool, get_q_flight_prop, notify=qFlightPropChanged)
+    qFireworksProp = Property(bool, get_q_fireworks_prop, notify=qFireworksPropChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -363,6 +390,70 @@ class QMLBackend(QObject):
     def setSizePx(self, size: int):
         self.app.set_size(size)
         self.sizeChanged.emit(size)
+
+    @Slot(bool)
+    def setMiniPixelMode(self, val: bool):
+        self.app.set_mini_pixel_mode(val)
+        self.miniPixelModeChanged.emit(val)
+
+    @Slot(bool)
+    def setQChibiEnabled(self, val: bool):
+        self.app.set_q_chibi_enabled(val)
+        self.qChibiChanged.emit(val)
+
+    @Slot(bool)
+    def setQClimbWindows(self, val: bool):
+        self.app.set_q_climb_windows(val)
+        self.qClimbWindowsChanged.emit(val)
+
+    @Slot(bool)
+    def setQFlightProp(self, val: bool):
+        self.app.set_q_flight_prop(val)
+        self.qFlightPropChanged.emit(val)
+
+    @Slot(bool)
+    def setQFireworksProp(self, val: bool):
+        self.app.set_q_fireworks_prop(val)
+        self.qFireworksPropChanged.emit(val)
+
+    @Slot(str, str, str, int)
+    def addAlarm(self, name: str, time_str: str, alarm_type: str, duration_sec: int):
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            self.app.alarm_dispatcher.add_alarm(name, time_str, alarm_type, duration_sec)
+            self.alarmsChanged.emit()
+
+    @Slot(str)
+    def removeAlarm(self, aid: str):
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            self.app.alarm_dispatcher.remove_alarm(aid)
+            self.alarmsChanged.emit()
+
+    @Slot(str, bool)
+    def toggleAlarm(self, aid: str, enabled: bool):
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            self.app.alarm_dispatcher.toggle_alarm(aid, enabled)
+            self.alarmsChanged.emit()
+
+    @Slot(result=str)
+    def getAlarmsJson(self) -> str:
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            import json
+            return json.dumps(self.app.alarm_dispatcher.get_alarms(), ensure_ascii=False)
+        return "[]"
+
+    @Slot(result=str)
+    def getNotificationsJson(self) -> str:
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            import json
+            return json.dumps(self.app.alarm_dispatcher.get_notifications(), ensure_ascii=False)
+        return "[]"
+
+    @Slot(str, str, str)
+    def setWebhookConfig(self, discord_url: str, tg_token: str, tg_chat: str):
+        self.app.cfg.set("discord_webhook_url", discord_url.strip())
+        self.app.cfg.set("telegram_bot_token", tg_token.strip())
+        self.app.cfg.set("telegram_chat_id", tg_chat.strip(), save=True)
+        self.noticeMessage.emit("通知管道 Webhook 設定已儲存", False)
 
     @Slot(int)
     def setOpacityVal(self, val: int):

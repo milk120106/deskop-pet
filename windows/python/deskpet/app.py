@@ -141,6 +141,16 @@ class App(QObject):
         self.pure_voice_worker = None
         self.pure_voice_pet: PetWindow | None = None
 
+        # 鬧鐘與通知排程調度器 (Alarm & Notification Dispatcher)
+        from .alarm import AlarmDispatcher
+        self.alarm_dispatcher = AlarmDispatcher(self.cfg, self.sounds, pet=self.pet, app=self)
+
+        # 全新 Q 版人物獨立像素系統 (Pixel Chibi Patrol)
+        from .pixel_chibi import PixelChibiWindow
+        self.pixel_chibi: PixelChibiWindow | None = None
+        if self.cfg.get("q_chibi_enabled", True):
+            self.pixel_chibi = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self)
+
         self.pet.props._menu_cb = self.prop_menu
         self.pet.context_requested.connect(lambda gpos: self.pet_menu(gpos, pet=self.pet))
         self.panel: ControlPanel | None = None
@@ -731,6 +741,8 @@ class App(QObject):
     def set_character(self, cid: str):
         self.cfg.set("character", cid)
         self.pet.set_character(cid)
+        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            self.pixel_chibi.set_character(cid)
         # If this character was in extra pets, remove it from extra pets
         if cid in self.extra_pets:
             self.dismiss_balance_pet(cid)
@@ -792,6 +804,40 @@ class App(QObject):
         self.pet.set_size(px)
         for ep in self.extra_pets.values():
             ep.set_size(px)
+        self._changed()
+
+    def set_mini_pixel_mode(self, on: bool):
+        self.cfg.set("mini_pixel_mode", bool(on), save=True)
+        self.pet._clear_cache()
+        self.pet.update()
+        for ep in self.extra_pets.values():
+            ep._clear_cache()
+            ep.update()
+        self._changed()
+
+    def set_q_chibi_enabled(self, on: bool):
+        self.cfg.set("q_chibi_enabled", bool(on), save=True)
+        from .pixel_chibi import PixelChibiWindow
+        if on:
+            if not self.pixel_chibi:
+                self.pixel_chibi = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self)
+            self.pixel_chibi.show()
+            self.pixel_chibi.raise_()
+        else:
+            if self.pixel_chibi:
+                self.pixel_chibi.hide()
+        self._changed()
+
+    def set_q_climb_windows(self, on: bool):
+        self.cfg.set("q_climb_windows", bool(on), save=True)
+        self._changed()
+
+    def set_q_flight_prop(self, on: bool):
+        self.cfg.set("q_flight_prop", bool(on), save=True)
+        self._changed()
+
+    def set_q_fireworks_prop(self, on: bool):
+        self.cfg.set("q_fireworks_prop", bool(on), save=True)
         self._changed()
 
     def set_theme(self, t: str):

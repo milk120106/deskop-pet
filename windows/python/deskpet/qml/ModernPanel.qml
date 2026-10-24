@@ -582,16 +582,17 @@ Rectangle {
                     }
                 }
 
-                // 卡片 3: 寵物尺寸與不透明度
+                // 卡片 3: 寵物尺寸與不透明度 (支援 80px - 1024px 平滑滑桿與極小尺寸像素 Q 版)
                 Rectangle {
                     width: parent.width
-                    height: 140
+                    height: colCard3.implicitHeight + 32
                     radius: 14
                     color: themeColors.surface
                     border.width: 1
                     border.color: themeColors.border
 
                     Column {
+                        id: colCard3
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 12
@@ -605,38 +606,115 @@ Rectangle {
                             renderType: Text.NativeRendering
                         }
 
+                        // 1. 平滑尺寸滑桿 (80px - 1024px)
                         Row {
                             width: parent.width
-                            spacing: 12
+                            spacing: 14
+
+                            Text {
+                                text: "寵物尺寸：" + ((typeof backend !== "undefined" && backend) ? backend.sizePx : 454) + " px"
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 110
+                            }
+
+                            Item {
+                                width: 340
+                                height: 32
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    id: sizeTrack
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width
+                                    height: 8
+                                    radius: 4
+                                    color: themeColors.surfaceVariant
+
+                                    Rectangle {
+                                        height: parent.height
+                                        radius: 4
+                                        color: themeColors.primary
+                                        width: {
+                                            var val = (typeof backend !== "undefined" && backend) ? backend.sizePx : 454
+                                            return Math.max(0, Math.min(parent.width, (val - 80) / (1024 - 80) * parent.width))
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    id: sizeThumb
+                                    width: 18
+                                    height: 18
+                                    radius: 9
+                                    color: themeColors.primary
+                                    border.width: 2
+                                    border.color: "#FFFFFF"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: {
+                                        var val = (typeof backend !== "undefined" && backend) ? backend.sizePx : 454
+                                        return Math.max(0, Math.min(sizeTrack.width - width, (val - 80) / (1024 - 80) * (sizeTrack.width - width)))
+                                    }
+                                    scale: sizeSliderMouse.pressed ? 1.25 : 1.0
+                                    Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.28 } }
+                                }
+
+                                MouseArea {
+                                    id: sizeSliderMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    preventStealing: true
+                                    function updatePos(mx) {
+                                        var frac = Math.max(0.0, Math.min(1.0, mx / width))
+                                        var val = Math.round(80 + frac * (1024 - 80))
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setSizePx(val)
+                                        }
+                                    }
+                                    onPressed: (mouse) => updatePos(mouse.x)
+                                    onPositionChanged: (mouse) => {
+                                        if (pressed) updatePos(mouse.x)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. 快速尺寸標籤（迷你 100px、精巧 180px、標準 340px、大杯 454px、特大 640px）
+                        Row {
+                            width: parent.width
+                            spacing: 8
 
                             Repeater {
                                 model: [
-                                    { size: 340, name: "中杯 (340px)" },
-                                    { size: 454, name: "大杯 (454px)" },
-                                    { size: 624, name: "超大杯 (624px)" }
+                                    { size: 100, name: "迷你 100px" },
+                                    { size: 180, name: "精巧 180px" },
+                                    { size: 340, name: "標準 340px" },
+                                    { size: 454, name: "大杯 454px" },
+                                    { size: 640, name: "特大 640px" }
                                 ]
                                 delegate: Rectangle {
-                                    width: 130
-                                    height: 36
-                                    radius: 10
-                                    color: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? themeColors.primaryContainer : (sizeMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant)
+                                    width: 86
+                                    height: 30
+                                    radius: 8
+                                    color: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? themeColors.primaryContainer : (presetMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant)
                                     border.width: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? 2 : 1
                                     border.color: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? themeColors.primary : themeColors.border
-                                    scale: sizeMouse.pressed ? 0.94 : 1.0
-                                    Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.28 } }
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: modelData.name
                                         color: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? themeColors.primary : themeColors.text
-                                        font.pixelSize: 12
+                                        font.pixelSize: 11
                                         font.bold: true
                                         font.family: root.modernFontStack
                                         renderType: Text.NativeRendering
                                     }
 
                                     MouseArea {
-                                        id: sizeMouse
+                                        id: presetMouse
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
@@ -650,7 +728,50 @@ Rectangle {
                             }
                         }
 
-                        // 不透明度滑桿
+                        // 3. 極小尺寸自動切換像素 Q 版（mini_pixel_mode）
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "極小尺寸自動切換像素 Q 版 (<= 140px)"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.miniPixelMode) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.miniPixelMode) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setMiniPixelMode(!backend.miniPixelMode)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. 不透明度滑桿
                         Row {
                             width: parent.width
                             spacing: 14
@@ -874,6 +995,302 @@ Rectangle {
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
                                             backend.setAlwaysOnTop(!backend.alwaysOnTop)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 5: 全新 Q 版人物獨立像素系統 (帶雙腿、風格嚴格對齊四位娘化主角)
+                Rectangle {
+                    width: parent.width
+                    height: colCard5.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCard5
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "全新 Q 版人物獨立像素系統"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        // 項目 1: 啟用 Q 版小人桌面巡邏
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "啟用 Q 版小人桌面巡邏（全身雙腿雙腳、圖層置頂）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiEnabled(!backend.qChibiEnabled)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2: 視窗與按鈕攀爬辨識 (預設關閉)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "視窗與按鈕攀爬辨識（視窗消失失足慌張掉落）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qClimbWindows) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qClimbWindows) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQClimbWindows(!backend.qClimbWindows)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 3: 竹蜻蜓飛行小道具 (預設關閉)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "趣味飛行小道具（竹蜻蜓空中巡航模式）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qFlightProp) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qFlightProp) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQFlightProp(!backend.qFlightProp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 4: 像素煙火發射小道具 (預設關閉)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "像素煙火發射小道具（鬧鐘響鈴或手動觸發慶祝）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qFireworksProp) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qFireworksProp) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQFireworksProp(!backend.qFireworksProp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 6: 鬧鐘與多管道通知轉發系統 (Windows Toast / Discord / Telegram)
+                Rectangle {
+                    width: parent.width
+                    height: colCard6.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCard6
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "鬧鐘與事件通知系統"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            text: "支援定時鬧鐘、倒數計時、平板呼吸閃爍與 Windows Toast / Discord / Telegram Webhook 同步轉發"
+                            color: themeColors.textSub
+                            font.pixelSize: 12
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                        }
+
+                        Row {
+                            spacing: 10
+
+                            Rectangle {
+                                width: 130
+                                height: 32
+                                radius: 8
+                                color: timerBtn5Mouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "+5 分鐘快速計時"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: timerBtn5Mouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.addAlarm("5分鐘提醒", "", "timer", 300)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 130
+                                height: 32
+                                radius: 8
+                                color: timerBtn25Mouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "+25 分鐘番茄鐘"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: timerBtn25Mouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.addAlarm("番茄工作鐘", "", "timer", 1500)
                                         }
                                     }
                                 }

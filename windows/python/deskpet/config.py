@@ -218,6 +218,18 @@ DEFAULTS = {
     "font_mode": "default",          # default / system / custom_file
     "font_family": "",               # selected system font family
     "custom_font_path": "",          # path to custom .ttf or .otf
+    # mini pixel mode & alarms & notifications
+    "mini_pixel_mode": False,        # 極小尺寸自動切換像素 Q 版
+    "alarms": [],                    # 鬧鐘與倒數計時清單
+    "notifications": [],             # 事件通知紀錄歷史
+    "discord_webhook_url": "",       # Discord Webhook 轉發網址
+    "telegram_bot_token": "",        # Telegram Bot Token
+    "telegram_chat_id": "",          # Telegram Chat ID
+    # Q-Chibi standalone pixel system
+    "q_chibi_enabled": True,         # 啟用全新 Q 版獨立像素小人巡邏
+    "q_climb_windows": False,        # 視窗與按鈕攀爬辨識（預設關閉）
+    "q_flight_prop": False,          # 飛行小道具（竹蜻蜓 / 氣球飛行模式，預設關閉）
+    "q_fireworks_prop": False,       # 像素煙火發射小道具（預設關閉）
 }
 
 _lock = threading.Lock()
@@ -477,13 +489,16 @@ def asset(*parts: str) -> str:
     return str(ASSETS.joinpath(*parts))
 
 
-def log(msg: str):
+def log(*args):
     try:
-        from .logger import log as _log
-        _log(msg)
+        from .logger import get_logger
+        if len(args) == 1:
+            get_logger().info(str(args[0]), source="Pet")
+        elif len(args) >= 2:
+            get_logger().info(str(args[1]), source=str(args[0]))
     except Exception:
         if sys.stdout:
             try:
-                print(msg)
+                print(" ".join(str(a) for a in args))
             except Exception:
                 pass

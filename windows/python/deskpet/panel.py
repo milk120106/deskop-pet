@@ -901,7 +901,7 @@ class ControlPanel(QWidget):
         f2.setSpacing(12)
 
         r_cup = QHBoxLayout()
-        for name, px in (("中杯 340", 340), ("大杯 454", 454), ("超大杯 624", 624)):
+        for name, px in (("迷你 100", 100), ("精巧 180", 180), ("標準 340", 340), ("大杯 454", 454), ("特大 640", 640)):
             b = QPushButton(name)
             b.clicked.connect(lambda _=False, v=px: self.app.set_size(v))
             r_cup.addWidget(b)
@@ -909,7 +909,7 @@ class ControlPanel(QWidget):
 
         r2 = QHBoxLayout()
         self.sp_size = QSpinBox()
-        self.sp_size.setRange(200, 1400)
+        self.sp_size.setRange(80, 1024)
         self.sp_size.setSuffix(" px")
         b = QPushButton("套用自訂尺寸")
         b.clicked.connect(lambda: self.app.set_size(self.sp_size.value()))

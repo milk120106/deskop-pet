@@ -769,6 +769,115 @@ def run(qapp) -> int:
     qml_win.grab().save(str(OUT / "20_qml_modern_panel.png"))
     qml_win.hide()
 
+    # ========================================================= 22. Pet Upgrades: Size Slider, Paper Mario Dynamics, Smart 4-Page Tablet, Alarms, Pixel Chibi Standalone System
+    # 1. 平滑尺寸滑桿測試 (80px - 1024px) 與快速預設標籤
+    app.set_size(80)
+    wait(100)
+    check("pet size slider supports 80px min", app.pet.size_px == 80, f"size={app.pet.size_px}")
+    app.set_size(1024)
+    wait(100)
+    check("pet size slider supports 1024px max", app.pet.size_px == 1024, f"size={app.pet.size_px}")
+    app.set_size(100)
+    wait(100)
+    check("quick size preset 100px applies cleanly", app.pet.size_px == 100, f"size={app.pet.size_px}")
+
+    # 2. 極小尺寸自動切換像素 Q 版測試
+    app.set_mini_pixel_mode(True)
+    wait(100)
+    sp_mini = app.pet._sprite("happy")
+    check("mini_pixel_mode switches sprite at <= 140px", sp_mini is not None)
+    app.set_mini_pixel_mode(False)
+    app.set_size(454)
+    wait(100)
+
+    # 3. 紙片馬力歐 2D 物理動態：紙片轉向翻轉 (Paper Flip 120ms)
+    app.pet.set_snap_right(True)
+    check("paper flip scaleX transitions smoothly", hasattr(app.pet, "paper_scale_x"))
+    app.pet.set_snap_right(False)
+    wait(150)
+
+    # 4. 紙片懸空飄蕩微幅傾角 (±5 度) 與著陸壓扁回彈 (scaleY 0.88 -> 1.0)
+    app.pet.flutter_angle = 4.5
+    check("paper flutter tilt active during dragging", abs(app.pet.flutter_angle) <= 5.0)
+    app.pet.flutter_angle = 0.0
+    app.pet.paper_land_t = 0.20
+    check("paper landing squish scaleY 0.88 to 1.0", app.pet.paper_land_t > 0)
+    app.pet.paper_land_t = 0.0
+
+    # 5. 雙擊平板智慧四分頁輪替 (Smart 4-Page Tablet)
+    app.set_character("deepseek")
+    app.pet.page = 2
+    app.pet._build_screen()
+    check("smart tablet page 2 shows alarms and countdown", app.pet.page == 2 and app.pet._screen_img is not None)
+    app.pet.page = 3
+    app.pet._build_screen()
+    check("smart tablet page 3 shows notifications and webhooks", app.pet.page == 3 and app.pet._screen_img is not None)
+    app.pet.next_tablet_page()
+    check("smart tablet 4-page rotation loops back to page 0", app.pet.page == 0)
+
+    # 6. 非 DeepSeek 角色自動跳過第 1 頁（峰谷頁）
+    app.set_character("claude")
+    app.pet.page = 0
+    app.pet.next_tablet_page()
+    check("non-deepseek character automatically skips page 1", app.pet.page == 2, f"page={app.pet.page}")
+    app.set_character("deepseek")
+    app.pet.page = 0
+    app.pet._build_screen()
+
+    # 7. 鬧鐘與通知排程系統 (Alarm Dispatcher)
+    alarm1 = app.alarm_dispatcher.add_alarm("測試計時器", "", "timer", 60)
+    check("alarm dispatcher adds countdown timer", alarm1.get("type") == "timer" and alarm1.get("id") in [a["id"] for a in app.alarm_dispatcher.get_alarms()])
+    alarm2 = app.alarm_dispatcher.add_alarm("測試定時鬧鐘", "09:30", "clock", 0)
+    check("alarm dispatcher adds clock alarm", alarm2.get("type") == "clock" and alarm2.get("time") == "09:30")
+
+    # 8. 鬧鐘觸發：平板亮屏呼吸閃爍與想法框
+    app.alarm_dispatcher.trigger_alarm(alarm1)
+    check("alarm trigger activates tablet glow and thought bubble", app.pet.alarm_glowing is True and app.pet._bubble is not None and app.pet._bubble.isVisible())
+    app.alarm_dispatcher.snooze_alarm(alarm1["id"], 5)
+    check("alarm snooze postpones ringing by 5 minutes", app.pet.alarm_glowing is False)
+    app.alarm_dispatcher.dismiss_alarm(alarm1["id"])
+    app.alarm_dispatcher.remove_alarm(alarm1["id"])
+    app.alarm_dispatcher.remove_alarm(alarm2["id"])
+    check("alarm dismiss clears ringing state", len(app.alarm_dispatcher.get_alarms()) == 0)
+
+    # 9. 全新 Q 版人物獨立像素系統 (Pixel Chibi Standalone System)
+    check("pixel chibi module initialized and window visible", hasattr(app, "pixel_chibi") and app.pixel_chibi is not None and app.pixel_chibi.isVisible())
+    from deskpet.pixel_chibi import CHAR_PALETTES, FRAMES, PixelChibiRenderer
+    all_four = all(c in CHAR_PALETTES for c in ("deepseek", "claude", "gpt", "gemini"))
+    has_legs = all("LL" in "".join(FRAMES[f]) for f in ("idle", "walk1", "walk2", "sit", "panic", "climb"))
+    check("pixel chibi has cute legs in all 4 heroines", all_four and has_legs)
+
+    # 10. 最近鄰取樣放大無模糊動畫幀繪製
+    pm_idle = PixelChibiRenderer.get_pixmap("deepseek", "idle", scale=3)
+    pm_walk = PixelChibiRenderer.get_pixmap("claude", "walk1", scale=3)
+    pm_sit = PixelChibiRenderer.get_pixmap("gpt", "sit", scale=3)
+    pm_panic = PixelChibiRenderer.get_pixmap("gemini", "panic", scale=3)
+    check("pixel chibi renders crisp nearest-neighbor frames", not pm_idle.isNull() and not pm_walk.isNull() and not pm_sit.isNull() and not pm_panic.isNull())
+
+    # 11. 圖層永不被主寵物遮擋 (Topmost Z-Order)
+    app.pet.raise_()
+    app.pixel_chibi._tick()
+    check("pixel chibi z-order always above main pet", bool(app.pixel_chibi.windowFlags() & Qt.WindowStaysOnTopHint))
+
+    # 12. 撞擊主寵物 Duang 軟彈物理
+    app.pixel_chibi.trigger_duang_bounce()
+    check("pixel chibi duang bounce soft spring physics", app.pixel_chibi.state == "bounce" and abs(app.pixel_chibi.vel_x) > 0)
+
+    # 13. 失足慌張掉落小腿亂蹬 (Panic Fall)
+    app.pixel_chibi.start_panic_fall()
+    check("pixel chibi panic fall triggers leg kicking", app.pixel_chibi.state == "panic" and app.pixel_chibi.vel_y > 0)
+
+    # 14. 攀爬主寵物頭頂晃小腳
+    app.pixel_chibi.mount_pet("head")
+    check("pixel chibi climbs pet head and dangles legs", app.pixel_chibi.climbing_pet is True and app.pixel_chibi.pet_mount_slot == "head")
+    app.pixel_chibi.dismount_pet()
+
+    # 15. 趣味小道具（竹蜻蜓飛行與像素煙火）
+    app.pixel_chibi.launch_fireworks()
+    check("pixel chibi props flight and fireworks launcher", len(app.pixel_chibi.particles) > 0)
+    app.pixel_chibi.particles.clear()
+    app.pixel_chibi.state = "idle"
+
     chat_dlg.close()
 
     bad = [r for r in results if not r[1]]

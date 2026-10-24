@@ -1,0 +1,1144 @@
+"""The main pet: sprite rendering (1024 square / 1536 tail), mirroring on snap-right,
+tablet balance / peak-valley page, hurt flash / shake, feeding, iron bowl, and petting.
+"""
+from __future__ import annotations
+
+import math
+import time
+from datetime import datetime, timezone, timedelta
+
+from PySide6.QtCore import (QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRectF, Qt, QTimer,
+                            Signal)
+from PySide6.QtGui import (QColor, QFont, QFontMetrics, QGuiApplication, QImage, QPainter,
+                           QPainterPath, QPen, QPixmap, QPolygonF, QTransform)
+from PySide6.QtWidgets import QWidget
+
+from . import winapi
+from .config import APP_DIR, ASSETS, CUSTOM_CHARS_DIR, PROV_NAMES, PROV_IDS, asset, log
+from .props import Art, PropManager
+
+M_L, M_R, M_T, M_B = 48, 48, 130, 28
+
+QUAD_1024 = [(549.6 + 5.1, 706.2), (949.7 - 13.3, 642.0), (984.7 - 13.3, 860.2), (584.6 + 5.1, 924.3)]
+QUAD_1536 = [(1060.0, 699.0), (1413.0, 644.0), (1443.0, 834.0), (1090.0, 889.0)]
+QUAD_GEMINI_1024 = [(554.7, 708.2), (936.4, 644.0), (971.4, 862.2), (589.7, 926.3)]
+QUAD_GEMINI_1536 = [(1065.0, 699.0), (1400.0, 646.0), (1430.0, 836.0), (1095.0, 889.0)]
+
+SCREEN_W, SCREEN_H = 480, 264
+
+HEART = [
+    "0110110",
+    "1111111",
+    "1111111",
+    "0111110",
+    "0011100",
+    "0001000",
+]
+
+STEP_GAP = 0.2
+FLASH_DECAY = 0.28
+SHAKE_DUR = 0.55
+HOLD_NERVOUS = 1.0
+HAPPY_AFTER_FEED = 2.0
+IRON_TILT = -6.23
+WAIT_TSUN = 10.0
+
+PAT_PALM_X = (0.712, 0.749, 0.711, 0.818, 0.691)
+PAT_PALM_Y = (0.305, 0.514, 0.629, 0.538, 0.402)
+PETPET_W = (0.80, 0.82, 0.84, 0.86, 0.88)
+PETPET_H = (0.80, 0.75, 0.70, 0.65, 0.60)
+PETPET_OFFSET_Y = (0.12, 0.17, 0.22, 0.27, 0.32)
+PETPET_BASE_OFFSET_Y = 0.12
+
+
+def _quad_transform(w, h, dst_pts) -> QTransform:
+    src = QPolygonF([QPointF(0, 0), QPointF(w, 0), QPointF(w, h), QPointF(0, h)])
+    dst = QPolygonF([QPointF(x, y) for x, y in dst_pts])
+    res = QTransform.quadToQuad(src, dst)
+    if isinstance(res, tuple):
+        res = res[-1] if isinstance(res[-1], QTransform) else res[0]
+    return res
+
+
+def is_peak_at(bj: datetime) -> bool:
+    """DeepSeek peak hours: weekdays 09:00-12:00 and 14:00-18:00 (Beijing time)."""
+    if bj.weekday() in (5, 6):  # Saturday, Sunday
+        return False
+    h = bj.hour + bj.minute / 60.0
+    return (9.0 <= h < 12.0) or (14.0 <= h < 18.0)
+
+
+def until_tariff_switch(bj: datetime) -> tuple[timedelta, bool]:
+    now_peak = is_peak_at(bj)
+    d = bj.replace(hour=0, minute=0, second=0, microsecond=0)
+    for day in range(9):
+        for q in range(1, 96):
+            c = d + timedelta(days=day, minutes=q * 15)
+            if c <= bj:
+                continue
+            if is_peak_at(c) != now_peak:
+                return (c - bj), not now_peak
+    return timedelta(0), not now_peak
+
+
+class PetWindow(QWidget):
+    context_requested = Signal(QPoint)
+    hurt = Signal()
+    moved_by_user = Signal()
+    double_clicked_head = Signal()
+
+    def __init__(self, cfg, ledger, sounds, character_override: str | None = None, is_extra: bool = False, pet_id: str | None = None):
+        super().__init__(None, Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
+                         | Qt.NoDropShadowWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setMouseTracking(True)
+        self.setWindowTitle("Desktop Pet")
+        self.cfg = cfg
+        self.ledger = ledger
+        self.sounds = sounds
+        self.is_extra = is_extra
+        self.pet_id = pet_id or (character_override if character_override else "main")
+        self._bubble = None
+
+        self.size_px = int(cfg.get("size", 454))
+        self.character = character_override if character_override else cfg.get("character", "deepseek")
+        self.variant = cfg.get("variant", "square")
+        self.snap_right = (cfg.get("snap_corner") == "right")
+
+        self.props = PropManager(self, sounds, cfg)
+        self._src: dict[str, QImage] = {}
+        self._scaled: dict[tuple, tuple] = {}
+        self._bbox = None
+        self._screen_img: QImage | None = None
+        self._screen_tf: QTransform | None = None
+        self._iron_pix: QPixmap | None = None
+        self._hands: dict[int, QPixmap] = {}
+        self._heart_pix: QPixmap | None = None
+
+        # Animation state
+        self.expr = "happy"
+        self.flashes: list[float] = []
+        self.floaters: list[list] = []
+        self.hearts: list[list] = []
+        self.cue_queue = 0
+        self.nervous_until = 0.0
+        self.happy_until = 0.0
+        self.iron_count = 0
+        self.iron_alpha = 1.0
+        self.iron_fading = False
+        self.bounce_t = 0.0
+        self.pat_active = False
+        self.pat_phase = 0.0
+        self.pat_cooldown = 0.0
+        self._wig_start = 0.0
+        self._wig_dist = 0.0
+        self._wig_last = 0.0
+        self._wig_pos: QPointF | None = None
+        self.page = 0  # 0: balance, 1: peak/valley or vendor spend
+        self._press_pos: QPoint | None = None
+        self._drag_off: QPoint | None = None
+        self._anim: QPropertyAnimation | None = None
+        self._last_tick = time.monotonic()
+
+        self.timer = QTimer(self)
+        self.timer.setInterval(16)
+        self.timer.setTimerType(Qt.PreciseTimer)
+        self.timer.timeout.connect(self._tick)
+
+        self.cue_timer = QTimer(self)
+        self.cue_timer.setInterval(int(STEP_GAP * 1000))
+        self.cue_timer.timeout.connect(self._cue_tick)
+
+        self.clock_timer = QTimer(self)
+        self.clock_timer.setInterval(1000)
+        self.clock_timer.timeout.connect(self._build_screen)
+
+        ledger.cues.connect(self.enqueue_cues)
+        ledger.topup.connect(self.on_topup)
+        ledger.changed.connect(self._build_screen)
+
+        self._resize_window()
+        self._build_screen()
+
+    # ====================================================== Character & Art loading
+    @property
+    def iron_worn(self) -> bool:
+        return self.iron_count > 0
+
+    @iron_worn.setter
+    def iron_worn(self, val: bool):
+        if val:
+            if self.iron_count == 0:
+                self.iron_count = 1
+        else:
+            self.iron_count = 0
+
+    @property
+    def is_tail(self) -> bool:
+        return self.variant == "tail"
+
+    @property
+    def aspect_ratio(self) -> float:
+        return 1.5 if self.is_tail else 1.0
+
+    @property
+    def art_w(self) -> int:
+        return int(self.size_px * self.aspect_ratio)
+
+    @property
+    def art_h(self) -> int:
+        return self.size_px
+
+    def set_character(self, char_id: str):
+        if self.character == char_id:
+            return
+        self.character = char_id
+        self.cfg.set("character", char_id)
+        self._clear_cache()
+        self._resize_window()
+        self.update()
+
+    def set_variant(self, variant: str):
+        if variant not in ("square", "tail"):
+            return
+        if self.variant == variant:
+            return
+        self.variant = variant
+        self.cfg.set("variant", variant)
+        self._clear_cache()
+        self._resize_window()
+        self.keep_on_screen()
+        self.update()
+
+    def _clear_cache(self):
+        self._src.clear()
+        self._scaled.clear()
+        self._bbox = None
+        self._iron_pix = None
+        self._hands.clear()
+        self._heart_pix = None
+
+    def _char_image_path(self, expr: str) -> str:
+        # Check custom character first
+        if self.character.startswith("custom_"):
+            d = CUSTOM_CHARS_DIR / self.character
+            if not d.exists():
+                d = APP_DIR / "chars" / self.character
+            # Check expression in sprites/
+            exp_file = d / "sprites" / f"{expr}.png"
+            if exp_file.exists():
+                return str(exp_file)
+            main_file = d / "sprite.png"
+            if main_file.exists():
+                return str(main_file)
+
+        # Built-in characters: deepseek, claude, gemini, gpt
+        cid = self.character if self.character in ("deepseek", "claude", "gemini", "gpt") else "deepseek"
+        chars_dir = ASSETS / "chars" / cid
+
+        if self.is_tail:
+            # 1536x1024 wide art
+            if cid == "deepseek":
+                if expr == "nervous" and (chars_dir / "tail_nervous.png").exists():
+                    return str(chars_dir / "tail_nervous.png")
+                if expr == "cold" and (chars_dir / "tail_cold.png").exists():
+                    return str(chars_dir / "tail_cold.png")
+                if expr == "tsun" and (chars_dir / "tail_tsun.png").exists():
+                    return str(chars_dir / "tail_tsun.png")
+            tail_file = chars_dir / "tail.png"
+            if tail_file.exists():
+                return str(tail_file)
+
+        # 1024x1024 square art
+        expr_map = {"happy": "expression_11", "tsun": "expression_12", "cold": "expression_21", "nervous": "expression_22"}
+        e_name = expr_map.get(expr, "expression_11")
+        if cid == "deepseek":
+            return str(ASSETS / "expr" / f"{e_name}.png")
+        else:
+            e_path = chars_dir / "sprites" / f"{e_name}.png"
+            if e_path.exists():
+                return str(e_path)
+            s_path = chars_dir / "sprite.png"
+            if s_path.exists():
+                return str(s_path)
+        return str(ASSETS / "expr" / "expression_11.png")
+
+    def _load(self, expr: str) -> QImage:
+        key = f"{self.character}_{self.variant}_{expr}"
+        if key not in self._src:
+            path = self._char_image_path(expr)
+            self._src[key] = QImage(path)
+        return self._src[key]
+
+    def _sprite(self, expr: str):
+        key = (self.character, self.variant, expr, self.size_px, self.snap_right)
+        if key not in self._scaled:
+            src = self._load(expr)
+            img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
+                QImage.Format_ARGB32_Premultiplied
+            )
+            if self.snap_right:
+                img = img.mirrored(True, False)
+            red = QImage(img)
+            qp = QPainter(red)
+            qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            qp.fillRect(red.rect(), QColor(255, 20, 20))
+            qp.end()
+            if len(self._scaled) > 20:
+                self._scaled.clear()
+            self._scaled[key] = (QPixmap.fromImage(img), img, QPixmap.fromImage(red))
+        return self._scaled[key]
+
+    def _tablet_corners_source(self) -> list[tuple[float, float]]:
+        # Read custom tablet quad if available
+        if self.character.startswith("custom_"):
+            d = CUSTOM_CHARS_DIR / self.character
+            t_file = d / "tablet.txt"
+            if t_file.exists():
+                try:
+                    nums = [float(x.strip()) for x in t_file.read_text().split(",") if x.strip()]
+                    if len(nums) == 8:
+                        return [(nums[0], nums[1]), (nums[2], nums[3]), (nums[4], nums[5]), (nums[6], nums[7])]
+                except Exception:
+                    pass
+
+        cid = self.character if self.character in ("deepseek", "claude", "gemini", "gpt") else "deepseek"
+        if self.is_tail:
+            return QUAD_GEMINI_1536 if cid == "gemini" else QUAD_1536
+        return QUAD_GEMINI_1024 if cid == "gemini" else QUAD_1024
+
+    def _update_tablet_transform(self):
+        corners = self._tablet_corners_source()
+        src_w = 1536.0 if self.is_tail else 1024.0
+        src_h = 1024.0
+        scale_x = self.art_w / src_w
+        scale_y = self.art_h / src_h
+
+        # 4 corners in unmirrored local coordinates
+        pts = [(x * scale_x, y * scale_y) for x, y in corners]
+        if self.snap_right:
+            # When mirrored across X:
+            # Original TL (0) moves to art_w - x, which is the RIGHT side of the mirrored tablet.
+            # Original TR (1) moves to art_w - x, which is the LEFT side of the mirrored tablet.
+            # To keep text readable and upright:
+            # Text TL -> Mirrored TR (1)
+            # Text TR -> Mirrored TL (0)
+            # Text BR -> Mirrored BL (3)
+            # Text BL -> Mirrored BR (2)
+            tl = (self.art_w - pts[1][0], pts[1][1])
+            tr = (self.art_w - pts[0][0], pts[0][1])
+            br = (self.art_w - pts[3][0], pts[3][1])
+            bl = (self.art_w - pts[2][0], pts[2][1])
+            dst_pts = [tl, tr, br, bl]
+        else:
+            dst_pts = pts
+
+        self._screen_tf = _quad_transform(SCREEN_W, SCREEN_H, dst_pts)
+
+    def _resize_window(self):
+        w = self.art_w
+        h = self.art_h
+        self.setFixedSize(w + M_L + M_R, h + M_T + M_B)
+        self._update_tablet_transform()
+        self._iron_pix = None
+        self._hands.clear()
+        self._heart_pix = None
+
+    def set_size(self, px: int):
+        px = max(200, min(1400, int(px)))
+        if px == self.size_px:
+            return
+        old_bc = QPoint(self.x() + M_L + self.art_w // 2, self.y() + M_T + self.art_h)
+        self.size_px = px
+        self.cfg.set("size", px)
+        self._clear_cache()
+        self._resize_window()
+        self.move(old_bc.x() - M_L - self.art_w // 2, old_bc.y() - M_T - self.art_h)
+        self.keep_on_screen()
+        self.update()
+
+    # ====================================================== Geometry & Mirroring
+    def set_snap_right(self, right: bool):
+        if self.snap_right == right and self.cfg.get("snap_corner") == ("right" if right else "left"):
+            return
+        self.snap_right = right
+        self.cfg.set("snap_corner", "right" if right else "left", save=True)
+        self._update_tablet_transform()
+        self.update()
+
+    def sprite_origin(self) -> QPointF:
+        return QPointF(self.x() + M_L, self.y() + M_T)
+
+    def body_center_global(self) -> QPointF:
+        o = self.sprite_origin()
+        # In tail mode character body sits on right side (0.66) unless mirrored
+        bx = (0.34 if self.snap_right else 0.66) if self.is_tail else 0.50
+        return QPointF(o.x() + self.art_w * bx, o.y() + self.art_h * 0.58)
+
+    def head_zone_global(self) -> QRectF:
+        o = self.sprite_origin()
+        W = self.art_w
+        H = self.art_h
+        hx = (W - W * 0.60) if self.snap_right else (W * 0.40 if self.is_tail else W * 0.28)
+        x = o.x() + hx
+        y = o.y() - H * 0.04
+        w = W * 0.45
+        h = H * 0.40
+        if self.iron_count > 0:
+            stack_extra = (self.iron_count - 1) * (H * 0.12)
+            y -= (H * 0.12 + stack_extra)
+            h += (H * 0.16 + stack_extra)
+            x -= W * 0.06
+            w += W * 0.12
+        return QRectF(x, y, w, h)
+
+    def tablet_zone_global(self) -> QRectF:
+        o = self.sprite_origin()
+        W = self.art_w
+        H = self.art_h
+        tx = (W * 0.15) if self.snap_right else (W * 0.50 if self.is_tail else W * 0.45)
+        return QRectF(o.x() + tx, o.y() + H * 0.60, W * 0.40, H * 0.35)
+
+    def contains_global(self, g: QPointF) -> bool:
+        o = self.sprite_origin()
+        lx, ly = g.x() - o.x(), g.y() - o.y()
+        if not (-16 <= lx < self.art_w + 16 and -16 <= ly < self.art_h + 16):
+            return False
+        img = self._sprite(self.expr)[1]
+        for dx, dy in ((0, 0), (14, 0), (-14, 0), (0, 14), (0, -14)):
+            x, y = int(lx + dx), int(ly + dy)
+            if 0 <= x < self.art_w and 0 <= y < self.art_h and (img.pixel(x, y) >> 24) > 20:
+                return True
+        return False
+
+    def _hit_local(self, pos: QPoint) -> bool:
+        x, y = pos.x() - M_L, pos.y() - M_T
+        if not (0 <= x < self.art_w and 0 <= y < self.art_h):
+            return False
+        return (self._sprite(self.expr)[1].pixel(x, y) >> 24) > 20
+
+    def bbox_frac(self):
+        if self._bbox is None:
+            img = self._load("happy").scaled(128, 128, Qt.IgnoreAspectRatio, Qt.FastTransformation)
+            x0 = y0 = 128
+            x1 = y1 = -1
+            for y in range(128):
+                for x in range(128):
+                    if img.pixelColor(x, y).alpha() > 20:
+                        x0, x1 = min(x0, x), max(x1, x)
+                        y0, y1 = min(y0, y), max(y1, y)
+            self._bbox = (x0 / 128.0, y0 / 128.0, (x1 + 1) / 128.0, (y1 + 1) / 128.0)
+        return self._bbox
+
+    # ====================================================== Window placement
+    def showEvent(self, e):
+        super().showEvent(e)
+        hwnd = int(self.winId())
+        winapi.hide_from_taskbar(hwnd)
+        self.apply_window_prefs()
+        if hasattr(self, "props") and self.props:
+            self.props.show_all()
+
+    def hideEvent(self, e):
+        super().hideEvent(e)
+        if hasattr(self, "props") and self.props:
+            self.props.hide_all()
+
+    def apply_window_prefs(self):
+        hwnd = int(self.winId())
+        self.setWindowOpacity(max(0.2, min(1.0, self.cfg.get("opacity", 100) / 100.0)))
+        winapi.set_topmost(hwnd, bool(self.cfg.get("always_on_top", True)))
+        self.apply_click_through(bool(self.cfg.get("click_through", False)))
+
+    def apply_click_through(self, on: bool):
+        winapi.set_click_through(int(self.winId()), on)
+        self.props.set_click_through(on)
+
+    def screen_ag(self):
+        s = QGuiApplication.screenAt(self.frameGeometry().center()) or QGuiApplication.primaryScreen()
+        return s.availableGeometry()
+
+    def keep_on_screen(self):
+        ag = self.screen_ag()
+        L = self.x() + M_L
+        R = self.x() + M_L + self.art_w
+        T = self.y() + M_T
+        B = self.y() + M_T + self.art_h
+        dx = dy = 0
+        if L < ag.left():
+            dx = ag.left() - L
+        elif R > ag.right() + 1:
+            dx = ag.right() + 1 - R
+        if B > ag.bottom() + 1:
+            dy = ag.bottom() + 1 - B
+        elif T < ag.top():
+            dy = ag.top() - T
+        if dx or dy:
+            self.move(int(self.x() + dx), int(self.y() + dy))
+
+    def _animate_to(self, target: QPoint, ms=160):
+        if self._anim:
+            self._anim.stop()
+        self._anim = QPropertyAnimation(self, b"pos", self)
+        self._anim.setDuration(ms)
+        self._anim.setStartValue(self.pos())
+        self._anim.setEndValue(target)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.finished.connect(self._save_pos)
+        self._anim.start()
+
+    def show_speech_bubble(self, text: str, thought: bool = False):
+        if self._bubble is None:
+            from .chat import SpeechBubble
+            self._bubble = SpeechBubble(self)
+        self._bubble.show_message(text, thought=thought)
+
+    def _save_pos(self):
+        if self.is_extra and self.pet_id:
+            extra_pos = self.cfg.get("extra_pet_positions") or {}
+            extra_pos[self.pet_id] = [self.x(), self.y()]
+            self.cfg.set("extra_pet_positions", extra_pos, save=True)
+        else:
+            self.cfg.set("pos", [self.x(), self.y()], save=False)
+            self.cfg.set("snap_corner", "right" if self.snap_right else "left", save=True)
+
+    def snap_target(self, force_corner: bool = False) -> QPoint | None:
+        ag = self.screen_ag()
+        L = self.x() + M_L
+        R = self.x() + M_L + self.art_w
+        T = self.y() + M_T
+        B = self.y() + M_T + self.art_h
+        nx, ny = self.x(), self.y()
+
+        if force_corner:
+            corner = self.cfg.get("snap_corner", "right")
+            nx += (ag.left() - L) if corner == "left" else (ag.right() + 1 - R)
+            ny += ag.bottom() + 1 - B
+            self.set_snap_right(corner == "right")
+            return QPoint(int(nx), int(ny))
+
+        th = int(self.cfg.get("snap_distance", 120))
+        cand_x = [(abs(L - ag.left()), ag.left() - L, False), (abs(ag.right() + 1 - R), ag.right() + 1 - R, True)]
+        cand_y = [(abs(T - ag.top()), ag.top() - T), (abs(ag.bottom() + 1 - B), ag.bottom() + 1 - B)]
+
+        dx = min(cand_x)
+        dy = min(cand_y)
+        moved = False
+        if dx[0] <= th:
+            nx += dx[1]
+            moved = True
+            self.set_snap_right(dx[2])
+        if dy[0] <= th:
+            ny += dy[1]
+            moved = True
+        return QPoint(int(nx), int(ny)) if moved else None
+
+    def snap_now(self, force_corner=False):
+        t = self.snap_target(force_corner)
+        if t is not None and t != self.pos():
+            self._animate_to(t)
+        else:
+            self._save_pos()
+
+    def place_initial(self, default_offset_x: int = 0):
+        if self.is_extra and self.pet_id:
+            extra_pos = (self.cfg.get("extra_pet_positions") or {}).get(self.pet_id)
+            if extra_pos and isinstance(extra_pos, list) and len(extra_pos) == 2:
+                self.move(int(extra_pos[0]), int(extra_pos[1]))
+                self.keep_on_screen()
+                ag = self.screen_ag()
+                center_x = self.x() + M_L + self.art_w / 2.0
+                is_right = center_x > (ag.left() + ag.width() / 2.0)
+                self.set_snap_right(is_right)
+                return
+        pos = self.cfg.get("pos") if not self.is_extra else None
+        ag = self.screen_ag()
+        if pos and isinstance(pos, list) and len(pos) == 2:
+            self.move(int(pos[0]), int(pos[1]))
+            self.keep_on_screen()
+            # Auto-align direction based on which side of the screen the pet sits
+            center_x = self.x() + M_L + self.art_w / 2.0
+            is_right = center_x > (ag.left() + ag.width() / 2.0)
+            self.set_snap_right(is_right)
+        else:
+            # Default to bottom-right corner
+            corner = self.cfg.get("snap_corner", "right")
+            self.set_snap_right(corner == "right")
+            L = M_L
+            R = M_L + self.art_w
+            B = M_T + self.art_h
+            nx = (ag.right() + 1 - R) if corner == "right" else (ag.left() - L)
+            if self.is_extra and default_offset_x != 0:
+                nx = max(ag.left(), min(ag.right() - R, nx + default_offset_x))
+            ny = ag.bottom() + 1 - B
+            self.move(int(nx), int(ny))
+            self.keep_on_screen()
+            self._save_pos()
+
+    # ====================================================== Tablet Screen Rendering
+    def _build_screen(self):
+        img = QImage(SCREEN_W, SCREEN_H, QImage.Format_ARGB32_Premultiplied)
+        img.fill(Qt.transparent)
+        p = QPainter(img)
+        p.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+
+        if self.page == 0:
+            # Page 0: Balance
+            prov = (self.ledger.provider or "").lower()
+            ch = (self.character or "").lower()
+            if "deepseek" in ch or "deepseek" in prov:
+                title = "DeepSeek 餘額"
+            elif "claude" in ch or "anthropic" in prov:
+                title = "Claude 餘額"
+            elif "gemini" in ch or "gemini" in prov:
+                title = "Gemini 餘額"
+            elif "gpt" in ch or "openai" in prov:
+                title = "OpenAI 餘額"
+            else:
+                title = f"{self.character.capitalize()} 餘額"
+            body = self.ledger.text
+            self._outlined(p, title, QRectF(0, 12, SCREEN_W, 70), 34, bold=False)
+
+            size = 110
+            f = QFont("Segoe UI", 1, QFont.Bold)
+            while size > 28:
+                f.setPixelSize(size)
+                if QFontMetrics(f).horizontalAdvance(body) <= SCREEN_W * 0.86:
+                    break
+                size -= 4
+            self._outlined(p, body, QRectF(0, 78, SCREEN_W, 160), size, bold=True)
+
+            if not self.ledger.online:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(255, 60, 60))
+                p.drawEllipse(QPointF(SCREEN_W - 26, 26), 9, 9)
+        else:
+            # Page 1: Peak / Valley for DeepSeek; Local time & usage for others
+            prov = (self.ledger.provider or "").lower()
+            ch = (self.character or "").lower()
+            if "deepseek" in ch or "deepseek" in prov:
+                bj = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=8)))
+                time_str = bj.strftime("%H:%M:%S")
+                is_off = not is_peak_at(bj)
+                tariff_name = "梁文谷" if is_off else "梁文峰"
+                left, to_peak = until_tariff_switch(bj)
+                cd_label = "距峰時" if to_peak else "距谷時"
+                cd_str = f"{cd_label} {int(left.total_seconds()//3600)}:{int((left.total_seconds()%3600)//60):02d}:{int(left.total_seconds()%60):02d}"
+
+                self._outlined(p, time_str, QRectF(0, 10, SCREEN_W, 60), 36, bold=False)
+                # Tariff line color: green for off-peak, warm gold for peak
+                ink_color = QColor(150, 226, 170) if is_off else QColor(240, 190, 120)
+                self._outlined(p, tariff_name, QRectF(0, 80, SCREEN_W, 90), 54, bold=True, fill_color=ink_color)
+                self._outlined(p, cd_str, QRectF(0, 180, SCREEN_W, 60), 32, bold=False)
+            else:
+                local_time = datetime.now().strftime("%H:%M:%S")
+                prov_id = self.ledger.provider
+                if self.cfg.get("mode") == "sim":
+                    mode_str = "模擬模式"
+                elif prov_id in PROV_IDS:
+                    mode_str = PROV_NAMES[PROV_IDS.index(prov_id)]
+                else:
+                    mode_str = prov_id
+                used_amt = self.cfg.get("today_used", 0.0)
+                used_str = f"今日已用 {used_amt:.2f}"
+
+                self._outlined(p, local_time, QRectF(0, 14, SCREEN_W, 60), 36, bold=False)
+                self._outlined(p, mode_str, QRectF(0, 86, SCREEN_W, 70), 42, bold=True)
+                self._outlined(p, used_str, QRectF(0, 176, SCREEN_W, 60), 32, bold=False)
+
+        p.end()
+        self._screen_img = img
+        self.update()
+
+        if self.page == 1 and not self.clock_timer.isActive():
+            self.clock_timer.start()
+        elif self.page == 0:
+            self.clock_timer.stop()
+
+    @staticmethod
+    def _outlined(p: QPainter, text: str, rect: QRectF, px: int, bold: bool, fill_color: QColor | None = None):
+        f = QFont("Segoe UI", 1)
+        f.setPixelSize(px)
+        f.setBold(bold)
+        path = QPainterPath()
+        fm = QFontMetrics(f)
+        w = fm.horizontalAdvance(text)
+        path.addText(rect.center().x() - w / 2, rect.center().y() + fm.ascent() / 2 - fm.descent() / 2, f, text)
+        p.setPen(QPen(QColor(10, 14, 28), max(3, px // 12), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        p.setBrush(Qt.NoBrush)
+        p.drawPath(path)
+        p.setPen(Qt.NoPen)
+        p.setBrush(fill_color or QColor(226, 238, 255))
+        p.drawPath(path)
+
+    # ====================================================== Expressions
+    def rice_waiting(self) -> bool:
+        now = time.monotonic()
+        return any(b.locked_at is not None or (b.landed_at is not None and now - b.landed_at >= WAIT_TSUN)
+                   for b in self.props.rice())
+
+    def _want_expr(self) -> str:
+        now = time.monotonic()
+        rice_alive = bool(self.props.rice())
+        if self.iron_worn and not rice_alive and now >= self.happy_until:
+            return "cold"
+        if now < self.nervous_until or self.pat_active:
+            return "nervous"
+        if self.rice_waiting():
+            return "tsun"
+        return "happy"
+
+    def refresh_expr(self):
+        e = self._want_expr()
+        if e != self.expr:
+            self.expr = e
+            self.update()
+
+    def on_bowl_state_changed(self):
+        self.refresh_expr()
+
+    # ====================================================== Painting
+    def paintEvent(self, _):
+        now = time.monotonic()
+        W = self.art_w
+        H = self.art_h
+        pix, _img, red = self._sprite(self.expr)
+        p = QPainter(self)
+        p.setRenderHints(QPainter.SmoothPixmapTransform | QPainter.Antialiasing | QPainter.TextAntialiasing)
+
+        # Shake: damped sine
+        dx = dy = 0.0
+        flash = 0.0
+        for t0 in self.flashes[-3:]:
+            a = now - t0
+            if a < SHAKE_DUR:
+                env = (1 - a / SHAKE_DUR) ** 2
+                dx += 8.0 * math.sin(a * 2 * math.pi * 13) * env
+                dy += 3.0 * math.sin(a * 2 * math.pi * 17 + 1) * env
+            flash += math.exp(-a / FLASH_DECAY)
+        dx = max(-14.0, min(14.0, dx))
+        dy = max(-6.0, min(6.0, dy))
+        max_tint = max(0.30, 0.64 - (H / 1024.0) * 0.75)
+        flash = min(1.0, flash) * max_tint
+
+        # Body squash and downward shift
+        sq_x = 1.0
+        sq_y = 1.0
+        shift_y = 0.0
+        if self.pat_active:
+            frame = int(self.pat_phase * 5) % 5
+            w_rel = PETPET_W[frame] / PETPET_W[0]
+            h_rel = PETPET_H[frame] / PETPET_H[0]
+            sq_x = float(1.0 - (1.0 - w_rel))
+            sq_y = float(1.0 - (1.0 - h_rel))
+            shift_y = float((PETPET_OFFSET_Y[frame] - PETPET_BASE_OFFSET_Y) * H)
+        if self.bounce_t > 0:
+            sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
+
+        ox, oy = M_L + dx, M_T + dy
+        p.save()
+        p.translate(ox + W / 2, oy + H + shift_y)
+        p.scale(sq_x, sq_y)
+        p.translate(-(ox + W / 2), -(oy + H))
+        p.drawPixmap(int(ox), int(oy), pix)
+
+        # Tablet quad transform mapping
+        if self._screen_img is not None and self._screen_tf is not None:
+            p.save()
+            p.translate(ox, oy)
+            p.setTransform(self._screen_tf, True)
+            p.drawImage(0, 0, self._screen_img)
+            p.restore()
+
+        if flash > 0.01:
+            p.setOpacity(flash)
+            p.drawPixmap(int(ox), int(oy), red)
+            p.setOpacity(1.0)
+
+        if self.iron_worn:
+            self._paint_iron(p, ox, oy)
+        p.restore()
+
+        if self.pat_active:
+            self._paint_hand(p, ox, oy, now)
+        self._paint_fx(p, ox, oy, now)
+
+    def _iron(self) -> QPixmap:
+        if self._iron_pix is None:
+            src = Art.get("iron_bowl.png")
+            w = int(self.size_px * 0.50)
+            self._iron_pix = QPixmap.fromImage(src.scaledToWidth(w, Qt.SmoothTransformation))
+        return self._iron_pix
+
+    def _paint_iron(self, p: QPainter, ox, oy):
+        if self.iron_count <= 0:
+            return
+        pm = self._iron()
+        W = self.art_w
+        H = self.art_h
+        tilt = -IRON_TILT if self.snap_right else IRON_TILT
+        base_cx = (0.40 if self.is_tail else 0.60)
+        cx = ox + (W * (1.0 - base_cx) if self.snap_right else W * base_cx)
+        base_cy = oy + H * 0.19
+
+        for idx in range(self.iron_count):
+            p.save()
+            p.setOpacity(max(0.0, self.iron_alpha))
+            cy = base_cy + idx * (-H * 0.12)
+            p.translate(cx, cy)
+            p.rotate(tilt)
+            p.drawPixmap(int(-pm.width() / 2), int(-pm.height() * 0.5), pm)
+            p.restore()
+
+    def _hand(self, i: int) -> QPixmap:
+        if i not in self._hands:
+            img = QImage(asset("hands", f"pat_hand_{i}.png"))
+            k = self.art_h / 454.0
+            dw = max(1, int(round(img.width() * k)))
+            dh = max(1, int(round(img.height() * k)))
+            scaled = img.scaled(dw, dh, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            self._hands[i] = QPixmap.fromImage(scaled)
+        return self._hands[i]
+
+    def _paint_hand(self, p: QPainter, ox, oy, now):
+        W = self.art_w
+        H = self.art_h
+        k = H / 454.0
+        frame = int(self.pat_phase * 5) % 5
+        pm = self._hand(frame)
+        dw = pm.width()
+        dh = pm.height()
+
+        head_x = int(W * 0.672) if self.is_tail else int(W * 0.50 + H * 0.17)
+        crown_y = int(round(40.0 * (446.0 / 107.0) * k))
+
+        palm_fx = PAT_PALM_X[frame]
+        palm_fy = PAT_PALM_Y[frame]
+
+        hand_x = int(round(head_x - palm_fx * dw))
+        if self.snap_right:
+            hand_x = (W - 1) - (hand_x + dw)
+        hand_y = int(round(crown_y - palm_fy * dh))
+
+        if self.snap_right:
+            p.save()
+            cx = ox + hand_x + dw / 2.0
+            p.translate(cx, 0.0)
+            p.scale(-1.0, 1.0)
+            p.translate(-cx, 0.0)
+            p.drawPixmap(int(ox + hand_x), int(oy + hand_y), pm)
+            p.restore()
+        else:
+            p.drawPixmap(int(ox + hand_x), int(oy + hand_y), pm)
+
+    def _heart(self) -> QPixmap:
+        if self._heart_pix is None:
+            u = max(2, int(self.size_px / 90))
+            img = QImage(7 * u, 6 * u, QImage.Format_ARGB32_Premultiplied)
+            img.fill(Qt.transparent)
+            q = QPainter(img)
+            for r, row in enumerate(HEART):
+                for c, ch in enumerate(row):
+                    if ch == "1":
+                        q.fillRect(c * u, r * u, u, u, QColor(255, 80, 120))
+            q.end()
+            self._heart_pix = QPixmap.fromImage(img)
+        return self._heart_pix
+
+    def _paint_fx(self, p: QPainter, ox, oy, now):
+        W = self.art_w
+        H = self.art_h
+        k = H / 454.0
+        f = QFont("Segoe UI", 1, QFont.Bold)
+        f.setPixelSize(max(14, int(24 * k)))
+        p.setFont(f)
+
+        base_x = (0.35 if self.is_tail else 0.40)
+        floater_x = W * (1.0 - base_x - 0.5) if self.snap_right else W * base_x
+
+        for item in self.floaters:
+            text, color, xo, t0 = item[0], item[1], item[2], item[3]
+            a = now - t0
+            life = 1.2
+            if a < 0 or a > life:
+                continue
+            progress = min(1.0, a / life)
+            y_rise = (1.0 - (1.0 - progress) ** 2) * 85.0 * max(0.7, k)
+            y = oy + H * 0.12 - y_rise
+            alpha = max(0.0, 1.0 - progress ** 1.8)
+            p.setOpacity(alpha)
+            r = QRectF(ox + floater_x + xo, y, W * 0.6, 36)
+            p.setPen(QColor(10, 12, 18, int(220 * alpha)))
+            for ddx, ddy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                p.drawText(r.translated(ddx, ddy), Qt.AlignHCenter, text)
+            p.setPen(color)
+            p.drawText(r, Qt.AlignHCenter, text)
+        p.setOpacity(1.0)
+
+        hp = self._heart()
+        for x, y, vx, vy, t0 in self.hearts:
+            a = now - t0
+            if a < 0 or a > 1.3:
+                continue
+            p.setOpacity(max(0.0, 1.0 - (a / 1.3) ** 2))
+            p.drawPixmap(int(ox + x + vx * a), int(oy + y + vy * a), hp)
+        p.setOpacity(1.0)
+
+    # ====================================================== Animation Loop
+    def wake(self):
+        if not self.timer.isActive():
+            self._last_tick = time.monotonic()
+            self.timer.start()
+
+    def _tick(self):
+        now = time.monotonic()
+        dt = min(0.05, now - self._last_tick)
+        self._last_tick = now
+        busy = False
+
+        self.flashes = [t for t in self.flashes if now - t < max(SHAKE_DUR, 1.0)]
+        busy |= bool(self.flashes)
+        self.floaters = [f for f in self.floaters if now - f[3] < 1.1]
+        busy |= bool(self.floaters)
+        self.hearts = [h for h in self.hearts if now - h[4] < 1.3]
+        busy |= bool(self.hearts)
+
+        if self.bounce_t > 0:
+            self.bounce_t = max(0.0, self.bounce_t - dt)
+            busy = True
+
+        if self.iron_fading:
+            self.iron_alpha -= dt / 0.35
+            busy = True
+            if self.iron_alpha <= 0:
+                self.iron_fading = False
+                self.iron_count = 0
+                self.iron_alpha = 1.0
+                self.sounds.play("off")
+                self.refresh_expr()
+
+        if self.pat_active:
+            self.pat_phase = (self.pat_phase + dt * 2.6) % 1.0
+            busy = True
+            if now - self._wig_last > 0.15:
+                self.end_pat()
+
+        if now < self.nervous_until:
+            busy = True
+        elif self.expr == "nervous" and not self.pat_active:
+            self.refresh_expr()
+
+        self.update()
+        if not busy:
+            self.timer.stop()
+            self.refresh_expr()
+
+    # ====================================================== Hurt / Topup / Feed
+    def enqueue_cues(self, n: int):
+        self.cue_queue += int(n)
+        if not self.cue_timer.isActive():
+            self._cue_tick()
+            self.cue_timer.start()
+
+    def _cue_tick(self):
+        if self.cue_queue <= 0:
+            self.cue_timer.stop()
+            return
+        batch = 1
+        if self.cue_queue >= 10:
+            batch = 10
+        elif self.cue_queue >= 5:
+            batch = 5
+        self.cue_queue -= batch
+        self.fire_hurt(count=batch)
+        if self.cue_queue <= 0:
+            self.cue_timer.stop()
+
+    def fire_hurt(self, count: int = 1):
+        now = time.monotonic()
+        count = max(1, int(count))
+        self.ledger.apply_cue(count=count)
+        self.flashes.append(now)
+        amount = round(count * 0.01, 2)
+        cur_sym = "" if self.ledger.currency == "CNY" else "$"
+        import random
+        xo = random.uniform(-20.0, 20.0)
+        self.floaters.append([f"-{cur_sym}{amount:.2f}", QColor(255, 60, 60), xo, now])
+        self.nervous_until = now + HOLD_NERVOUS
+        self.sounds.play("hit")
+        self.hurt.emit()
+        self.refresh_expr()
+        self.wake()
+
+    def on_topup(self, amount: float):
+        self.props.spawn_rice(amount)
+        self.refresh_expr()
+
+    def feed(self, amount: float, at: QPointF):
+        now = time.monotonic()
+        self.ledger.apply_credit(amount)
+        cur_sym = "" if self.ledger.currency == "CNY" else "$"
+        self.floaters.append([f"+{cur_sym}{amount:.2f}", QColor(60, 220, 110), 0, now])
+        W = self.art_w
+        import random
+        for _ in range(9):
+            self.hearts.append([W * (0.35 + random.random() * 0.4), self.art_h * (0.02 + random.random() * 0.18),
+                                (random.random() - 0.5) * 40, -40 - random.random() * 50,
+                                now + random.random() * 0.25])
+        self.sounds.play("feed")
+        self.happy_until = now + HAPPY_AFTER_FEED
+        self.bounce_t = 0.35
+        self.props.spawn_iron(at.x(), at.y())
+        QTimer.singleShot(int(HAPPY_AFTER_FEED * 1000) + 50, self.refresh_expr)
+        self.refresh_expr()
+        self.wake()
+
+    def wear_iron(self):
+        if self.iron_count < 5:
+            self.iron_count += 1
+        self.iron_alpha = 1.0
+        self.iron_fading = False
+        self.bounce_t = 0.35
+        self.sounds.play("land")
+        now = time.monotonic()
+        msg = f"鐵盆已戴在頭上 (層數: {self.iron_count}/5)" if self.iron_count > 1 else "點擊頭頂取下鐵盆"
+        self.floaters.append([msg, QColor(255, 230, 110), 0, now])
+        self.setToolTip("點擊頭頂取下鐵盆")
+        self.refresh_expr()
+        self.wake()
+
+    def remove_iron(self, all_pots: bool = False):
+        if self.iron_count <= 0:
+            return
+        self.bounce_t = 0.35
+        self.sounds.play("off")
+        now = time.monotonic()
+        if all_pots or self.iron_count == 1:
+            self.iron_count = 0
+            self.floaters.append(["鐵盆已取下", QColor(140, 220, 255), 0, now])
+            self.setToolTip("")
+        else:
+            self.iron_count -= 1
+            self.floaters.append([f"取下頂層鐵盆（剩餘 {self.iron_count} 個）", QColor(140, 220, 255), 0, now])
+            self.setToolTip("點擊頭頂取下鐵盆")
+        self.refresh_expr()
+        self.wake()
+
+    # ====================================================== Petting Interaction
+    def start_pat(self):
+        if self.pat_active:
+            return
+        self.pat_active = True
+        self.pat_phase = 0.0
+        self.refresh_expr()
+        self.wake()
+
+    def end_pat(self):
+        if not self.pat_active:
+            return
+        self.pat_active = False
+        self.refresh_expr()
+        self.update()
+
+    def _track_pat(self, pos: QPointF):
+        if not self.cfg.get("pat", True) or self._drag_off is not None:
+            return
+        now = time.monotonic()
+        if self._wig_pos is None or now - self._wig_last > 0.35:
+            self._wig_start, self._wig_dist = now, 0.0
+        else:
+            self._wig_dist += math.hypot(pos.x() - self._wig_pos.x(), pos.y() - self._wig_pos.y())
+        self._wig_pos, self._wig_last = pos, now
+
+        if self.pat_active:
+            return
+
+        # If user strokes over 24 px within 0.35s:
+        if self._wig_dist > 24 and now - self._wig_start >= 0.35 and now >= self.pat_cooldown:
+            # 鐵盆扣在頭上時，摸頭直接不觸發（依使用者明確要求，不可取下鐵盆再摸）
+            if self.iron_worn:
+                return
+            self.start_pat()
+
+    # ====================================================== Mouse events
+    def contextMenuEvent(self, e):
+        g = QPointF(self.mapToGlobal(e.pos()))
+        hit = self._hit_local(e.pos()) or self.head_zone_global().contains(g)
+        if not hit:
+            return
+        self.end_pat()
+        self.context_requested.emit(self.mapToGlobal(e.pos()))
+        e.accept()
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton:
+            g = QPointF(self.mapToGlobal(e.position().toPoint()))
+            hit = self._hit_local(e.position().toPoint()) or (self.iron_worn and self.head_zone_global().contains(g))
+            if not hit:
+                return
+            self.end_pat()
+            self.pat_cooldown = time.monotonic() + 1.0
+            if self._anim:
+                self._anim.stop()
+            self._drag_off = e.globalPosition().toPoint() - self.pos()
+            self._press_pos = e.globalPosition().toPoint()
+
+    def mouseMoveEvent(self, e):
+        if self._drag_off is not None and e.buttons() & Qt.LeftButton:
+            new_pos = e.globalPosition().toPoint() - self._drag_off
+            self.move(new_pos)
+            # Mid-drag turning: check if dragged near left vs right edge
+            ag = self.screen_ag()
+            mid_x = (new_pos.x() + M_L + self.art_w / 2)
+            self.set_snap_right(mid_x > ag.center().x())
+            return
+
+        g = QPointF(self.mapToGlobal(e.position().toPoint()))
+        if self.head_zone_global().contains(g) and self._hit_local(e.position().toPoint()):
+            self._track_pat(e.position())
+        else:
+            if not self.pat_active:
+                self._wig_pos = None
+                self._wig_dist = 0.0
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.LeftButton and self._drag_off is not None:
+            self._drag_off = None
+            moved = self._press_pos is not None and \
+                (e.globalPosition().toPoint() - self._press_pos).manhattanLength() > 3
+            self._press_pos = None
+            if moved:
+                self.moved_by_user.emit()
+                if self.cfg.get("auto_snap", True):
+                    self.snap_now()
+                else:
+                    self._save_pos()
+            else:
+                g = QPointF(self.mapToGlobal(e.position().toPoint()))
+                if self.iron_worn and self.head_zone_global().contains(g):
+                    self.remove_iron(all_pots=False)
+                    return
+
+    def mouseDoubleClickEvent(self, e):
+        if e.button() != Qt.LeftButton:
+            return
+        g = QPointF(self.mapToGlobal(e.position().toPoint()))
+        if self.head_zone_global().contains(g):
+            if self.iron_worn:
+                self.remove_iron(all_pots=True)
+                return
+            self.bounce_t = 0.35
+            self.wake()
+            self.double_clicked_head.emit()
+            return
+
+        if self.tablet_zone_global().contains(g):
+            # Double click tablet -> toggle Page 0 (Balance) and Page 1 (Peak/Local Time)
+            self.page = 1 - self.page
+            self._build_screen()
+
+    def leaveEvent(self, e):
+        super().leaveEvent(e)
+        self._wig_pos = None
+        self._wig_dist = 0.0

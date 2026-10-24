@@ -28,5 +28,17 @@ integration/*-test-report.json
 integration/__pycache__/
 node_modules/
 *-balance.json
-
+# 含 API Key 與對話記憶，切勿提交
 pet_config.json
+pet_config.tmp
+voice_cache/
+models/
+.venv/
+dist/
+build/
+release/
+__pycache__/
+*.spec
+selftest_out/
+logs/
+windows/backup_qchars/

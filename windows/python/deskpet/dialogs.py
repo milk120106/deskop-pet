@@ -1,0 +1,786 @@
+"""Rich dialogs for Character Picker, Sound Library, and Custom Q-Characters.
+Material Design 3 style with dark/light theme switching and screen auto-centering.
+"""
+from __future__ import annotations
+
+import os
+import shutil
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
+from .config import APP_DIR, CUSTOM_CHARS_DIR, SOUND_LIB_DIR, asset, log
+from .titlebar import CustomTitleBar
+
+BUILTIN_CHARS = [
+    ("deepseek", "藍色大肥魚 (DeepSeek)"),
+    ("claude", "大小姐 Claude"),
+    ("gemini", "祈願神龍 Gemini"),
+    ("gpt", "GPT 龍娘"),
+]
+
+# ========================================================= Dialog MD3 Stylesheets
+DIALOG_LIGHT_QSS = """
+QDialog {
+    background-color: #f8f9fa;
+    color: #1f2937;
+    font-family: 'Segoe UI Variable Text', 'Microsoft JhengHei UI', 'PingFang TC', 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+}
+QLabel {
+    color: #1f2937;
+    background-color: transparent;
+}
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-top: 14px;
+    padding: 16px 12px 12px 12px;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 4px;
+    color: #1e40af;
+    background-color: transparent;
+}
+QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 4px;
+    color: #1f2937;
+    outline: none;
+}
+QListWidget::item {
+    height: 36px;
+    padding-left: 10px;
+    margin: 2px 4px;
+    border-radius: 8px;
+}
+QListWidget::item:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+}
+QListWidget::item:selected {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    font-weight: bold;
+}
+QPushButton {
+    background-color: #e2e8f0;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 4px 12px;
+    min-height: 24px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #cbd5e1;
+    border-color: #94a3b8;
+}
+QPushButton:pressed {
+    background-color: #b0c0d0;
+}
+QPushButton#primary {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#primary:hover {
+    background-color: #1d4ed8;
+}
+QPushButton#primary:pressed {
+    background-color: #1e40af;
+}
+QPushButton#danger {
+    background-color: #ef4444;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#danger:hover {
+    background-color: #dc2626;
+}
+QPushButton#danger:pressed {
+    background-color: #b91c1c;
+}
+QComboBox, QLineEdit, QSpinBox {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #0f172a;
+}
+QComboBox:focus, QLineEdit:focus, QSpinBox:focus {
+    border: 2px solid #2563eb;
+}
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    selection-background-color: #dbeafe;
+    selection-color: #1d4ed8;
+    padding: 4px;
+    outline: none;
+}
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+QSlider::sub-page:horizontal {
+    background: #2563eb;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    width: 16px;
+    height: 16px;
+    margin: -5px 0;
+    border-radius: 8px;
+    background: #2563eb;
+}
+QSlider::handle:horizontal:hover {
+    background: #1d4ed8;
+}
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 8px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #cbd5e1;
+    min-height: 24px;
+    border-radius: 4px;
+}
+"""
+
+DIALOG_DARK_QSS = """
+QDialog {
+    background-color: #16181d;
+    color: #e2e2e6;
+    font-family: 'Segoe UI Variable Text', 'Microsoft JhengHei UI', 'PingFang TC', 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    border: 1px solid #333642;
+    border-radius: 12px;
+}
+QLabel {
+    color: #e2e2e6;
+    background-color: transparent;
+}
+QGroupBox {
+    background-color: #20232a;
+    border: 1px solid #2d313b;
+    border-radius: 12px;
+    margin-top: 14px;
+    padding: 16px 12px 12px 12px;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 4px;
+    color: #93c5fd;
+    background-color: transparent;
+}
+QListWidget {
+    background-color: #1b1d24;
+    border: 1px solid #2d313b;
+    border-radius: 10px;
+    padding: 4px;
+    color: #e2e2e6;
+    outline: none;
+}
+QListWidget::item {
+    height: 36px;
+    padding-left: 10px;
+    margin: 2px 4px;
+    border-radius: 8px;
+}
+QListWidget::item:hover {
+    background-color: #282c37;
+    color: #ffffff;
+}
+QListWidget::item:selected {
+    background-color: #2c3954;
+    color: #93c5fd;
+    font-weight: bold;
+}
+QPushButton {
+    background-color: #272a34;
+    color: #e2e2e6;
+    border: 1px solid #3c4252;
+    border-radius: 14px;
+    padding: 4px 12px;
+    min-height: 24px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #333744;
+    border-color: #4f576b;
+}
+QPushButton:pressed {
+    background-color: #1c1e24;
+}
+QPushButton#primary {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#primary:hover {
+    background-color: #2563eb;
+}
+QPushButton#primary:pressed {
+    background-color: #1d4ed8;
+}
+QPushButton#danger {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#danger:hover {
+    background-color: #b91c1c;
+}
+QPushButton#danger:pressed {
+    background-color: #991b1b;
+}
+QComboBox, QLineEdit, QSpinBox {
+    background-color: #242731;
+    border: 1px solid #3c4252;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #f1f5f9;
+}
+QComboBox:focus, QLineEdit:focus, QSpinBox:focus {
+    border: 2px solid #60a5fa;
+}
+QComboBox QAbstractItemView {
+    background-color: #1b1d24;
+    border: 1px solid #3c4252;
+    border-radius: 8px;
+    selection-background-color: #2c3954;
+    selection-color: #93c5fd;
+    padding: 4px;
+    outline: none;
+    color: #e2e2e6;
+}
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #2d313b;
+    border-radius: 3px;
+}
+QSlider::sub-page:horizontal {
+    background: #3b82f6;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    width: 16px;
+    height: 16px;
+    margin: -5px 0;
+    border-radius: 8px;
+    background: #60a5fa;
+}
+QSlider::handle:horizontal:hover {
+    background: #93c5fd;
+}
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 8px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #373c47;
+    min-height: 24px;
+    border-radius: 4px;
+}
+"""
+
+
+def center_dialog(dialog: QDialog):
+    screen = QApplication.primaryScreen()
+    if screen:
+        geo = screen.availableGeometry()
+        x = geo.x() + max(0, (geo.width() - dialog.width()) // 2)
+        y = geo.y() + max(0, (geo.height() - dialog.height()) // 2)
+        dialog.move(x, y)
+
+
+class CharPickerDialog(QDialog):
+    def __init__(self, app, parent=None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.app = app
+        self.setWindowTitle("選擇角色與尺寸形態")
+        self.setFixedSize(600, 500)
+        self.selected_id = app.pet.character
+        self.selected_variant = app.pet.variant
+
+        is_dark = (self.app.cfg.get("theme", "light") == "dark")
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        CUSTOM_CHARS_DIR.mkdir(parents=True, exist_ok=True)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "選擇角色與尺寸形態", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        lay = QHBoxLayout(content)
+        lay.setContentsMargins(18, 16, 18, 18)
+        lay.setSpacing(14)
+
+        # Left: Character list
+        left = QVBoxLayout()
+        lbl_list = QLabel("可用角色清單")
+        lbl_list.setStyleSheet("font-size: 14px; font-weight: bold; color: " + ("#93c5fd;" if is_dark else "#1e40af;"))
+        left.addWidget(lbl_list)
+
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self._on_char_selected)
+        left.addWidget(self.list_widget, 1)
+
+        r_btns = QHBoxLayout()
+        b_add = QPushButton("新增自訂角色...")
+        b_add.clicked.connect(self._add_custom)
+        self.b_del = QPushButton("刪除角色")
+        self.b_del.setObjectName("danger")
+        self.b_del.clicked.connect(self._del_custom)
+        r_btns.addWidget(b_add)
+        r_btns.addWidget(self.b_del)
+        left.addLayout(r_btns)
+        lay.addLayout(left, 1)
+
+        # Right: Preview & variant options
+        right = QVBoxLayout()
+        g_preview = QGroupBox("角色預覽")
+        f_prev = QVBoxLayout(g_preview)
+        self.lb_preview = QLabel()
+        self.lb_preview.setAlignment(Qt.AlignCenter)
+        self.lb_preview.setFixedSize(230, 220)
+        bg_prev = "#1b1d24" if is_dark else "#f1f5f9"
+        bd_prev = "#2d313b" if is_dark else "#cbd5e1"
+        self.lb_preview.setStyleSheet(f"border: 1px dashed {bd_prev}; border-radius: 10px; background-color: {bg_prev};")
+        f_prev.addWidget(self.lb_preview)
+        right.addWidget(g_preview)
+
+        g_opt = QGroupBox("寵物形態（寬高比）")
+        f_opt = QVBoxLayout(g_opt)
+        self.cmb_variant = QComboBox()
+        self.cmb_variant.addItems(["正方形沒尾巴 (1024×1024, 1:1)", "有尾巴 (1536×1024, 1.5:1)"])
+        self.cmb_variant.currentIndexChanged.connect(self._on_variant_changed)
+        f_opt.addWidget(self.cmb_variant)
+        right.addWidget(g_opt)
+
+        r_act = QHBoxLayout()
+        r_act.addStretch(1)
+        b_ok = QPushButton("套用角色")
+        b_ok.setObjectName("primary")
+        b_ok.clicked.connect(self._apply)
+        b_cancel = QPushButton("關閉")
+        b_cancel.clicked.connect(self.reject)
+        r_act.addWidget(b_ok)
+        r_act.addWidget(b_cancel)
+        right.addLayout(r_act)
+
+        lay.addLayout(right, 1)
+        outer.addWidget(content, 1)
+
+        self._refresh_list()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+    def _refresh_list(self):
+        self.list_widget.clear()
+        entries = []
+        for cid, name in BUILTIN_CHARS:
+            entries.append((cid, name, False))
+
+        # Scan custom_characters/
+        for d in CUSTOM_CHARS_DIR.iterdir():
+            if d.is_dir() and (d / "sprite.png").exists():
+                cid = d.name
+                disp = f"自訂：{cid.replace('custom_', '')}"
+                entries.append((cid, disp, True))
+
+        # Scan legacy chars/
+        legacy_dir = APP_DIR / "chars"
+        if legacy_dir.exists():
+            for d in legacy_dir.iterdir():
+                if d.is_dir() and (d / "sprite.png").exists() and d.name not in [e[0] for e in entries]:
+                    cid = d.name
+                    disp = f"自訂：{cid.replace('custom_', '')}"
+                    entries.append((cid, disp, True))
+
+        select_idx = 0
+        for i, (cid, name, is_custom) in enumerate(entries):
+            item = QListWidgetItem(name)
+            item.setData(Qt.UserRole, (cid, is_custom))
+            self.list_widget.addItem(item)
+            if cid == self.selected_id:
+                select_idx = i
+
+        self.list_widget.setCurrentRow(select_idx)
+        self.cmb_variant.setCurrentIndex(1 if self.selected_variant == "tail" else 0)
+
+    def _on_char_selected(self, row: int):
+        if row < 0:
+            return
+        item = self.list_widget.item(row)
+        cid, is_custom = item.data(Qt.UserRole)
+        self.selected_id = cid
+        self.b_del.setEnabled(is_custom)
+        self._update_preview()
+
+    def _on_variant_changed(self, idx: int):
+        self.selected_variant = "tail" if idx == 1 else "square"
+        self._update_preview()
+
+    def _update_preview(self):
+        cid = self.selected_id
+        is_tail = (self.selected_variant == "tail")
+        p = None
+        if cid.startswith("custom_"):
+            d = CUSTOM_CHARS_DIR / cid
+            if not d.exists():
+                d = APP_DIR / "chars" / cid
+            p = d / "sprite.png"
+        else:
+            chars_dir = APP_DIR / "assets" / "chars" / cid
+            if is_tail:
+                tail_f = chars_dir / "tail.png"
+                if tail_f.exists():
+                    p = tail_f
+            if not p:
+                square_f = chars_dir / "sprites" / "expression_11.png"
+                if square_f.exists():
+                    p = square_f
+                else:
+                    s_f = chars_dir / "sprite.png"
+                    if s_f.exists():
+                        p = s_f
+
+        if not p or not p.exists():
+            p = APP_DIR / "assets" / "expr" / "expression_11.png"
+
+        img = QImage(str(p))
+        if not img.isNull():
+            pm = QPixmap.fromImage(img.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.lb_preview.setPixmap(pm)
+        else:
+            self.lb_preview.setText("無圖片預覽")
+
+    def _add_custom(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "選擇角色圖片（建議透明背景 PNG）", "", "圖片檔案 (*.png *.jpg *.jpeg *.webp *.bmp)"
+        )
+        if not path:
+            return
+        name, ok = QInputDialog.getText(self, "自訂角色名稱", "給這個角色取個名字（英數底線）：")
+        if not ok or not name.strip():
+            return
+
+        safe_name = "".join(c for c in name if c.isalnum() or c in ("_", "-")).strip()
+        if not safe_name:
+            QMessageBox.warning(self, "名稱錯誤", "請輸入有效的名稱。")
+            return
+
+        cid = f"custom_{safe_name}"
+        dest_dir = CUSTOM_CHARS_DIR / cid
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            img = QImage(path)
+            if img.isNull():
+                raise ValueError("無法解析圖片檔案")
+            # Fit into 1024x1024
+            canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
+            canvas.fill(Qt.transparent)
+            sc = min(1024.0 / img.width(), 1024.0 / img.height())
+            w, h = int(img.width() * sc), int(img.height() * sc)
+            from PySide6.QtGui import QPainter
+            p = QPainter(canvas)
+            p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+            p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+            p.end()
+            canvas.save(str(dest_dir / "sprite.png"), "PNG")
+            # Default tablet quad: centered at bottom
+            (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
+        except Exception as e:
+            QMessageBox.warning(self, "建立失敗", f"無法建立自訂角色: {e}")
+            return
+
+        QMessageBox.information(self, "成功", f"自訂角色「{safe_name}」已新增！\n若角色手上有拿平板，可手動修改\n{dest_dir / 'tablet.txt'}\n的四角座標（1024×1024 座標系）。")
+        self.selected_id = cid
+        self._refresh_list()
+
+    def _del_custom(self):
+        cid = self.selected_id
+        if not cid.startswith("custom_"):
+            return
+        if QMessageBox.question(self, "確認刪除", f"確定要刪除自訂角色「{cid}」嗎？") != QMessageBox.Yes:
+            return
+        d = CUSTOM_CHARS_DIR / cid
+        if d.exists():
+            shutil.rmtree(d, ignore_errors=True)
+        d_legacy = APP_DIR / "chars" / cid
+        if d_legacy.exists():
+            shutil.rmtree(d_legacy, ignore_errors=True)
+        self.selected_id = "deepseek"
+        self._refresh_list()
+
+    def _apply(self):
+        self.app.set_character(self.selected_id)
+        self.app.set_variant(self.selected_variant)
+        self.accept()
+
+
+class SoundLibraryDialog(QDialog):
+    def __init__(self, app, parent=None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.app = app
+        self.sounds = app.sounds
+        self.cfg = app.cfg
+        self.setWindowTitle("音效庫與個別提示音設定")
+        self.setFixedSize(640, 600)
+
+        is_dark = (self.cfg.get("theme", "light") == "dark")
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "音效庫與個別提示音設定", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(18, 16, 18, 18)
+        lay.setSpacing(12)
+
+        t_lbl = QLabel("自訂個別音效與音量")
+        t_lbl.setStyleSheet("font-size: 15px; font-weight: bold; color: " + ("#93c5fd;" if is_dark else "#1e40af;"))
+        lay.addWidget(t_lbl)
+
+        d_lbl = QLabel("四個提示音各自獨立調整音量與更換檔案（支援 mp3, wav, ogg，上限 50MB）")
+        d_lbl.setStyleSheet("font-size: 12px; color: " + ("#94a3b8;" if is_dark else "#64748b;"))
+        lay.addWidget(d_lbl)
+
+        from .audio import CUE_KEYS, CUE_NAMES
+        self.sliders: dict[str, QSlider] = {}
+        self.labels: dict[str, QLabel] = {}
+        self.file_labels: dict[str, QLabel] = {}
+
+        for k in CUE_KEYS:
+            g = QGroupBox(CUE_NAMES[k])
+            f = QVBoxLayout(g)
+            f.setSpacing(6)
+
+            r_vol = QHBoxLayout()
+            r_vol.addWidget(QLabel("音量:"))
+            sl = QSlider(Qt.Horizontal)
+            sl.setRange(0, 100)
+            cur_v = (self.cfg.get("cue_volumes") or {}).get(k, 80)
+            sl.setValue(cur_v)
+            lb_v = QLabel(f"{cur_v} %")
+            lb_v.setFixedWidth(45)
+            sl.valueChanged.connect(lambda v, key=k, label=lb_v: self._on_vol_changed(key, v, label))
+            r_vol.addWidget(sl, 1)
+            r_vol.addWidget(lb_v)
+            f.addLayout(r_vol)
+
+            r_act = QHBoxLayout()
+            r_act.setSpacing(8)
+            custom_fn = (self.cfg.get("cue_custom") or {}).get(k, "")
+            lb_f = QLabel(f"檔案: {custom_fn or '預設音效'}")
+            lb_f.setStyleSheet("color: " + ("#94a3b8;" if is_dark else "#64748b;"))
+            b_play = QPushButton("試聽")
+            b_play.setFixedWidth(68)
+            b_play.clicked.connect(lambda _=False, key=k: self.sounds.play(key))
+            b_upload = QPushButton("更換...")
+            b_upload.setFixedWidth(78)
+            b_upload.clicked.connect(lambda _=False, key=k: self._upload_cue(key))
+            b_reset = QPushButton("恢復預設")
+            b_reset.setFixedWidth(92)
+            b_reset.clicked.connect(lambda _=False, key=k: self._reset_cue(key))
+
+            r_act.addWidget(lb_f, 1)
+            r_act.addWidget(b_play)
+            r_act.addWidget(b_upload)
+            r_act.addWidget(b_reset)
+            f.addLayout(r_act)
+
+            self.sliders[k] = sl
+            self.labels[k] = lb_v
+            self.file_labels[k] = lb_f
+            lay.addWidget(g)
+
+        b_close = QPushButton("完成")
+        b_close.setObjectName("primary")
+        b_close.clicked.connect(self.accept)
+        lay.addWidget(b_close)
+        outer.addWidget(content, 1)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+    def _on_vol_changed(self, key: str, v: int, label: QLabel):
+        label.setText(f"{v} %")
+        vols = self.cfg.get("cue_volumes") or {}
+        vols[key] = v
+        self.cfg.set("cue_volumes", vols)
+        self.sounds.apply()
+
+    def _upload_cue(self, key: str):
+        path, _ = QFileDialog.getOpenFileName(self, "選擇音效檔案", "", "音效檔案 (*.mp3 *.wav *.ogg *.m4a)")
+        if not path:
+            return
+        ok, msg = self.sounds.set_custom_cue(key, path)
+        if not ok:
+            QMessageBox.warning(self, "更換失敗", msg)
+        else:
+            self.file_labels[key].setText(f"檔案: {msg}")
+
+    def _reset_cue(self, key: str):
+        self.sounds.restore_default_cue(key)
+        self.file_labels[key].setText("檔案: 預設音效")
+
+
+class CustomQDialog(QDialog):
+    def __init__(self, app, parent=None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.app = app
+        self.qchars = app.qchars
+        self.setWindowTitle("Q 版自訂角色管理")
+        self.setFixedSize(560, 460)
+
+        is_dark = (self.app.cfg.get("theme", "light") == "dark")
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "Q 版自訂角色管理", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(18, 16, 18, 18)
+        lay.setSpacing(12)
+
+        t_lbl = QLabel("Q 版人物形象管理")
+        t_lbl.setStyleSheet("font-size: 15px; font-weight: bold; color: " + ("#93c5fd;" if is_dark else "#1e40af;"))
+        lay.addWidget(t_lbl)
+
+        d_lbl = QLabel("圖片格式不限（PNG、JPG、WEBP…），檔案限制 10MB、尺寸限制 2048px 內。<br>匯入後可召喚到桌面走動巡邏！")
+        d_lbl.setStyleSheet("font-size: 12px; color: " + ("#94a3b8;" if is_dark else "#64748b;"))
+        lay.addWidget(d_lbl)
+
+        self.list_widget = QListWidget()
+        lay.addWidget(self.list_widget, 1)
+
+        r_btns = QHBoxLayout()
+        b_add = QPushButton("匯入新 Q 版角色...")
+        b_add.clicked.connect(self._import)
+        b_spawn = QPushButton("召喚到桌面")
+        b_spawn.setObjectName("primary")
+        b_spawn.clicked.connect(self._spawn)
+        b_del = QPushButton("刪除角色")
+        b_del.setObjectName("danger")
+        b_del.clicked.connect(self._delete)
+        b_close = QPushButton("關閉")
+        b_close.clicked.connect(self.accept)
+
+        r_btns.addWidget(b_add)
+        r_btns.addWidget(b_spawn)
+        r_btns.addWidget(b_del)
+        r_btns.addStretch(1)
+        r_btns.addWidget(b_close)
+        lay.addLayout(r_btns)
+        outer.addWidget(content, 1)
+
+        self._refresh()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+    def _refresh(self):
+        self.list_widget.clear()
+        for name in self.qchars.list_custom_q():
+            self.list_widget.addItem(name)
+
+    def _import(self):
+        path, _ = QFileDialog.getOpenFileName(self, "選擇 Q 版人物圖片", "", "圖片檔案 (*.png *.jpg *.jpeg *.webp *.bmp)")
+        if not path:
+            return
+        name, ok = QInputDialog.getText(self, "角色名稱", "請輸入這個 Q 版角色的名稱：")
+        if not ok or not name.strip():
+            return
+        ok, msg = self.qchars.import_custom_q(name.strip(), path)
+        if not ok:
+            QMessageBox.warning(self, "匯入失敗", msg)
+        else:
+            QMessageBox.information(self, "匯入成功", f"Q 版角色「{msg}」已建立！")
+            self._refresh()
+
+    def _spawn(self):
+        item = self.list_widget.currentItem()
+        if not item:
+            QMessageBox.information(self, "提示", "請先選擇一個角色。")
+            return
+        name = item.text()
+        self.app.add_q(kind="custom", custom_id=name)
+
+    def _delete(self):
+        item = self.list_widget.currentItem()
+        if not item:
+            return
+        name = item.text()
+        if QMessageBox.question(self, "確認刪除", f"確定要刪除 Q 版角色「{name}」嗎？") == QMessageBox.Yes:
+            self.qchars.delete_custom_q(name)
+            self._refresh()

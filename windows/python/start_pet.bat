@@ -1,3 +1,9 @@
 @echo off
+rem Starts the pet without a console window.
 cd /d "%~dp0"
-if exist "dist\PythonPetV4\PythonPetV4.exe" (start "" "dist\PythonPetV4\PythonPetV4.exe") else (pythonw main.py)
+if not exist .venv\Scripts\pythonw.exe (
+  echo .venv missing - run setup_venv.bat first.
+  pause
+  exit /b 1
+)
+start "" ".venv\Scripts\pythonw.exe" main.py

@@ -1,4 +1,5 @@
 @echo off
+rem Starts the pet with a console so errors stay visible (also see pet.log).
 cd /d "%~dp0"
-if exist "dist\PythonPetV4\PythonPetV4.exe" (dist\PythonPetV4\PythonPetV4.exe) else (python main.py)
+.venv\Scripts\python.exe main.py
 pause

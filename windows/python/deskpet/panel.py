@@ -2098,30 +2098,29 @@ class ControlPanel(QWidget):
         c3_lay.addLayout(r_btns)
         lay.addWidget(card3)
 
-        # Card 4: 致謝開源專案與核心依賴
+        # Card 4: 開源專案與依賴清單
         card_thanks = QFrame()
         card_thanks.setObjectName("AboutCard")
         cthanks_lay = QVBoxLayout(card_thanks)
         cthanks_lay.setContentsMargins(18, 16, 18, 16)
         cthanks_lay.setSpacing(10)
 
-        h_thanks = QLabel("致謝開源專案與核心依賴")
+        h_thanks = QLabel("開源專案與依賴清單")
         h_thanks.setStyleSheet("font-size: 14px; font-weight: bold;")
         cthanks_lay.addWidget(h_thanks)
 
         thanks_desc = QLabel(
-            "本專案的誕生與持續演進，離不開開源社群優秀創作者的無私貢獻與堅實生態基石：\n\n"
-            "• VK-1 (DSH Balance Pet)：本專案為 VK-1 原型倉庫之開源分支（Fork），感謝原創作者所打造之 DSH 餘額桌寵原型與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。\n"
-            "• YuYue_Encryption (幽月加解密工具)：感謝 YuYue71 研發之奇特高強度 8 層複合加密混淆演算法，賦予資料備份強大隱私安全防護。\n"
-            "• PySide6 / Qt 6：現代化跨平台 GUI 與 Qt Quick / QML 渲染引擎 (LGPLv3)。\n"
-            "• Google Material Symbols：開源現代扁平化向量圖示系統 (Apache 2.0 License)。\n"
-            "• Python 標準庫與 Windows MCI：本機輕量標準函式庫與免依賴音訊引擎。"
+            "• VK-1 (DSH Balance Pet)：原型倉庫（本專案為其衍生分支）\n"
+            "• YuYue_Encryption：備份資料加密模組\n"
+            "• PySide6 / Qt 6：介面與 QML 渲染框架 (LGPLv3)\n"
+            "• Google Material Symbols：向量圖示庫 (Apache 2.0)\n"
+            "• Python 標準庫 & Windows MCI：系統核心與本機音訊"
         )
         thanks_desc.setWordWrap(True)
         cthanks_lay.addWidget(thanks_desc)
 
         r_thanks_btns = QHBoxLayout()
-        b_vk1 = QPushButton("造訪 VK-1 專案倉庫")
+        b_vk1 = QPushButton("造訪 VK-1 倉庫")
         b_vk1.clicked.connect(lambda: webbrowser.open("https://github.com/VKmich16/VK-1"))
         r_thanks_btns.addWidget(b_vk1)
 

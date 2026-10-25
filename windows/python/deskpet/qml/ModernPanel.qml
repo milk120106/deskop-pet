@@ -2112,6 +2112,292 @@ Rectangle {
                     }
                 }
 
+                // 卡片 2.5: 即時額度與餘額監控 (API Balance & Quota Monitor)
+                Rectangle {
+                    width: parent.width
+                    height: 195
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            spacing: 10
+
+                            Text {
+                                text: "API 餘額與額度即時監控（" + ((typeof backend !== "undefined" && backend) ? backend.apiProvider : "當前廠商") + "）"
+                                color: themeColors.text
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                            }
+
+                            // 狀態指示燈膠囊
+                            Rectangle {
+                                height: 22
+                                width: txtStatusPill.implicitWidth + 20
+                                radius: 11
+                                color: (typeof backend !== "undefined" && backend && backend.activeBalanceIsOnline) ? "#10b98122" : "#ef444422"
+                                border.width: 1
+                                border.color: (typeof backend !== "undefined" && backend && backend.activeBalanceIsOnline) ? "#10b981" : "#ef4444"
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 6
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: (typeof backend !== "undefined" && backend && backend.activeBalanceIsOnline) ? "#10b981" : "#ef4444"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Text {
+                                        id: txtStatusPill
+                                        text: (typeof backend !== "undefined" && backend) ? backend.activeBalanceStatus : "未連線"
+                                        color: (typeof backend !== "undefined" && backend && backend.activeBalanceIsOnline) ? "#10b981" : "#ef4444"
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                }
+                            }
+                        }
+
+                        // 餘額數值展示與快捷操作
+                        Row {
+                            width: parent.width
+                            spacing: 14
+
+                            // 數值區塊
+                            Rectangle {
+                                width: 220
+                                height: 50
+                                radius: 10
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 8
+                                    Text {
+                                        text: (typeof backend !== "undefined" && backend) ? backend.activeBalanceText : "--"
+                                        color: themeColors.primary
+                                        font.pixelSize: 22
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Text {
+                                        text: (typeof backend !== "undefined" && backend) ? backend.activeBalanceCurrency : "CNY"
+                                        color: themeColors.textSub
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                            }
+
+                            // 操作按鈕群
+                            Row {
+                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                // 設為主寵物監視目標
+                                Rectangle {
+                                    width: 155
+                                    height: 38
+                                    radius: 8
+                                    color: themeColors.primary
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "設為主寵物監視目標"
+                                        color: "#FFFFFF"
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.setActiveBalanceProvider(backend.apiProvider)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 召喚獨立餘額寵物
+                                Rectangle {
+                                    width: 140
+                                    height: 38
+                                    radius: 8
+                                    color: themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "召喚專屬餘額寵物"
+                                        color: themeColors.text
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.summonBalancePet(backend.apiProvider)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 手動重新整理
+                                Rectangle {
+                                    width: 90
+                                    height: 38
+                                    radius: 8
+                                    color: themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "重新整理"
+                                        color: themeColors.text
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.refreshBalance()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 預算與起算日設定（適合 OpenAI / Anthropic / Gemini / Groq 等廠商）
+                        Row {
+                            width: parent.width
+                            spacing: 10
+
+                            Text {
+                                text: "初始預算："
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Rectangle {
+                                width: 75
+                                height: 30
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                TextInput {
+                                    id: edProvBudget
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    text: (typeof backend !== "undefined" && backend) ? backend.getProviderBudget(backend.apiProvider).toString() : "100"
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            Text {
+                                text: "起算日："
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Rectangle {
+                                width: 90
+                                height: 30
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                TextInput {
+                                    id: edProvSince
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    text: (typeof backend !== "undefined" && backend) ? backend.getProviderSinceDate(backend.apiProvider) : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            Rectangle {
+                                width: 75
+                                height: 30
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "儲存預算"
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.saveProviderBudget(backend.apiProvider, parseFloat(edProvBudget.text || "100"), edProvSince.text)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "目前主寵物：" + ((typeof backend !== "undefined" && backend) ? backend.activeBalanceProvider : "DeepSeek")
+                                color: themeColors.primary
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                }
+
                 // 卡片 3: 對話模型選取與線上探索
                 Rectangle {
                     width: parent.width

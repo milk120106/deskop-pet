@@ -484,6 +484,42 @@ def run(qapp) -> int:
     app.dismiss_all_balance_pets()
     check("dismissed all extra balance pets", len(app.extra_pets) == 0)
 
+    # ========================================================= 16.5 擴充更多 API 額度與餘額監控測試
+    from .balance import Ledger, SUPPORTED_BALANCE_PROVIDERS
+    check("balance supports expanded providers", "openrouter" in SUPPORTED_BALANCE_PROVIDERS and "siliconflow" in SUPPORTED_BALANCE_PROVIDERS and "moonshot" in SUPPORTED_BALANCE_PROVIDERS and "custom_openai" in SUPPORTED_BALANCE_PROVIDERS)
+
+    l_sf = Ledger(app.cfg, provider_override="siliconflow")
+    l_ms = Ledger(app.cfg, provider_override="moonshot")
+    l_or = Ledger(app.cfg, provider_override="openrouter")
+    l_ol = Ledger(app.cfg, provider_override="ollama")
+    check("siliconflow balance currency is CNY", l_sf.currency == "CNY")
+    check("moonshot balance currency is CNY", l_ms.currency == "CNY")
+    check("openrouter balance currency is USD", l_or.currency == "USD")
+    check("ollama balance currency is FREE", l_ol.currency == "FREE")
+
+    p_or = app.summon_balance_pet("openrouter")
+    p_sf = app.summon_balance_pet("siliconflow")
+    p_ms = app.summon_balance_pet("moonshot")
+    wait(200)
+    check("openrouter balance pet summoned", p_or is not None and p_or.isVisible() and app.extra_ledgers["openrouter"].provider == "openrouter")
+    check("siliconflow balance pet summoned", p_sf is not None and p_sf.isVisible() and app.extra_ledgers["siliconflow"].provider == "siliconflow")
+    check("moonshot balance pet summoned", p_ms is not None and p_ms.isVisible() and app.extra_ledgers["moonshot"].provider == "moonshot")
+
+    p_or.page = 0
+    p_or._build_screen()
+    p_sf.page = 0
+    p_sf._build_screen()
+    p_ms.page = 0
+    p_ms._build_screen()
+    check("openrouter tablet rendered", p_or._screen_img is not None)
+    check("siliconflow tablet rendered", p_sf._screen_img is not None)
+    check("moonshot tablet rendered", p_ms._screen_img is not None)
+
+    app.dismiss_balance_pet("openrouter")
+    app.dismiss_balance_pet("siliconflow")
+    app.dismiss_balance_pet("moonshot")
+    check("dismissed expanded balance pets", "openrouter" not in app.extra_pets and "siliconflow" not in app.extra_pets and "moonshot" not in app.extra_pets)
+
     # ========================================================= 17. AI Chat Dialog, Model Catalog & Memory
     from .model_catalog import _normalise, discover_models
     raw_models = [{"id": "gpt-4o", "displayName": "GPT-4o"}, {"name": "models/gemini-pro"}]
@@ -1176,6 +1212,14 @@ def run(qapp) -> int:
     check("qml backend has openVk1Repo slot", hasattr(qml_backend, "openVk1Repo"))
     check("qml backend has openYuYueRepo slot", hasattr(qml_backend, "openYuYueRepo"))
     check("qml backend has openExternalUrl slot", hasattr(qml_backend, "openExternalUrl"))
+    check("qml backend has setActiveBalanceProvider slot", hasattr(qml_backend, "setActiveBalanceProvider"))
+    check("qml backend has refreshBalance slot", hasattr(qml_backend, "refreshBalance"))
+    check("qml backend has summonBalancePet slot", hasattr(qml_backend, "summonBalancePet"))
+    check("qml backend has getProviderBudget slot", hasattr(qml_backend, "getProviderBudget"))
+    check("qml backend has saveProviderBudget slot", hasattr(qml_backend, "saveProviderBudget"))
+    qml_backend.setActiveBalanceProvider("SiliconFlow")
+    check("qml backend active balance provider switched to SiliconFlow", "SiliconFlow" in qml_backend.get_active_balance_provider() or "矽基" in qml_backend.get_active_balance_provider())
+    qml_backend.setActiveBalanceProvider("DeepSeek")
 
     # 清理測試自訂立繪
     pet.set_character("deepseek")

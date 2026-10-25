@@ -21,10 +21,22 @@ from .web import WebServer
 MAX_CHARS = 8
 
 BALANCE_PET_SPECS = {
-    "deepseek": {"name": "藍色大肥魚", "sub": "DeepSeek 鯨魚娘", "title": "DeepSeek 餘額", "prov": "deepseek"},
-    "gpt": {"name": "GPT龍娘", "sub": "OpenAI 龍娘", "title": "OpenAI 餘額", "prov": "openai"},
-    "claude": {"name": "大小姐Claude", "sub": "Anthropic 大小姐", "title": "Claude 餘額", "prov": "anthropic"},
-    "gemini": {"name": "北美貓娘Gemini", "sub": "Google 北美貓娘", "title": "Gemini 餘額", "prov": "gemini"},
+    # 核心四大 AI 形象
+    "deepseek": {"name": "藍色大肥魚", "sub": "DeepSeek 鯨魚娘", "title": "DeepSeek 餘額", "prov": "deepseek", "char": "deepseek"},
+    "gpt": {"name": "GPT龍娘", "sub": "OpenAI 龍娘", "title": "OpenAI 餘額", "prov": "openai", "char": "gpt"},
+    "claude": {"name": "大小姐Claude", "sub": "Anthropic 大小姐", "title": "Claude 餘額", "prov": "anthropic", "char": "claude"},
+    "gemini": {"name": "北美貓娘Gemini", "sub": "Google 北美貓娘", "title": "Gemini 餘額", "prov": "gemini", "char": "gemini"},
+    # 更多雲端與轉發 API 餘額寵物
+    "openrouter": {"name": "OpenRouter 巡警", "sub": "OpenRouter 額度監控", "title": "OpenRouter 餘額", "prov": "openrouter", "char": "gemini"},
+    "siliconflow": {"name": "矽基小夥伴", "sub": "SiliconFlow 額度監控", "title": "矽基流動 餘額", "prov": "siliconflow", "char": "deepseek"},
+    "moonshot": {"name": "月之小暗面", "sub": "Moonshot Kimi 額度監控", "title": "Moonshot 餘額", "prov": "moonshot", "char": "claude"},
+    "groq": {"name": "極速 Groq", "sub": "Groq 額度監控", "title": "Groq 額度", "prov": "groq", "char": "gpt"},
+    "mistral": {"name": "西北風 Mistral", "sub": "Mistral 額度監控", "title": "Mistral 額度", "prov": "mistral", "char": "claude"},
+    "grok": {"name": "科技狂想 xAI/Grok", "sub": "xAI / Grok 額度監控", "title": "xAI/Grok 額度", "prov": "grok", "char": "gpt"},
+    "together": {"name": "協同雲端 Together", "sub": "Together AI 額度監控", "title": "Together 額度", "prov": "together", "char": "gemini"},
+    "glm": {"name": "智譜智子 GLM", "sub": "智譜 GLM 額度監控", "title": "智譜 GLM 額度", "prov": "glm", "char": "deepseek"},
+    "custom_openai": {"name": "自訂端點 OneAPI", "sub": "OneAPI / 轉發站餘額監控", "title": "自訂 API 餘額", "prov": "custom_openai", "char": "gpt"},
+    "ollama": {"name": "本地小羊駝 Ollama", "sub": "Ollama 本地運行狀態", "title": "Ollama 狀態", "prov": "ollama", "char": "deepseek"},
 }
 
 
@@ -215,8 +227,9 @@ class App(QObject):
             return None
 
         spec = BALANCE_PET_SPECS[cid]
+        char_id = spec.get("char", cid)
         ledger = Ledger(self.cfg, provider_override=spec["prov"])
-        pet = PetWindow(self.cfg, ledger, self.sounds, character_override=cid, is_extra=True, pet_id=cid)
+        pet = PetWindow(self.cfg, ledger, self.sounds, character_override=char_id, is_extra=True, pet_id=cid)
         pet.props._menu_cb = self.prop_menu
         pet.context_requested.connect(lambda gpos, p=pet: self.pet_menu(gpos, pet=p))
 
@@ -530,11 +543,14 @@ class App(QObject):
 
         # Multi-pet balance summons
         total_balance_pets = len(self.extra_pets) + (1 if self.pet.character in BALANCE_PET_SPECS else 0)
-        sub_balance = m.addMenu(f"召喚餘額寵物（在場 {total_balance_pets}/4）")
+        sub_balance = m.addMenu(f"召喚餘額寵物（在場 {total_balance_pets}/{len(BALANCE_PET_SPECS)}）")
         sub_balance.setStyleSheet(m.styleSheet())
         sub_balance.setAttribute(Qt.WA_TranslucentBackground, True)
         sub_balance.setWindowFlags(sub_balance.windowFlags() | Qt.FramelessWindowHint)
-        for cid, spec in BALANCE_PET_SPECS.items():
+
+        # 1. 核心四大 AI 形象
+        for cid in ["deepseek", "gpt", "claude", "gemini"]:
+            spec = BALANCE_PET_SPECS[cid]
             is_main = (cid == self.pet.character)
             is_active = (is_main or cid in self.extra_pets)
             label = f"召喚 {spec['name']} 餘額寵物" + ("（目前為主寵物）" if is_main else "")
@@ -547,8 +563,28 @@ class App(QObject):
                 a.triggered.connect(
                     lambda chk=False, c_id=cid: self.summon_balance_pet(c_id) if chk else self.dismiss_balance_pet(c_id)
                 )
+
         sub_balance.addSeparator()
-        sub_balance.addAction("召喚全部 4 隻餘額寵物").triggered.connect(self.summon_all_balance_pets)
+
+        # 2. 更多雲端與轉發 API 餘額寵物
+        m_more = sub_balance.addMenu("更多 API 額度監控寵物")
+        m_more.setStyleSheet(m.styleSheet())
+        m_more.setAttribute(Qt.WA_TranslucentBackground, True)
+        m_more.setWindowFlags(m_more.windowFlags() | Qt.FramelessWindowHint)
+        for cid in ["openrouter", "siliconflow", "moonshot", "groq", "mistral", "grok", "together", "glm", "custom_openai", "ollama"]:
+            if cid in BALANCE_PET_SPECS:
+                spec = BALANCE_PET_SPECS[cid]
+                is_active = (cid in self.extra_pets)
+                label = f"召喚 {spec['name']} ({spec['title']})"
+                a = m_more.addAction(label)
+                a.setCheckable(True)
+                a.setChecked(is_active)
+                a.triggered.connect(
+                    lambda chk=False, c_id=cid: self.summon_balance_pet(c_id) if chk else self.dismiss_balance_pet(c_id)
+                )
+
+        sub_balance.addSeparator()
+        sub_balance.addAction("召喚全部 4 隻核心餘額寵物").triggered.connect(self.summon_all_balance_pets)
         sub_balance.addAction("移除全部額外餘額寵物").triggered.connect(self.dismiss_all_balance_pets)
 
         if cur_pet.is_extra:

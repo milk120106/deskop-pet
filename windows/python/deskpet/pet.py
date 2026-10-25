@@ -713,16 +713,47 @@ class PetWindow(QWidget):
             # 第 0 頁：寵物餘額（通用）
             prov = (self.ledger.provider or "").lower()
             ch = (self.character or "").lower()
-            if "deepseek" in ch or "deepseek" in prov:
+            if "deepseek" in prov or "deepseek" in ch:
                 title = "DeepSeek 餘額"
-            elif "claude" in ch or "anthropic" in prov:
+            elif "claude" in prov or "anthropic" in prov or "claude" in ch:
                 title = "Claude 餘額"
-            elif "gemini" in ch or "gemini" in prov:
+            elif "gemini" in prov or "gemini" in ch:
                 title = "Gemini 餘額"
-            elif "gpt" in ch or "openai" in prov:
+            elif "openai" in prov or "gpt" in prov or "gpt" in ch:
                 title = "OpenAI 餘額"
+            elif "openrouter" in prov:
+                title = "OpenRouter 餘額"
+            elif "siliconflow" in prov or "矽基" in prov:
+                title = "矽基流動 餘額"
+            elif "moonshot" in prov or "kimi" in prov:
+                title = "Moonshot 餘額"
+            elif "groq" in prov:
+                title = "Groq 額度"
+            elif "mistral" in prov:
+                title = "Mistral 額度"
+            elif "grok" in prov or "xai" in prov:
+                title = "xAI/Grok 額度"
+            elif "together" in prov:
+                title = "Together 額度"
+            elif "cerebras" in prov:
+                title = "Cerebras 額度"
+            elif "deepinfra" in prov:
+                title = "DeepInfra 額度"
+            elif "fireworks" in prov:
+                title = "Fireworks 額度"
+            elif "glm" in prov or "zhipu" in prov:
+                title = "智譜 GLM 額度"
+            elif "ollama" in prov:
+                title = "Ollama 狀態"
+            elif "lmstudio" in prov or "lm studio" in prov:
+                title = "LM Studio 狀態"
+            elif "vllm" in prov:
+                title = "vLLM 狀態"
+            elif "custom" in prov or "oneapi" in prov or "relay" in prov:
+                title = "自訂 API 餘額"
             else:
-                title = f"{self.character.capitalize()} 餘額"
+                pname = getattr(self.ledger, "provider_display_name", self.character.capitalize())
+                title = f"{pname} 餘額"
             body = self.ledger.text
             self._outlined(p, title, QRectF(0, 12, SCREEN_W, 70), 34, bold=False)
 

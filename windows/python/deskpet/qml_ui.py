@@ -13,6 +13,7 @@ import sys
 import urllib.error
 import urllib.request
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Property, QObject, QPoint, Qt, QThread, QTimer, QUrl, Signal, Slot
@@ -30,6 +31,8 @@ from .config import (
     GITHUB_RELEASES_URL,
     GITHUB_REPO_URL,
     SOUND_LIB_DIR,
+    id_to_provider_name,
+    provider_to_id,
 )
 from .font_manager import (
     apply_global_font,
@@ -127,6 +130,8 @@ class QMLBackend(QObject):
     alarmsChanged = Signal()
     notificationsChanged = Signal()
     strictCustomImageRatioChanged = Signal(bool)
+    activeBalanceChanged = Signal()
+    activeBalanceProviderChanged = Signal(str)
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -148,6 +153,13 @@ class QMLBackend(QObject):
         # 監聽應用程式狀態變更以保持雙向同步
         if hasattr(self.app, "state_changed"):
             self.app.state_changed.connect(self.sync_from_app)
+
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            self.app.ledger.changed.connect(self._on_ledger_changed)
+
+    def _on_ledger_changed(self):
+        self.activeBalanceChanged.emit()
+        self.statusSummaryChanged.emit(self.get_status_summary())
 
     # --------------------------------------------------------- 屬性讀取器 (Getters)
     def get_theme(self) -> str:
@@ -332,6 +344,33 @@ class QMLBackend(QObject):
     def get_q_fireworks_prop(self) -> bool:
         return bool(self.app.cfg.get("q_fireworks_prop", False))
 
+    def get_active_balance_provider(self) -> str:
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            return self.app.ledger.provider_display_name
+        return id_to_provider_name(self.app.cfg.get("provider", "deepseek"))
+
+    def get_active_balance_text(self) -> str:
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            return self.app.ledger.text
+        return "--"
+
+    def get_active_balance_status(self) -> str:
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            if self.app.ledger.online:
+                return "正常連線"
+            return self.app.ledger.error or "未連線"
+        return "未連線"
+
+    def get_active_balance_currency(self) -> str:
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            return self.app.ledger.currency
+        return "CNY"
+
+    def get_active_balance_is_online(self) -> bool:
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            return bool(self.app.ledger.online)
+        return False
+
     def _update_logs_cache(self, level: str | None = None, search: str | None = None):
         lvl_arg = None if (not level or "ALL" in level or "全部" in level) else level
         query_arg = search.strip() if search and search.strip() else None
@@ -387,6 +426,11 @@ class QMLBackend(QObject):
     qFlightProp = Property(bool, get_q_flight_prop, notify=qFlightPropChanged)
     qFireworksProp = Property(bool, get_q_fireworks_prop, notify=qFireworksPropChanged)
     strictCustomImageRatio = Property(bool, get_strict_custom_image_ratio, notify=strictCustomImageRatioChanged)
+    activeBalanceProvider = Property(str, get_active_balance_provider, notify=activeBalanceProviderChanged)
+    activeBalanceText = Property(str, get_active_balance_text, notify=activeBalanceChanged)
+    activeBalanceStatus = Property(str, get_active_balance_status, notify=activeBalanceChanged)
+    activeBalanceCurrency = Property(str, get_active_balance_currency, notify=activeBalanceChanged)
+    activeBalanceIsOnline = Property(bool, get_active_balance_is_online, notify=activeBalanceChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -771,6 +815,74 @@ class QMLBackend(QObject):
     def setTemperature(self, temp: float):
         self.app.cfg.set("temperature", float(temp), save=True)
         self.temperatureChanged.emit(float(temp))
+
+    @Slot(str)
+    def setActiveBalanceProvider(self, prov: str):
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            self.app.ledger.set_provider(prov)
+            self.activeBalanceProviderChanged.emit(self.get_active_balance_provider())
+            self.activeBalanceChanged.emit()
+            self.noticeMessage.emit(f"桌面主寵物餘額監視已切換為：{self.get_active_balance_provider()}！", False)
+
+    @Slot()
+    def refreshBalance(self):
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            self.app.ledger.refresh()
+            self.noticeMessage.emit("已發送餘額查詢請求...", False)
+
+    @Slot(str)
+    def summonBalancePet(self, prov: str):
+        pid = provider_to_id(prov)
+        from .app import BALANCE_PET_SPECS
+        target_cid = None
+        for cid, spec in BALANCE_PET_SPECS.items():
+            if cid == pid or spec.get("prov") == pid:
+                target_cid = cid
+                break
+        if not target_cid:
+            target_cid = pid if pid in BALANCE_PET_SPECS else "deepseek"
+        pet = self.app.summon_balance_pet(target_cid)
+        if pet:
+            self.noticeMessage.emit(f"已在桌面召喚【{BALANCE_PET_SPECS.get(target_cid, {}).get('name', target_cid)}】餘額寵物！", False)
+        else:
+            self.noticeMessage.emit("召喚餘額寵物失敗或該寵物已在場上", True)
+
+    @Slot(str, result=float)
+    def getProviderBudget(self, prov: str) -> float:
+        pid = provider_to_id(prov)
+        budgets = self.app.cfg.get("budgets") or {}
+        if pid in budgets:
+            return float(budgets[pid])
+        pname = id_to_provider_name(pid)
+        if pname in budgets:
+            return float(budgets[pname])
+        return 100.0
+
+    @Slot(str, float, str)
+    def saveProviderBudget(self, prov: str, budget: float, since_date: str):
+        pid = provider_to_id(prov)
+        pname = id_to_provider_name(pid)
+        budgets = dict(self.app.cfg.get("budgets") or {})
+        budgets[pid] = float(budget)
+        budgets[pname] = float(budget)
+        self.app.cfg.set("budgets", budgets, save=True)
+
+        sinces = dict(self.app.cfg.get("sinces") or {})
+        if since_date.strip():
+            sinces[pid] = since_date.strip()
+            sinces[pname] = since_date.strip()
+            self.app.cfg.set("sinces", sinces, save=True)
+
+        if hasattr(self.app, "ledger") and self.app.ledger:
+            self.app.ledger.refresh()
+        self.activeBalanceChanged.emit()
+        self.noticeMessage.emit(f"{pname} 預算與起算日期已更新並重新整理！", False)
+
+    @Slot(str, result=str)
+    def getProviderSinceDate(self, prov: str) -> str:
+        pid = provider_to_id(prov)
+        sinces = self.app.cfg.get("sinces") or {}
+        return str(sinces.get(pid, sinces.get(id_to_provider_name(pid), datetime.now().strftime("%Y-%m-01"))))
 
     @Slot()
     def openChatDialog(self):

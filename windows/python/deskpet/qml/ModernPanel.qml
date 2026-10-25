@@ -3555,9 +3555,10 @@ Rectangle {
                                     color: themeColors.surfaceVariant
                                     border.width: 1
                                     border.color: themeColors.border
+                                    visible: (typeof backend !== "undefined" && backend && ["deepseek", "openai", "anthropic", "gemini"].indexOf(backend.apiProvider.toLowerCase()) !== -1)
                                     Text {
                                         anchors.centerIn: parent
-                                        text: (typeof backend !== "undefined" && backend && ["deepseek", "openai", "anthropic", "gemini"].indexOf(backend.apiProvider.toLowerCase()) !== -1) ? "召喚專屬大寵物" : "召喚 Q 版額度小人"
+                                        text: "召喚專屬大寵物"
                                         color: themeColors.text
                                         font.pixelSize: 12
                                         font.bold: true

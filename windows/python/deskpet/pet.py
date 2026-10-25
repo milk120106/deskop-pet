@@ -139,6 +139,7 @@ class PetWindow(QWidget):
         self.iron_alpha = 1.0
         self.iron_fading = False
         self.bounce_t = 0.0
+        self.head_jelly_t = 0.0
         self.pat_active = False
         self.pat_phase = 0.0
         self.pat_cooldown = 0.0
@@ -1178,7 +1179,34 @@ class PetWindow(QWidget):
                 sq_x = float(1.0 - (1.0 - w_rel))
                 sq_y = float(1.0 - (1.0 - h_rel))
                 shift_y = float((PETPET_OFFSET_Y[frame] - PETPET_BASE_OFFSET_Y) * H)
-            if self.bounce_t > 0:
+            if self.head_jelly_t > 0:
+                elapsed = 1.10 - self.head_jelly_t
+                if elapsed < 0.25:
+                    p_val = elapsed / 0.25
+                    s_val = math.sin(p_val * math.pi / 2.0)
+                    jelly_y = 1.00 - (1.00 - 0.74) * s_val
+                    jelly_x = 1.00 + (1.18 - 1.00) * s_val
+                elif elapsed < 0.55:
+                    p_val = (elapsed - 0.25) / 0.30
+                    s_val = 0.5 * (1.0 - math.cos(p_val * math.pi))
+                    jelly_y = 0.74 + (1.15 - 0.74) * s_val
+                    jelly_x = 1.18 + (0.90 - 1.18) * s_val
+                elif elapsed < 0.85:
+                    p_val = (elapsed - 0.55) / 0.30
+                    s_val = 0.5 * (1.0 - math.cos(p_val * math.pi))
+                    jelly_y = 1.15 + (0.93 - 1.15) * s_val
+                    jelly_x = 0.90 + (1.05 - 0.90) * s_val
+                elif elapsed <= 1.10:
+                    p_val = (elapsed - 0.85) / 0.25
+                    s_val = 0.5 * (1.0 - math.cos(p_val * math.pi))
+                    jelly_y = 0.93 + (1.00 - 0.93) * s_val
+                    jelly_x = 1.05 + (1.00 - 1.05) * s_val
+                else:
+                    jelly_y = 1.00
+                    jelly_x = 1.00
+                sq_x *= jelly_x
+                sq_y *= jelly_y
+            elif self.bounce_t > 0:
                 sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
 
         # 2D 剪紙風格動態物理：著陸回彈 (scaleY 0.88 -> 1.0)
@@ -1390,6 +1418,10 @@ class PetWindow(QWidget):
         busy |= bool(self.floaters)
         self.hearts = [h for h in self.hearts if now - h[4] < 1.3]
         busy |= bool(self.hearts)
+
+        if self.head_jelly_t > 0:
+            self.head_jelly_t = max(0.0, self.head_jelly_t - dt)
+            busy = True
 
         if self.bounce_t > 0:
             self.bounce_t = max(0.0, self.bounce_t - dt)
@@ -1694,6 +1726,21 @@ class PetWindow(QWidget):
                         self.input_dispatcher.handle_head_single_click(needs_debounce=has_double)
                     return
 
+    def trigger_head_jelly_bounce(self):
+        """雙擊寵物頭部必定觸發長達 1.1 秒布丁/果凍般多波衰減 Q 彈動畫。"""
+        self.head_jelly_t = 1.10
+        self.bounce_t = 1.10
+        if hasattr(self, "sounds") and self.sounds:
+            self.sounds.play("hit")
+        self.wake()
+        self.double_clicked_head.emit()
+        if hasattr(self, "input_dispatcher"):
+            try:
+                self.input_dispatcher.handle_head_double_click()
+            except Exception:
+                pass
+        self.update()
+
     def mouseDoubleClickEvent(self, e):
         if e.button() != Qt.LeftButton:
             return
@@ -1702,12 +1749,7 @@ class PetWindow(QWidget):
             if self.iron_worn:
                 self.remove_iron(all_pots=True)
                 return
-            if hasattr(self, "input_dispatcher"):
-                self.input_dispatcher.handle_head_double_click()
-            else:
-                self.bounce_t = 0.35
-                self.wake()
-                self.double_clicked_head.emit()
+            self.trigger_head_jelly_bounce()
             return
 
         if self.tablet_zone_global().contains(g):

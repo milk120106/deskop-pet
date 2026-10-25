@@ -1154,7 +1154,7 @@ class QMLBackend(QObject):
             else:
                 self.noticeMessage.emit("召喚大寵物失敗或已達數量上限", True)
         else:
-            self.summonApiChibi(pid)
+            self.noticeMessage.emit(f"廠商【{prov}】無專屬大寵物形象", True)
 
     @Slot(int)
     def setPetMaxCount(self, count: int):
@@ -1264,6 +1264,10 @@ class QMLBackend(QObject):
 
     @Slot(str)
     def summonApiChibi(self, provider: str):
+        pid = provider_to_id(provider)
+        if pid not in ("deepseek", "openai", "anthropic", "gemini"):
+            self.noticeMessage.emit("Q 版小人目前僅支援 4 大核心廠商（DeepSeek、GPT、Claude、Gemini）", True)
+            return
         w = self.app.summon_api_chibi(provider)
         if w:
             self.activePetsListChanged.emit()

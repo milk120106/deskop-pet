@@ -582,15 +582,34 @@ class PropManager:
                 return False
 
         # 天降空鐵鍋砸中 Q 版小人 -> 觸發舉鍋巡邏 (lift_walk)
-        if b.kind == "iron" and b.vy > 30:
-            chibi_mgr = getattr(self.pet, "chibi_mgr", None) or (getattr(self.pet, "app", None) and getattr(self.pet.app, "chibi_mgr", None))
+        # 修正措施：
+        # 1. 丟出的鐵鍋設定 flying_from_chibi = True，在空中飛行期間（vy != 0 或落地前），嚴禁任何小人再次拾取！
+        # 2. 小人投擲後進入 lift_pot_cooldown = 20.0 秒冷卻期，冷卻未結束前禁止再次舉鍋。
+        # 3. 全螢幕同一時間至多允許 1 隻小人處於 lift_walk 舉鍋狀態。
+        # 4. 若主寵物頭頂鐵鍋已達上限，丟出的鍋子安全落入地面，絕不重複抓取。
+        if b.kind == "iron" and b.vy > 30 and not getattr(b, "flying_from_chibi", False):
+            chibi_mgr = (
+                getattr(self.pet, "chibi_manager", None)
+                or getattr(self.pet, "chibi_mgr", None)
+                or (getattr(self.pet, "app", None) and getattr(self.pet.app, "chibi_manager", None))
+                or (getattr(self.pet, "app", None) and getattr(self.pet.app, "chibi_mgr", None))
+            )
             chibis = chibi_mgr.chibis if chibi_mgr else ([getattr(self.pet, "pixel_chibi", None)] if getattr(self.pet, "pixel_chibi", None) else [])
-            for ch in chibis:
-                if ch and ch.isVisible() and not getattr(ch, "climbing_pet", False) and getattr(ch, "state", "") not in ("lift_walk", "bowl_smash"):
-                    ch_rect = QRectF(ch.geometry())
-                    if ch_rect.intersects(b.art_rect()) or ch_rect.contains(QPointF(b.x, b.y)):
-                        if hasattr(ch, "trigger_lift_pot"):
-                            ch.trigger_lift_pot()
-                            self.remove(b)
-                            return False
+            # 全螢幕同一時間至多允許 1 隻小人處於 lift_walk 舉鍋狀態
+            has_lifting_chibi = any(getattr(ch, "state", "") == "lift_walk" for ch in chibis if ch)
+            if not has_lifting_chibi:
+                for ch in chibis:
+                    if (
+                        ch
+                        and ch.isVisible()
+                        and not getattr(ch, "climbing_pet", False)
+                        and getattr(ch, "state", "") not in ("lift_walk", "bowl_smash")
+                        and getattr(ch, "lift_pot_cooldown", 0.0) <= 0.0
+                    ):
+                        ch_rect = QRectF(ch.geometry())
+                        if ch_rect.intersects(b.art_rect()) or ch_rect.contains(QPointF(b.x, b.y)):
+                            if hasattr(ch, "trigger_lift_pot"):
+                                ch.trigger_lift_pot()
+                                self.remove(b)
+                                return False
         return True

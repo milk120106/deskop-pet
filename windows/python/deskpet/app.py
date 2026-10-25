@@ -243,6 +243,13 @@ class App(QObject):
             return
         for entry in saved_chibis:
             cid = entry.get("character", "deepseek")
+            if cid not in ("deepseek", "gpt", "claude", "gemini"):
+                continue
+            prov = entry.get("monitor_provider")
+            if prov:
+                from .balance import provider_to_id
+                if provider_to_id(prov) not in ("deepseek", "openai", "anthropic", "gemini"):
+                    continue
             w = self.chibi_manager.summon(cid, force=True)
             if w:
                 w.pos_x = float(entry.get("pos_x", w.pos_x))
@@ -364,6 +371,10 @@ class App(QObject):
 
     def summon_api_chibi(self, prov: str, key_index: int | None = None):
         """召喚指定 API 額度監控 Q 版小人（在桌面上巡邏、在想法框中顯示該 API 的額度/餘額）。"""
+        from .balance import provider_to_id
+        if provider_to_id(prov) not in ("deepseek", "openai", "anthropic", "gemini"):
+            log(f"[App] 拒絕召喚非核心廠商【{prov}】之 Q 版小人")
+            return None
         if hasattr(self, "chibi_manager") and self.chibi_manager:
             cur = self.chibi_manager.active_count
             limit = self.chibi_manager.max_count
@@ -804,7 +815,7 @@ class App(QObject):
             sub_api_chibi.setStyleSheet(m.styleSheet())
             sub_api_chibi.setAttribute(Qt.WA_TranslucentBackground, True)
             sub_api_chibi.setWindowFlags(sub_api_chibi.windowFlags() | Qt.FramelessWindowHint)
-            for prov in SUPPORTED_BALANCE_PROVIDERS:
+            for prov in ("deepseek", "openai", "anthropic", "gemini"):
                 pname = id_to_provider_name(prov)
                 a_api = sub_api_chibi.addAction(f"召喚【{pname}】額度小人")
                 a_api.triggered.connect(lambda _=False, p=prov: self.summon_api_chibi(p))
@@ -814,10 +825,10 @@ class App(QObject):
             # 4. 開啟 Q 版人物像素編輯器...
             sub_chibi.addAction("開啟 Q 版人物像素編輯器...").triggered.connect(self.open_chibi_editor)
 
-            # 5. 清除場上所有額外 Q 版小人（只保留 1 隻）
-            act_clear_extra = sub_chibi.addAction("清除場上所有額外 Q 版小人（只保留 1 隻）")
-            act_clear_extra.setEnabled(cur_chibi_count > 1)
-            act_clear_extra.triggered.connect(self.clear_extra_chibis)
+            # 5. 清除場上所有 Q 版小人
+            act_clear_all = sub_chibi.addAction("清除場上所有 Q 版小人")
+            act_clear_all.setEnabled(cur_chibi_count > 0)
+            act_clear_all.triggered.connect(self.clear_all_chibis)
 
             # 5.5 允許地面走動（漫遊模式）開關
             act_walk = sub_chibi.addAction("允許地面自由走動")
@@ -1286,6 +1297,10 @@ class App(QObject):
                         return None
                 force = True
             return self.chibi_manager.summon(cid, force=force)
+
+    def clear_all_chibis(self):
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.clear_all_chibis()
 
     def clear_extra_chibis(self):
         if hasattr(self, "chibi_manager") and self.chibi_manager:

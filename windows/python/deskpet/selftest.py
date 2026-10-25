@@ -517,17 +517,15 @@ def run(qapp) -> int:
     check("big pet rejects non-official characters", app.summon_balance_pet("openrouter") is None and app.summon_balance_pet("siliconflow") is None)
 
     # 2. 其他 API 廠商全部做成 Q 版獨立像素人物巡邏監控並顯示想法框
-    c_or = app.summon_api_chibi("openrouter")
-    c_sf = app.summon_api_chibi("siliconflow")
-    c_ms = app.summon_api_chibi("moonshot")
+    check("Q-chibi rejects non-core providers", app.summon_api_chibi("openrouter") is None and app.summon_api_chibi("siliconflow") is None and app.summon_api_chibi("moonshot") is None)
+    c_ds = app.summon_api_chibi("deepseek")
+    c_gpt = app.summon_api_chibi("openai")
     wait(100)
-    check("openrouter Q-chibi monitor summoned", c_or is not None and c_or.isVisible() and c_or.monitor_provider == "openrouter")
-    check("siliconflow Q-chibi monitor summoned", c_sf is not None and c_sf.isVisible() and c_sf.monitor_provider == "siliconflow")
-    check("moonshot Q-chibi monitor summoned", c_ms is not None and c_ms.isVisible() and c_ms.monitor_provider == "moonshot")
-    check("Q-chibi monitor has thought bubble", c_sf.thought_bubble is not None and c_sf.thought_bubble.isVisible())
-    app.chibi_manager.dismiss(c_or)
-    app.chibi_manager.dismiss(c_sf)
-    app.chibi_manager.dismiss(c_ms)
+    check("deepseek Q-chibi monitor summoned", c_ds is not None and c_ds.isVisible() and c_ds.monitor_provider == "deepseek")
+    check("openai Q-chibi monitor summoned", c_gpt is not None and c_gpt.isVisible() and c_gpt.monitor_provider == "openai")
+    check("Q-chibi monitor has thought bubble", c_ds.thought_bubble is not None and c_ds.thought_bubble.isVisible())
+    app.chibi_manager.dismiss(c_ds)
+    app.chibi_manager.dismiss(c_gpt)
 
     # 3. 寵物數量上限檔位 (5, 10, 15, 20, 25, 30) 與效能模式自動調節
     check("pet max count options include 5,10,15,20,25,30", PET_MAX_COUNT_OPTIONS == (5, 10, 15, 20, 25, 30))
@@ -1173,7 +1171,9 @@ def run(qapp) -> int:
     check("submenu contains random summon action", any("隨機召喚一隻 Q 版人物" in t for t in chibi_actions))
     check("submenu contains specific summon submenu", any("指定召喚" in t for t in chibi_actions))
     check("submenu contains open editor action", any("開啟 Q 版人物像素編輯器..." in t for t in chibi_actions))
-    check("submenu contains clear extra chibis action", any("清除場上所有額外 Q 版小人" in t for t in chibi_actions))
+    check("submenu contains clear all chibis action", any("清除場上所有 Q 版小人" in t for t in chibi_actions))
+    app.clear_all_chibis()
+    check("app.clear_all_chibis clears all chibis to 0", app.chibi_manager.active_count == 0)
 
     # 清理測試自訂角色
     PixelChibiRegistry.delete_custom_chibi("selftest_hero")
@@ -1539,7 +1539,10 @@ def run(qapp) -> int:
     chibi.trigger_lift_pot()
     check("trigger_lift_pot enters lift_walk state", chibi.state == "lift_walk" and chibi.has_lift_pot is True)
     chibi.chibi_throw_pot()
-    check("chibi_throw_pot exits lift_walk state", chibi.has_lift_pot is False)
+    check("chibi_throw_pot exits lift_walk state and triggers 20s cooldown", chibi.has_lift_pot is False and chibi.lift_pot_cooldown >= 19.0)
+    chibi.trigger_lift_pot()
+    check("chibi cannot pick up pot during cooldown", chibi.has_lift_pot is False and chibi.state == "idle")
+    chibi.lift_pot_cooldown = 0.0
 
     # ========================================================= 33. Module 3: Visual Anchor Editor & Protected Chars
     from deskpet.anchor_editor import load_character_anchors, save_character_anchors, VisualAnchorEditorDialog
@@ -1728,6 +1731,30 @@ def run(qapp) -> int:
                 break
     check("pixel chibi rows 25-29 have zero floating pixels with continuous arms", continuous_arms)
     check("pixel chibi all 24 frames have valid 32x48 resolution", len(FRAMES) >= 24 and all(len(FRAMES[f]) == 48 and all(len(r) == 32 for r in FRAMES[f]) for f in FRAMES))
+
+    # 雙擊主寵頭部 1.1s Q 彈果凍回彈曲線測試
+    app.pet.head_jelly_t = 0.0
+    app.pet.trigger_head_jelly_bounce()
+    check("trigger_head_jelly_bounce sets head_jelly_t to 1.10s", abs(app.pet.head_jelly_t - 1.10) < 0.01)
+    app.pet.head_jelly_t = 0.0
+
+    # Q 版小人獨立選單與互動狀態切換測試
+    chibi_interact = app.chibi_manager.summon("deepseek", force=True)
+    check("chibi_interact summoned", chibi_interact is not None)
+    chibi_interact.state = "sit"
+    check("chibi switches to sit state", chibi_interact.state == "sit")
+    chibi_interact.state = "splat"
+    check("chibi switches to splat state", chibi_interact.state == "splat")
+    chibi_interact.state = "sleep"
+    check("chibi switches to sleep state", chibi_interact.state == "sleep")
+    chibi_interact.set_character("gpt")
+    check("chibi switches character to gpt", chibi_interact.character == "gpt")
+    chibi_interact.set_character("claude")
+    check("chibi switches character to claude", chibi_interact.character == "claude")
+    chibi_interact.set_character("gemini")
+    check("chibi switches character to gemini", chibi_interact.character == "gemini")
+    app.clear_all_chibis()
+    check("app.clear_all_chibis completely clears chibis to 0", app.chibi_manager.active_count == 0)
 
     # 像素編輯器畫布縮放與網格功能
     from deskpet.chibi_editor import PixelCanvasWidget, AutoPixelizeDialog, ChibiPixelEditorDialog

@@ -169,7 +169,9 @@ def mask_key_preview(k: str) -> str:
 DEFAULTS = {
     # window
     "size": 454,              # pet height in px
-    "opacity": 100,           # 20..100
+    "opacity": 100,           # 20..100 (相容舊版大寵物透明度)
+    "pet_opacity": 100,       # 20..100 大寵物透明度 (預設 100)
+    "q_chibi_opacity": 100,   # 20..100 Q 版人物透明度 (預設 100)
     "always_on_top": True,
     "click_through": False,
     "auto_snap": True,
@@ -181,6 +183,7 @@ DEFAULTS = {
     "character": "deepseek",  # deepseek / claude / gemini / gpt / custom_<name>
     "variant": "square",      # square (1024x1024) / tail (1536x1024)
     "strict_custom_image_ratio": True,  # 寵物自訂立繪尺寸嚴格限制（預設開啟）
+    "custom_pet_crop_mode": "fit",      # 寵物自訂立繪裁切模式: crop(裁切填滿) / fit(等比縮放) / free(自由比例)，預設 fit
     "theme": "light",         # control-panel theme: light / dark
     # performance & rendering
     "disable_transparency": False,

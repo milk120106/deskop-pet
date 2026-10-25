@@ -9,8 +9,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QRect, Qt, QTimer
+from PySide6.QtGui import QGuiApplication, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -401,6 +401,56 @@ def center_dialog(dialog: QDialog):
         dialog.move(x, y)
 
 
+class NotificationToast(QLabel):
+    """螢幕中上方居中浮動通知 Toast，離頂部 48px，清晰醒目且絕不遮擋中央工作區域與下方對話框。"""
+    def __init__(self, text: str = "", is_error: bool = False, parent=None):
+        super().__init__(parent, Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint)
+        self.setAlignment(Qt.AlignCenter)
+        self.setWordWrap(True)
+        bg = "#2d1618" if is_error else "#162338"
+        border = "#ef4444" if is_error else "#3b82f6"
+        fg = "#fee2e2" if is_error else "#dbeafe"
+        self.setStyleSheet(
+            f"QLabel {{ background-color: {bg}; color: {fg}; border: 1.5px solid {border}; "
+            f"border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: bold; }}"
+        )
+        self.setText(text)
+        self.adjustSize()
+        screen = QGuiApplication.primaryScreen()
+        geo = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
+        w = max(240, min(geo.width() - 80, self.sizeHint().width() + 28))
+        h = max(38, self.sizeHint().height() + 14)
+        self.resize(w, h)
+        x = geo.left() + (geo.width() - w) // 2
+        y = geo.top() + 48
+        self.move(x, y)
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self.hide)
+
+    def show_notice(self, duration_ms: int = 3500):
+        self.show()
+        self.raise_()
+        self._timer.start(duration_ms)
+
+
+_global_toast_instance: NotificationToast | None = None
+
+
+def show_desktop_toast(text: str, is_error: bool = False, duration_ms: int = 3500) -> NotificationToast:
+    """在螢幕中上方顯示浮動通知 Toast。"""
+    global _global_toast_instance
+    if _global_toast_instance is not None:
+        try:
+            _global_toast_instance.hide()
+            _global_toast_instance.close()
+        except Exception:
+            pass
+    _global_toast_instance = NotificationToast(text=text, is_error=is_error)
+    _global_toast_instance.show_notice(duration_ms=duration_ms)
+    return _global_toast_instance
+
+
 class ModernMessageBox(QDialog):
     """現代化全客製無邊框對話框，具備深淺主題切換、自訂標題列與向量圖示。
     提供與 QMessageBox 相同之 information、warning、question 靜態呼叫介面。
@@ -743,32 +793,8 @@ class CharPickerDialog(QDialog):
             if img.isNull() or img.height() <= 0:
                 raise ValueError("無法解析圖片檔案格式")
 
-            strict = self.app.cfg.get("strict_custom_image_ratio", True)
-            ratio = img.width() / float(img.height())
-            if strict:
-                if ratio < 0.7 or ratio > 1.8:
-                    ModernMessageBox.warning(
-                        self,
-                        "圖片比例不符合",
-                        "圖片比例不符合官方立繪標準規格（1:1 或 1.5:1）。若欲強制使用特殊比例圖片，請至設定中關閉尺寸比例限制。",
-                    )
-                    return
-
-            if not strict:
-                # 關閉限制：保持原始寬高比直接儲存
-                img.save(str(dest_dir / "sprite.png"), "PNG")
-            else:
-                # Fit into 1024x1024
-                canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
-                canvas.fill(Qt.transparent)
-                sc = min(1024.0 / img.width(), 1024.0 / img.height())
-                w, h = int(img.width() * sc), int(img.height() * sc)
-                from PySide6.QtGui import QPainter
-                p = QPainter(canvas)
-                p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-                p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-                p.end()
-                canvas.save(str(dest_dir / "sprite.png"), "PNG")
+            # 完整保留使用者原始立繪圖片，渲染時依 custom_pet_crop_mode (crop/fit/free) 自動適應
+            img.save(str(dest_dir / "sprite.png"), "PNG")
             # Default tablet quad: centered at bottom
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
         except Exception as e:

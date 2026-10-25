@@ -102,7 +102,7 @@ class PetWindow(QWidget):
             self.setWindowOpacity(1.0)
         else:
             self.setAttribute(Qt.WA_TranslucentBackground, True)
-            self.setWindowOpacity(max(0.2, min(1.0, int(cfg.get("opacity", 100)) / 100.0)))
+            self.sync_opacity()
 
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setMouseTracking(True)
@@ -198,13 +198,27 @@ class PetWindow(QWidget):
             interval = max(1, int(1000 / effective_fps))
         self.timer.setInterval(interval)
 
+    def sync_opacity(self, val: int | float | None = None):
+        """同步大寵物透明度 (20..100)。"""
+        if self.cfg.get("disable_transparency", False):
+            self.setWindowOpacity(1.0)
+            return
+        if val is None:
+            val = self.cfg.get("pet_opacity", self.cfg.get("opacity", 100))
+        op = max(0.2, min(1.0, float(val) / 100.0))
+        self.setWindowOpacity(op)
+
+    def set_opacity(self, val: int | float, save: bool = True):
+        """設定大寵物透明度並即時更新視窗。"""
+        v = max(20, min(100, int(val)))
+        self.cfg.set("pet_opacity", v, save=False)
+        self.cfg.set("opacity", v, save=save)
+        self.sync_opacity(v)
+
     def set_disable_transparency(self, on: bool):
         """動態切換停用半透明背景：使用純色背景緩衝，透明度鎖定 1.0。"""
         self.setAttribute(Qt.WA_TranslucentBackground, not on)
-        if on:
-            self.setWindowOpacity(1.0)
-        else:
-            self.setWindowOpacity(max(0.2, min(1.0, int(self.cfg.get("opacity", 100)) / 100.0)))
+        self.sync_opacity()
         self.update()
 
     # ====================================================== Character & Art loading
@@ -226,7 +240,9 @@ class PetWindow(QWidget):
 
     @property
     def aspect_ratio(self) -> float:
-        if self.character.startswith("custom_") and not self.cfg.get("strict_custom_image_ratio", True):
+        mode = self.cfg.get("custom_pet_crop_mode", "fit")
+        strict = self.cfg.get("strict_custom_image_ratio", True)
+        if self.character.startswith("custom_") and (mode == "free" or not strict):
             src = self._load("happy")
             if not src.isNull() and src.height() > 0:
                 return src.width() / float(src.height())
@@ -242,10 +258,24 @@ class PetWindow(QWidget):
 
     def set_strict_custom_image_ratio(self, val: bool):
         self.cfg.set("strict_custom_image_ratio", bool(val))
+        if bool(val) and self.cfg.get("custom_pet_crop_mode") == "free":
+            self.cfg.set("custom_pet_crop_mode", "fit")
+        elif not bool(val):
+            self.cfg.set("custom_pet_crop_mode", "free")
         self._clear_cache()
         self._resize_window()
         self.keep_on_screen()
         self.update()
+
+    def set_custom_pet_crop_mode(self, mode: str):
+        """切換自訂立繪裁切模式：crop(裁切填滿)、fit(等比縮放)、free(自由比例)。"""
+        if mode in ("crop", "fit", "free"):
+            self.cfg.set("custom_pet_crop_mode", mode)
+            self.cfg.set("strict_custom_image_ratio", (mode != "free"))
+            self._clear_cache()
+            self._resize_window()
+            self.keep_on_screen()
+            self.update()
 
     def set_character(self, char_id: str):
         if self.character == char_id:
@@ -329,12 +359,55 @@ class PetWindow(QWidget):
         return self._src[key]
 
     def _sprite(self, expr: str):
-        key = (self.character, self.variant, expr, self.size_px, self.snap_right)
+        crop_mode = self.cfg.get("custom_pet_crop_mode", "fit")
+        key = (self.character, self.variant, expr, self.size_px, self.snap_right, crop_mode)
         if key not in self._scaled:
             src = self._load(expr)
-            img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
-                QImage.Format_ARGB32_Premultiplied
-            )
+            if src.isNull() or src.width() <= 0 or src.height() <= 0:
+                src = self._load("happy")
+
+            target_w = self.art_w
+            target_h = self.art_h
+
+            if self.character.startswith("custom_") and not src.isNull() and src.width() > 0 and src.height() > 0:
+                strict = self.cfg.get("strict_custom_image_ratio", True)
+                mode = "free" if not strict else crop_mode
+
+                if mode == "free":
+                    img = src.scaled(target_w, target_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
+                        QImage.Format_ARGB32_Premultiplied
+                    )
+                elif mode == "crop":
+                    # 裁切填滿：維持長寬比填滿方框，超出部分置中裁切
+                    canvas = QImage(target_w, target_h, QImage.Format_ARGB32_Premultiplied)
+                    canvas.fill(Qt.transparent)
+                    sc = max(target_w / float(src.width()), target_h / float(src.height()))
+                    sw = max(1, int(round(src.width() * sc)))
+                    sh = max(1, int(round(src.height() * sc)))
+                    sc_img = src.scaled(sw, sh, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                    qp = QPainter(canvas)
+                    qp.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+                    qp.drawImage((target_w - sw) // 2, (target_h - sh) // 2, sc_img)
+                    qp.end()
+                    img = canvas
+                else:  # "fit" (預設)
+                    # 等比縮放：維持長寬比容納於方框內，水平居中、垂直靠下貼地
+                    canvas = QImage(target_w, target_h, QImage.Format_ARGB32_Premultiplied)
+                    canvas.fill(Qt.transparent)
+                    sc = min(target_w / float(src.width()), target_h / float(src.height()))
+                    sw = max(1, int(round(src.width() * sc)))
+                    sh = max(1, int(round(src.height() * sc)))
+                    sc_img = src.scaled(sw, sh, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                    qp = QPainter(canvas)
+                    qp.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+                    qp.drawImage((target_w - sw) // 2, target_h - sh, sc_img)
+                    qp.end()
+                    img = canvas
+            else:
+                img = src.scaled(target_w, target_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
+                    QImage.Format_ARGB32_Premultiplied
+                )
+
             if self.snap_right:
                 img = img.mirrored(True, False)
             red = QImage(img)
@@ -517,7 +590,7 @@ class PetWindow(QWidget):
 
     def apply_window_prefs(self):
         hwnd = int(self.winId())
-        self.setWindowOpacity(max(0.2, min(1.0, self.cfg.get("opacity", 100) / 100.0)))
+        self.sync_opacity()
         winapi.set_topmost(hwnd, bool(self.cfg.get("always_on_top", True)))
         self.apply_click_through(bool(self.cfg.get("click_through", False)))
 

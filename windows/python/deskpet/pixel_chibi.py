@@ -2627,6 +2627,7 @@ class PixelChibiWindow(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         self.setMouseTracking(True)
         self.setWindowTitle("Pixel Chibi Patrol")
+        self.sync_opacity()
 
         self.scale_factor = 3  # 16x24 -> 48x72 px (或自訂尺寸 x 3)
         self.character = cfg.get("character", "deepseek")
@@ -2668,6 +2669,13 @@ class PixelChibiWindow(QWidget):
         self.timer.start()
 
         self._init_position()
+
+    def sync_opacity(self, val: int | float | None = None):
+        """同步 Q 版人物視窗不透明度 (20..100)。"""
+        if val is None:
+            val = float(self.cfg.get("q_chibi_opacity", 100))
+        op = max(0.2, min(1.0, float(val) / 100.0))
+        self.setWindowOpacity(op)
 
     def sync_fps(self) -> int:
         """根據 target_fps 與 performance_mode 動態調度定時器幀率 (10-240 FPS / 無限制)。"""
@@ -3523,6 +3531,20 @@ class PixelChibiManager:
         else:
             for c in self.chibis:
                 c.hide()
+
+    def set_opacity(self, val: int | float, save: bool = True):
+        """設定 Q 版人物不透明度 (20..100) 並即時同步所有活躍小人。"""
+        v = max(20, min(100, int(val)))
+        self.cfg.set("q_chibi_opacity", v, save=save)
+        self.sync_opacity(v)
+
+    def sync_opacity(self, val: int | float | None = None):
+        """同步場上所有活躍的 Q 版小人透明度。"""
+        if val is None:
+            val = self.cfg.get("q_chibi_opacity", 100)
+        op = max(0.2, min(1.0, float(val) / 100.0))
+        for c in self.chibis:
+            c.setWindowOpacity(op)
 
     def sync_fps(self):
         """同步所有在場小人之 FPS 與定時器間隔。"""

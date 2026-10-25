@@ -253,7 +253,7 @@ class App(QObject):
         pet.place_initial(default_offset_x=offset_x)
 
         # Apply current global options
-        pet.setWindowOpacity(max(0.2, min(1.0, int(self.cfg.get("opacity", 100)) / 100.0)))
+        pet.sync_opacity()
         pet.set_size(self.pet.size_px)
         if self.cfg.get("click_through", False):
             pet.apply_click_through(True)
@@ -1028,13 +1028,38 @@ class App(QObject):
                 ep.end_pat()
         self._changed()
 
+    def set_pet_opacity(self, v: int):
+        self.set_opacity(v)
+
     def set_opacity(self, v: int):
-        self.cfg.set("opacity", int(v))
-        op = max(0.2, min(1.0, int(v) / 100.0))
+        v = max(20, min(100, int(v)))
+        self.cfg.set("pet_opacity", v, save=False)
+        self.cfg.set("opacity", v, save=True)
+        op = max(0.2, min(1.0, float(v) / 100.0))
         self.pet.setWindowOpacity(op)
         for ep in self.extra_pets.values():
             ep.setWindowOpacity(op)
         self._changed()
+
+    def set_q_chibi_opacity(self, v: int):
+        v = max(20, min(100, int(v)))
+        self.cfg.set("q_chibi_opacity", v, save=True)
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.sync_opacity(v)
+        elif hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            self.pixel_chibi.setWindowOpacity(float(v) / 100.0)
+        self._changed()
+
+    def set_custom_pet_crop_mode(self, mode: str):
+        if mode in ("crop", "fit", "free"):
+            self.cfg.set("custom_pet_crop_mode", mode, save=True)
+            self.cfg.set("strict_custom_image_ratio", (mode != "free"), save=True)
+            if hasattr(self.pet, "set_custom_pet_crop_mode"):
+                self.pet.set_custom_pet_crop_mode(mode)
+            for ep in self.extra_pets.values():
+                if hasattr(ep, "set_custom_pet_crop_mode"):
+                    ep.set_custom_pet_crop_mode(mode)
+            self._changed()
 
     def set_size(self, px: int):
         self.pet.set_size(px)

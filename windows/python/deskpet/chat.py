@@ -2119,27 +2119,25 @@ class ChatDialog(QDialog):
         self._anim.start()
 
     # ------------------------------------------------------------- Companion Placement
-    def show_beside_pet(self):
+    def show_dialog(self):
+        """顯示對話視窗並定位於螢幕水平居中、垂直靠下方（離底部約 48px），好打字且不遮擋中央內容。"""
         self.show()
         self.raise_()
         self.activateWindow()
 
-        pet_rect = self.pet.geometry()
-        screen = QGuiApplication.screenAt(pet_rect.center()) or QGuiApplication.primaryScreen()
+        screen = None
+        if hasattr(self, "pet") and self.pet:
+            screen = QGuiApplication.screenAt(self.pet.geometry().center())
+        if not screen:
+            screen = QGuiApplication.primaryScreen()
         geo = screen.availableGeometry()
         w = self.width()
         h = self.height()
 
-        # 當寵物位於螢幕右側時，彈在寵物左側（內側）；位於左側時，彈在寵物右側（內側）
-        if pet_rect.center().x() > geo.center().x():
-            target_x = pet_rect.left() - w - 16
-        else:
-            target_x = pet_rect.right() + 16
+        target_x = geo.left() + (geo.width() - w) // 2
+        target_y = geo.bottom() - h - 48
 
-        # 垂直對齊寵物中心
-        target_y = pet_rect.center().y() - h // 2
-
-        # 100% 邊界夾持演算法杜絕被螢幕邊緣遮擋
+        # 100% 邊界安全夾持杜絕被螢幕邊緣遮擋
         x = max(geo.left() + 16, min(target_x, geo.right() - w - 16))
         y = max(geo.top() + 16, min(target_y, geo.bottom() - h - 16))
         self.move(x, y)
@@ -2148,6 +2146,9 @@ class ChatDialog(QDialog):
             winapi.set_topmost(int(self.winId()), True)
         except Exception:
             pass
+
+    def show_beside_pet(self):
+        self.show_dialog()
 
     # ------------------------------------------------------------- Menu & Dialogs
     def _open_menu(self):
@@ -2292,9 +2293,9 @@ class ChatDialog(QDialog):
             self.show_floating_notice("已切換為【標準對話模式】")
 
     def show_floating_notice(self, text: str, is_error: bool = False):
-        """在膠囊對話視窗內顯示浮動提示氣泡，清晰醒目且平滑消失。"""
+        """在螢幕中上方居中顯示浮動提示氣泡，清晰醒目且絕不遮擋中央工作區域與下方對話框。"""
         if self._toast_label is None:
-            self._toast_label = QLabel(self)
+            self._toast_label = QLabel(None, Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint)
             self._toast_label.setAlignment(Qt.AlignCenter)
             self._toast_label.setWordWrap(True)
             self._toast_timer = QTimer(self)
@@ -2306,19 +2307,34 @@ class ChatDialog(QDialog):
         fg = "#fee2e2" if is_error else "#dbeafe"
         self._toast_label.setStyleSheet(
             f"QLabel {{ background-color: {bg}; color: {fg}; border: 1.5px solid {border}; "
-            f"border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: bold; }}"
+            f"border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: bold; }}"
         )
         self._toast_label.setText(text)
         self._toast_label.adjustSize()
-        w = min(self.width() - 40, max(240, self._toast_label.sizeHint().width() + 20))
-        h = max(36, self._toast_label.sizeHint().height() + 10)
+
+        screen = None
+        if hasattr(self, "pet") and self.pet:
+            screen = QGuiApplication.screenAt(self.pet.geometry().center())
+        if not screen:
+            screen = QGuiApplication.screenAt(self.geometry().center()) or QGuiApplication.primaryScreen()
+        geo = screen.availableGeometry()
+
+        w = max(240, min(geo.width() - 80, self._toast_label.sizeHint().width() + 28))
+        h = max(38, self._toast_label.sizeHint().height() + 14)
         self._toast_label.resize(w, h)
-        x = (self.width() - w) // 2
-        y = self.height() - self.capsule.height() - h - 16
-        self._toast_label.move(x, max(60, y))
+
+        x = geo.left() + (geo.width() - w) // 2
+        y = geo.top() + 48
+        self._toast_label.move(x, y)
         self._toast_label.raise_()
         self._toast_label.show()
         self._toast_timer.start(4500)
+
+    def closeEvent(self, e):
+        if self._toast_label:
+            self._toast_label.hide()
+            self._toast_label.close()
+        super().closeEvent(e)
 
     def _open_api_profiles(self):
         dlg = ApiProfileDialog(self.cfg, self)
@@ -2444,9 +2460,12 @@ class ChatDialog(QDialog):
         elif self.current_mode == "agent":
             parts.append(
                 "【系統助手 Agent 模式】\n"
-                "你是一個具備系統指令與輔助任務執行能力的桌面智慧助手。若使用者的要求需要執行本機系統指令或查詢，請以標準格式輸出要執行的指令，格式如下：\n"
-                "[EXECUTE: 指令內容]\n"
-                "請嚴格遵從安全最小權限原則。若僅為一般諮詢，則直接以繁體中文客觀簡短回應。"
+                "你是一個具備系統指令、網路搜尋與網頁閱讀能力的桌面智慧助手。\n"
+                "可用工具指令格式如下：\n"
+                "1. 網路搜尋：[SEARCH: 搜尋關鍵字]\n"
+                "2. 網頁閱讀：[BROWSE: 網頁網址]\n"
+                "3. 系統指令：[EXECUTE: 指令內容]\n"
+                "請嚴格遵從安全最小權限原則。若使用者的問題需要聯網查詢最新資訊，請調用 [SEARCH: 關鍵字] 或 [BROWSE: 網址]。若為一般諮詢或已獲得資訊，則直接以繁體中文客觀簡短回應。"
             )
 
         if long_mem:
@@ -2497,12 +2516,76 @@ class ChatDialog(QDialog):
         # Trigger TTS if configured or in voice mode
         self._speak(reply)
 
-        # Agent 模式指令執行與安全規則檢驗
-        if ok and self.current_mode == "agent" and "[EXECUTE:" in reply:
-            match = re.search(r'\[EXECUTE:\s*(.+?)\]', reply, re.DOTALL)
-            if match:
-                cmd = match.group(1).strip()
-                self._handle_agent_command(cmd)
+        # Agent 模式指令執行與安全工具檢驗
+        if ok and self.current_mode == "agent":
+            if "[SEARCH:" in reply:
+                match = re.search(r'\[SEARCH:\s*(.+?)\]', reply, re.DOTALL)
+                if match:
+                    query = match.group(1).strip()
+                    self._handle_agent_search(query)
+                    return
+            elif "[BROWSE:" in reply:
+                match = re.search(r'\[BROWSE:\s*(.+?)\]', reply, re.DOTALL)
+                if match:
+                    url = match.group(1).strip()
+                    self._handle_agent_browse(url)
+                    return
+            elif "[EXECUTE:" in reply:
+                match = re.search(r'\[EXECUTE:\s*(.+?)\]', reply, re.DOTALL)
+                if match:
+                    cmd = match.group(1).strip()
+                    self._handle_agent_command(cmd)
+
+    def _handle_agent_search(self, query: str):
+        self.show_floating_notice(f"正在安全搜尋網路：{query[:30]}...")
+        self.lb_status.setText("正在進行安全網路搜尋...")
+        self.add_history_entry("系統", f"調用網路搜尋工具：[SEARCH: {query}]")
+
+        def task():
+            from .agent_tools import safe_web_search
+            res = safe_web_search(query)
+            QTimer.singleShot(0, lambda: self._on_agent_tool_done(query, res))
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def _handle_agent_browse(self, url: str):
+        self.show_floating_notice(f"正在安全閱讀網頁：{url[:30]}...")
+        self.lb_status.setText("正在進行安全網頁讀取...")
+        self.add_history_entry("系統", f"調用網頁閱讀工具：[BROWSE: {url}]")
+
+        def task():
+            from .agent_tools import safe_web_browse
+            res = safe_web_browse(url)
+            QTimer.singleShot(0, lambda: self._on_agent_tool_done(url, res))
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def _on_agent_tool_done(self, source: str, tool_output: str):
+        self.add_history_entry("工具結果", tool_output)
+        self.pet.show_speech_bubble("分析資訊中...", thought=True)
+        self.lb_status.setText("正在統整外部資訊並生成回答...")
+
+        profile = self.current_profile()
+        prompt = (
+            self._build_prompt(f"請根據已獲取的外部資料（來源：{source}），為我提供精確客觀、繁體中文且無表情符號的完整回答。")
+            + "\n\n【工具查詢獲取之資料】\n"
+            + tool_output
+            + "\n\n請根據以上資訊生成最終回答（直接回答內容，請勿再輸出工具調用標籤）："
+        )
+        self.chat_worker = ChatWorker(profile, prompt, self, cfg=self.cfg)
+        self.chat_worker.done.connect(self._on_chat_final_done)
+        self.chat_worker.start()
+
+    def _on_chat_final_done(self, ok: bool, reply: str, err: str):
+        self.chat_worker = None
+        self.add_history_entry("助手", reply)
+        self._remember("assistant", reply)
+        self.pet.show_speech_bubble(reply, thought=False)
+        if ok:
+            self.lb_status.setText("回覆完成")
+        else:
+            self.lb_status.setText(f"AI 回覆失敗: {err}")
+        self._speak(reply)
 
     def _handle_agent_command(self, cmd: str):
         if not cmd:

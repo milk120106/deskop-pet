@@ -580,6 +580,63 @@ Rectangle {
                             }
                         }
 
+                        // 項目: 自訂立繪尺寸與裁切模式 (等比縮放 / 裁切填滿 / 自由比例)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "自訂立繪裁切模式："
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Row {
+                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Repeater {
+                                    model: [
+                                        { label: "等比縮放", mode: "fit" },
+                                        { label: "裁切填滿", mode: "crop" },
+                                        { label: "自由比例", mode: "free" }
+                                    ]
+                                    Rectangle {
+                                        width: 84
+                                        height: 28
+                                        radius: 6
+                                        property bool isSelected: (typeof backend !== "undefined" && backend) ? (backend.customPetCropMode === modelData.mode) : (modelData.mode === "fit")
+                                        color: isSelected ? themeColors.primary : themeColors.surfaceVariant
+                                        border.width: 1
+                                        border.color: isSelected ? themeColors.primary : themeColors.border
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.label
+                                            color: parent.isSelected ? "#FFFFFF" : themeColors.text
+                                            font.pixelSize: 11
+                                            font.bold: parent.isSelected
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.setCustomPetCropMode(modelData.mode)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 項目: 嚴格限制自訂立繪比例（1:1 或 1.5:1）開關
                         Row {
                             width: parent.width
@@ -783,28 +840,28 @@ Rectangle {
                             }
                         }
 
-                        // 4. 不透明度滑桿
+                        // 4. 大寵物透明度滑桿
                         Row {
                             width: parent.width
                             spacing: 14
 
                             Text {
-                                text: "不透明度：" + ((typeof backend !== "undefined" && backend) ? backend.opacityVal : 100) + "%"
+                                text: "大寵物透明度：" + ((typeof backend !== "undefined" && backend) ? (backend.petOpacityVal || backend.opacityVal) : 100) + "%"
                                 color: themeColors.textSub
                                 font.pixelSize: 12
                                 font.family: root.modernFontStack
                                 renderType: Text.NativeRendering
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 110
+                                width: 130
                             }
 
                             Item {
-                                width: 340
+                                width: 320
                                 height: 32
                                 anchors.verticalCenter: parent.verticalCenter
 
                                 Rectangle {
-                                    id: opTrack
+                                    id: petOpTrack
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: parent.width
                                     height: 8
@@ -816,14 +873,14 @@ Rectangle {
                                         radius: 4
                                         color: themeColors.primary
                                         width: {
-                                            var val = (typeof backend !== "undefined" && backend) ? backend.opacityVal : 100
+                                            var val = (typeof backend !== "undefined" && backend) ? (backend.petOpacityVal || backend.opacityVal) : 100
                                             return Math.max(0, Math.min(parent.width, (val - 20) / 80 * parent.width))
                                         }
                                     }
                                 }
 
                                 Rectangle {
-                                    id: opThumb
+                                    id: petOpThumb
                                     width: 18
                                     height: 18
                                     radius: 9
@@ -832,15 +889,15 @@ Rectangle {
                                     border.color: "#FFFFFF"
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: {
-                                        var val = (typeof backend !== "undefined" && backend) ? backend.opacityVal : 100
-                                        return Math.max(0, Math.min(opTrack.width - width, (val - 20) / 80 * (opTrack.width - width)))
+                                        var val = (typeof backend !== "undefined" && backend) ? (backend.petOpacityVal || backend.opacityVal) : 100
+                                        return Math.max(0, Math.min(petOpTrack.width - width, (val - 20) / 80 * (petOpTrack.width - width)))
                                     }
-                                    scale: opMouse.pressed ? 1.25 : 1.0
+                                    scale: petOpMouse.pressed ? 1.25 : 1.0
                                     Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.28 } }
                                 }
 
                                 MouseArea {
-                                    id: opMouse
+                                    id: petOpMouse
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
                                     preventStealing: true
@@ -848,7 +905,83 @@ Rectangle {
                                         var frac = Math.max(0.0, Math.min(1.0, mx / width))
                                         var val = Math.round(20 + frac * 80)
                                         if (typeof backend !== "undefined" && backend) {
-                                            backend.setOpacityVal(val)
+                                            backend.setPetOpacityVal(val)
+                                        }
+                                    }
+                                    onPressed: (mouse) => updatePos(mouse.x)
+                                    onPositionChanged: (mouse) => {
+                                        if (pressed) updatePos(mouse.x)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 5. Q 版人物透明度滑桿
+                        Row {
+                            width: parent.width
+                            spacing: 14
+
+                            Text {
+                                text: "Q 版人物透明度：" + ((typeof backend !== "undefined" && backend) ? backend.qChibiOpacityVal : 100) + "%"
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 130
+                            }
+
+                            Item {
+                                width: 320
+                                height: 32
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    id: chibiOpTrack
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width
+                                    height: 8
+                                    radius: 4
+                                    color: themeColors.surfaceVariant
+
+                                    Rectangle {
+                                        height: parent.height
+                                        radius: 4
+                                        color: themeColors.primary
+                                        width: {
+                                            var val = (typeof backend !== "undefined" && backend) ? backend.qChibiOpacityVal : 100
+                                            return Math.max(0, Math.min(parent.width, (val - 20) / 80 * parent.width))
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    id: chibiOpThumb
+                                    width: 18
+                                    height: 18
+                                    radius: 9
+                                    color: themeColors.primary
+                                    border.width: 2
+                                    border.color: "#FFFFFF"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: {
+                                        var val = (typeof backend !== "undefined" && backend) ? backend.qChibiOpacityVal : 100
+                                        return Math.max(0, Math.min(chibiOpTrack.width - width, (val - 20) / 80 * (chibiOpTrack.width - width)))
+                                    }
+                                    scale: chibiOpMouse.pressed ? 1.25 : 1.0
+                                    Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.28 } }
+                                }
+
+                                MouseArea {
+                                    id: chibiOpMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    preventStealing: true
+                                    function updatePos(mx) {
+                                        var frac = Math.max(0.0, Math.min(1.0, mx / width))
+                                        var val = Math.round(20 + frac * 80)
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiOpacityVal(val)
                                         }
                                     }
                                     onPressed: (mouse) => updatePos(mouse.x)

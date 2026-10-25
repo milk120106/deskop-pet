@@ -96,6 +96,9 @@ class QMLBackend(QObject):
     variantChanged = Signal(str)
     sizeChanged = Signal(int)
     opacityChanged = Signal(int)
+    petOpacityChanged = Signal(int)
+    qChibiOpacityChanged = Signal(int)
+    customPetCropModeChanged = Signal(str)
     clickThroughChanged = Signal(bool)
     autoSnapChanged = Signal(bool)
     alwaysOnTopChanged = Signal(bool)
@@ -190,6 +193,15 @@ class QMLBackend(QObject):
 
     def get_opacity_val(self) -> int:
         return int(self.app.cfg.get("opacity", 100))
+
+    def get_pet_opacity_val(self) -> int:
+        return int(self.app.cfg.get("pet_opacity", self.app.cfg.get("opacity", 100)))
+
+    def get_q_chibi_opacity_val(self) -> int:
+        return int(self.app.cfg.get("q_chibi_opacity", 100))
+
+    def get_custom_pet_crop_mode(self) -> str:
+        return str(self.app.cfg.get("custom_pet_crop_mode", "fit"))
 
     def get_click_through(self) -> bool:
         return bool(self.app.cfg.get("click_through", False))
@@ -514,6 +526,9 @@ class QMLBackend(QObject):
     variant = Property(str, get_variant, notify=variantChanged)
     sizePx = Property(int, get_size_px, notify=sizeChanged)
     opacityVal = Property(int, get_opacity_val, notify=opacityChanged)
+    petOpacityVal = Property(int, get_pet_opacity_val, notify=petOpacityChanged)
+    qChibiOpacityVal = Property(int, get_q_chibi_opacity_val, notify=qChibiOpacityChanged)
+    customPetCropMode = Property(str, get_custom_pet_crop_mode, notify=customPetCropModeChanged)
     clickThrough = Property(bool, get_click_through, notify=clickThroughChanged)
     autoSnap = Property(bool, get_auto_snap, notify=autoSnapChanged)
     alwaysOnTop = Property(bool, get_always_on_top, notify=alwaysOnTopChanged)
@@ -677,29 +692,8 @@ class QMLBackend(QObject):
             if img.isNull() or img.height() <= 0:
                 raise ValueError("無法解析圖片檔案格式")
 
-            strict = self.app.cfg.get("strict_custom_image_ratio", True)
-            ratio = img.width() / float(img.height())
-            if strict:
-                if ratio < 0.7 or ratio > 1.8:
-                    warn_msg = "圖片比例不符合官方立繪標準規格（1:1 或 1.5:1）。若欲強制使用特殊比例圖片，請至設定中關閉尺寸比例限制。"
-                    self.noticeMessage.emit(warn_msg, True)
-                    from .dialogs import ModernMessageBox
-                    ModernMessageBox.warning(self.win, "圖片比例不符合", warn_msg)
-                    return
-
-            if not strict:
-                # 關閉限制：保持原始寬高比
-                img.save(str(dest_dir / "sprite.png"), "PNG")
-            else:
-                canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
-                canvas.fill(Qt.transparent)
-                sc = min(1024.0 / img.width(), 1024.0 / img.height())
-                w, h = int(img.width() * sc), int(img.height() * sc)
-                p = QPainter(canvas)
-                p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-                p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-                p.end()
-                canvas.save(str(dest_dir / "sprite.png"), "PNG")
+            # 完整保留使用者原始立繪圖片，渲染時依 custom_pet_crop_mode (crop/fit/free) 自動適應
+            img.save(str(dest_dir / "sprite.png"), "PNG")
 
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
             self.setCharacter(cid)
@@ -773,9 +767,30 @@ class QMLBackend(QObject):
 
     @Slot(int)
     def setOpacityVal(self, val: int):
+        self.setPetOpacityVal(val)
+
+    @Slot(int)
+    def setPetOpacityVal(self, val: int):
         val = max(20, min(100, val))
         self.app.set_opacity(val)
+        self.petOpacityChanged.emit(val)
         self.opacityChanged.emit(val)
+
+    @Slot(int)
+    def setQChibiOpacityVal(self, val: int):
+        val = max(20, min(100, val))
+        self.app.set_q_chibi_opacity(val)
+        self.qChibiOpacityChanged.emit(val)
+
+    @Slot(str)
+    def setCustomPetCropMode(self, mode: str):
+        mode = mode.lower().strip()
+        if mode in ("crop", "fit", "free"):
+            self.app.set_custom_pet_crop_mode(mode)
+            self.customPetCropModeChanged.emit(mode)
+            self.strictCustomImageRatioChanged.emit(mode != "free")
+            mode_names = {"crop": "裁切填滿", "fit": "等比縮放", "free": "自由比例"}
+            self.noticeMessage.emit(f"自訂立繪裁切模式已切換為：{mode_names.get(mode, mode)}", False)
 
     @Slot(bool)
     def setClickThrough(self, val: bool):

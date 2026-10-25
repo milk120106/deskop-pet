@@ -148,7 +148,13 @@ class AlarmDispatcher(QObject):
         self._ringing_alarms[alarm_id] = alarm_dict
         log("Alarm", f"觸發鬧鐘響鈴：【時間到囉：{alarm_name}】")
 
-        # 1. 桌面寵物本體動態：平板亮屏呼吸閃爍
+        # 1. 桌面寵物本體動態：平板亮屏呼吸閃爍與螢幕中上方彈窗通知
+        try:
+            from .dialogs import show_desktop_toast
+            show_desktop_toast(f"【時間到囉：{alarm_name}】")
+        except Exception:
+            pass
+
         if self.pet:
             self.pet.trigger_alarm_glow(alarm_name)
             # 頭頂冒出想法框【時間到囉：事件名稱】，點擊可選擇關閉或貪睡

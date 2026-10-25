@@ -1301,6 +1301,176 @@ def run(qapp) -> int:
     check("qml backend has summonApiChibi", hasattr(qml_backend, "summonApiChibi"))
     check("qml backend has activePetsList", hasattr(qml_backend, "get_active_pets_list") and len(qml_backend.get_active_pets_list()) >= 1)
 
+    # ========================================================= 25. Pet & Q-Chibi Opacity Controls and Synchronization
+    check("config has default pet_opacity 100", cfg.get("pet_opacity", 100) == 100)
+    check("config has default q_chibi_opacity 100", cfg.get("q_chibi_opacity", 100) == 100)
+
+    # 測試大寵物透明度設定與即時視窗同步
+    app.set_pet_opacity(75)
+    check("set_pet_opacity updates config to 75", cfg.get("pet_opacity") == 75)
+    check("pet window opacity matches 0.75", abs(pet.windowOpacity() - 0.75) < 0.02)
+    app.set_pet_opacity(100)
+    check("pet window opacity restored to 1.0", abs(pet.windowOpacity() - 1.0) < 0.02)
+
+    # 測試 Q 版人物透明度設定與即時小人同步
+    check("chibi manager exists", hasattr(app, "chibi_manager") and app.chibi_manager is not None)
+    app.set_q_chibi_opacity(60)
+    check("set_q_chibi_opacity updates config to 60", cfg.get("q_chibi_opacity") == 60)
+    if app.chibi_manager.primary_chibi:
+        check("primary chibi window opacity matches 0.6", abs(app.chibi_manager.primary_chibi.windowOpacity() - 0.6) < 0.02)
+    app.set_q_chibi_opacity(100)
+    if app.chibi_manager.primary_chibi:
+        check("primary chibi window opacity restored to 1.0", abs(app.chibi_manager.primary_chibi.windowOpacity() - 1.0) < 0.02)
+
+    # 測試 QML Backend 透明度屬性與槽函數
+    check("qml backend has petOpacityVal property", hasattr(qml_backend, "get_pet_opacity_val"))
+    check("qml backend has qChibiOpacityVal property", hasattr(qml_backend, "get_q_chibi_opacity_val"))
+    qml_backend.setPetOpacityVal(85)
+    check("qml backend setPetOpacityVal updates config to 85", cfg.get("pet_opacity") == 85)
+    qml_backend.setPetOpacityVal(100)
+    qml_backend.setQChibiOpacityVal(70)
+    check("qml backend setQChibiOpacityVal updates config to 70", cfg.get("q_chibi_opacity") == 70)
+    qml_backend.setQChibiOpacityVal(100)
+
+    # ========================================================= 26. Chat Dialog Screen Bottom-Center Coordinates
+    chat_dlg.show_dialog()
+    screen_active = qapp.primaryScreen()
+    geo_active = screen_active.availableGeometry()
+    w_dlg = chat_dlg.width()
+    h_dlg = chat_dlg.height()
+    expected_x = geo_active.left() + (geo_active.width() - w_dlg) // 2
+    expected_y = geo_active.bottom() - h_dlg - 48
+    clamped_x = max(geo_active.left() + 16, min(expected_x, geo_active.right() - w_dlg - 16))
+    clamped_y = max(geo_active.top() + 16, min(expected_y, geo_active.bottom() - h_dlg - 16))
+    check("chat dialog placed at bottom-center horizontally", abs(chat_dlg.x() - clamped_x) <= 2)
+    check("chat dialog placed at bottom-center vertically", abs(chat_dlg.y() - clamped_y) <= 2)
+
+    chat_dlg.show_beside_pet()
+    check("show_beside_pet retains ergonomic bottom-center placement", abs(chat_dlg.x() - clamped_x) <= 2 and abs(chat_dlg.y() - clamped_y) <= 2)
+
+    # ========================================================= 27. Floating Notifications Screen Top-Center Coordinates
+    chat_dlg.show_floating_notice("測試螢幕頂部居中通知")
+    check("floating notice label exists", hasattr(chat_dlg, "_toast_label") and chat_dlg._toast_label is not None)
+    toast_lbl = chat_dlg._toast_label
+    check("floating notice visible", toast_lbl.isVisible())
+    expected_top_y = geo_active.top() + 48
+    expected_top_x = geo_active.left() + (geo_active.width() - toast_lbl.width()) // 2
+    check("floating notice placed at screen top-center vertically", abs(toast_lbl.y() - expected_top_y) <= 2)
+    check("floating notice placed at screen top-center horizontally", abs(toast_lbl.x() - expected_top_x) <= 2)
+    toast_lbl.hide()
+
+    from deskpet.dialogs import NotificationToast, show_desktop_toast
+    desktop_toast = show_desktop_toast("測試桌面通用通知")
+    check("desktop toast window created and visible", desktop_toast is not None and desktop_toast.isVisible())
+    check("desktop toast placed at top-center vertically", abs(desktop_toast.y() - expected_top_y) <= 2)
+    desktop_toast.hide()
+    desktop_toast.close()
+
+    # ========================================================= 28. Custom Character Crop / Fit / Free Modes
+    check("custom_pet_crop_mode config default is fit", cfg.get("custom_pet_crop_mode", "fit") == "fit")
+    pet.set_character("custom_selftest_wide")
+
+    # 1. 裁切填滿 (crop)
+    app.set_custom_pet_crop_mode("crop")
+    check("crop mode maintains 1.0 standard aspect ratio for target frame", pet.aspect_ratio == 1.0)
+    check("crop mode config set to crop", cfg.get("custom_pet_crop_mode") == "crop")
+    pix_crop, _, _ = pet._sprite("happy")
+    check("crop mode renders valid pixmap", not pix_crop.isNull() and pix_crop.width() == pet.art_w)
+
+    # 2. 等比縮放 (fit)
+    app.set_custom_pet_crop_mode("fit")
+    check("fit mode maintains 1.0 standard aspect ratio for target frame", pet.aspect_ratio == 1.0)
+    check("fit mode config set to fit", cfg.get("custom_pet_crop_mode") == "fit")
+    pix_fit, _, _ = pet._sprite("happy")
+    check("fit mode renders valid pixmap", not pix_fit.isNull() and pix_fit.width() == pet.art_w)
+
+    # 3. 自由比例 (free)
+    app.set_custom_pet_crop_mode("free")
+    check("free mode adopts image original aspect ratio 4.0", abs(pet.aspect_ratio - 4.0) < 0.05)
+    check("free mode art_w dynamically calculated from aspect_ratio", pet.art_w == int(pet.size_px * pet.aspect_ratio))
+    pix_free, _, _ = pet._sprite("happy")
+    check("free mode renders valid pixmap", not pix_free.isNull() and pix_free.width() == pet.art_w)
+
+    # QML Backend 自訂立繪裁切模式綁定
+    check("qml backend has customPetCropMode property", hasattr(qml_backend, "get_custom_pet_crop_mode"))
+    check("qml backend has setCustomPetCropMode slot", hasattr(qml_backend, "setCustomPetCropMode"))
+    qml_backend.setCustomPetCropMode("fit")
+    check("qml backend setCustomPetCropMode updates config to fit", cfg.get("custom_pet_crop_mode") == "fit")
+
+    # ========================================================= 29. SSRF Deep Defense & Safe Web Tools
+    from deskpet.agent_tools import (
+        validate_url_safety,
+        safe_web_browse,
+        safe_web_search,
+        safe_decompress_stream,
+    )
+
+    # 1. 測試本機迴環 (127.0.0.1 與 ::1)
+    ok_loopback, msg_loopback, _ = validate_url_safety("http://127.0.0.1/admin")
+    check("SSRF defense strictly blocks 127.0.0.1 loopback", ok_loopback is False and "本機迴環" in msg_loopback)
+    ok_v6_loop, msg_v6_loop, _ = validate_url_safety("http://[::1]/secret")
+    check("SSRF defense strictly blocks IPv6 loopback", ok_v6_loop is False)
+
+    # 2. 測試雲端敏感元數據 (169.254.169.254 與 metadata.google.internal)
+    ok_meta_ip, msg_meta_ip, _ = validate_url_safety("http://169.254.169.254/latest/meta-data/")
+    check("SSRF defense strictly blocks 169.254.169.254 cloud metadata IP", ok_meta_ip is False and ("元數據" in msg_meta_ip or "鏈路" in msg_meta_ip))
+    ok_meta_host, msg_meta_host, _ = validate_url_safety("http://metadata.google.internal/computeMetadata/v1/")
+    check("SSRF defense strictly blocks metadata.google.internal", ok_meta_host is False and ("元數據" in msg_meta_host or "敏感內部服務" in msg_meta_host))
+
+    # 3. 測試私有內網 (192.168.0.1, 10.0.0.1, 172.16.0.1)
+    ok_priv1, msg_priv1, _ = validate_url_safety("http://192.168.1.1:8080/")
+    ok_priv2, msg_priv2, _ = validate_url_safety("http://10.1.2.3/")
+    ok_priv3, msg_priv3, _ = validate_url_safety("http://172.20.0.5/")
+    check("SSRF defense strictly blocks private LAN IPs", ok_priv1 is False and ok_priv2 is False and ok_priv3 is False)
+
+    # 4. 測試危險協議白名單 (file://, ftp://, gopher://, dict://)
+    ok_file, msg_file, _ = validate_url_safety("file:///C:/Windows/win.ini")
+    check("SSRF defense strictly blocks file:// protocol", ok_file is False and "通訊協議" in msg_file)
+    ok_gopher, msg_gopher, _ = validate_url_safety("gopher://127.0.0.1:6379/")
+    check("SSRF defense strictly blocks gopher:// protocol", ok_gopher is False and "通訊協議" in msg_gopher)
+
+    # 5. 測試危險連接埠 (22, 23, 3306, 6379)
+    ok_port22, msg_port22, _ = validate_url_safety("http://8.8.8.8:22/")
+    check("SSRF defense strictly blocks SSH port 22", ok_port22 is False and "埠號" in msg_port22)
+    ok_port6379, msg_port6379, _ = validate_url_safety("http://8.8.8.8:6379/")
+    check("SSRF defense strictly blocks Redis port 6379", ok_port6379 is False and "埠號" in msg_port6379)
+
+    # 6. 測試 safe_web_browse 回應中包含安全阻擋提示
+    res_browse_loopback = safe_web_browse("http://127.0.0.1:8080/sensitive")
+    check("safe_web_browse returns security blocked notice on loopback", "安全阻擋" in res_browse_loopback)
+    res_browse_meta = safe_web_browse("http://169.254.169.254/secret")
+    check("safe_web_browse returns security blocked notice on metadata", "安全阻擋" in res_browse_meta)
+
+    # 7. 測試 safe_web_search 支援空關鍵字安全防護與離線友善處理
+    res_search_empty = safe_web_search("")
+    check("safe_web_search returns helpful notice on empty query", "搜尋關鍵字為空" in res_search_empty)
+    res_search_query = safe_web_search("desktop pet ai agent")
+    check("safe_web_search returns sandboxed XML wrapper", "<untrusted_web_content" in res_search_query and "</untrusted_web_content>" in res_search_query)
+
+    # ========================================================= 30. HTTP Decompression Bomb / Gzip Bomb Defense
+    import zlib
+
+    # 1. 測試拒絕多層巢狀壓縮 (Nested Content-Encoding)
+    ok_nested, msg_nested, _ = safe_decompress_stream([b"test"], content_encoding="gzip, gzip")
+    check("decompression bomb defense rejects nested gzip, gzip", ok_nested is False and "多層巢狀" in msg_nested)
+    ok_nested2, msg_nested2, _ = safe_decompress_stream([b"test"], content_encoding="gzip, deflate")
+    check("decompression bomb defense rejects nested gzip, deflate", ok_nested2 is False and "多層巢狀" in msg_nested2)
+
+    # 2. 測試超過 2MB 解壓縮硬上限 (Hard Cap 2MB)
+    huge_data = b"A" * (2500 * 1024)
+    huge_comp = zlib.compress(huge_data)
+    ok_cap, msg_cap, _ = safe_decompress_stream([huge_comp], content_encoding="deflate")
+    check("decompression bomb defense blocks payload exceeding 2MB hard cap", ok_cap is False and ("超過上限" in msg_cap or "解壓縮炸彈" in msg_cap))
+
+    # 3. 測試異常壓縮膨脹比例監控 (超過 100:1)
+    # 產生超過 10KB 門檻 (約 13KB) 且膨脹比例高達 116:1 的攻擊 Payload (解壓後約 1.5MB < 2MB 上限)
+    bomb_noise = os.urandom(10240)
+    bomb_zeros = b"A" * 1500000
+    bomb_raw_data = bomb_noise + bomb_zeros
+    bomb_compressed_data = zlib.compress(bomb_raw_data, 9)
+    ok_ratio, msg_ratio, _ = safe_decompress_stream([bomb_compressed_data], content_encoding="deflate")
+    check("decompression bomb defense triggers ratio safeguard on expansion exceeding 100:1", ok_ratio is False and "膨脹比例" in msg_ratio)
+
     # 清理測試自訂立繪
     pet.set_character("deepseek")
     shutil.rmtree(custom_test_dir, ignore_errors=True)

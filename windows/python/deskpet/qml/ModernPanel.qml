@@ -2879,7 +2879,203 @@ Rectangle {
                     }
                 }
 
-                // 卡片 5: 全設定與資料安全備份管理
+                // 卡片 5: 致謝開源專案與核心依賴
+                Rectangle {
+                    width: parent.width
+                    height: colCardThanks.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCardThanks
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "致謝開源專案與核心依賴"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            text: "本專案的誕生與持續演進，離不開開源社群優秀創作者的無私貢獻與堅實生態基石："
+                            color: themeColors.textSub
+                            font.pixelSize: 11
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        // 專案 1: VK-1 (DSH Balance Pet)
+                        Rectangle {
+                            width: parent.width
+                            height: 64
+                            radius: 10
+                            color: themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 12
+
+                                Column {
+                                    width: parent.width - 120
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 3
+
+                                    Text {
+                                        text: "VK-1 (DSH Balance Pet)"
+                                        color: themeColors.primary
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    Text {
+                                        text: "感謝原創 DSH 餘額桌寵靈感與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。"
+                                        color: themeColors.textSub
+                                        font.pixelSize: 10
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                        elide: Text.ElideRight
+                                        width: parent.width
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 100
+                                    height: 30
+                                    radius: 6
+                                    color: themeColors.surface
+                                    border.width: 1
+                                    border.color: themeColors.primary
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "造訪開源倉庫"
+                                        color: themeColors.primary
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.openVk1Repo()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 專案 2: YuYue_Encryption (幽月加解密工具)
+                        Rectangle {
+                            width: parent.width
+                            height: 64
+                            radius: 10
+                            color: themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 12
+
+                                Column {
+                                    width: parent.width - 120
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 3
+
+                                    Text {
+                                        text: "YuYue_Encryption (幽月加解密工具)"
+                                        color: themeColors.primary
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    Text {
+                                        text: "感謝 YuYue71 研發之奇特高強度 8 層複合加密混淆演算法（雙重動態凱薩位移 + 柵欄置換 + 二進位/十六進位維度投影 + Base64/Base32 交叉混淆 + zlib 緊緻壓縮），賦予資料備份強大隱私防護。"
+                                        color: themeColors.textSub
+                                        font.pixelSize: 10
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                        elide: Text.ElideRight
+                                        width: parent.width
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 100
+                                    height: 30
+                                    radius: 6
+                                    color: themeColors.surface
+                                    border.width: 1
+                                    border.color: themeColors.primary
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "造訪開源倉庫"
+                                        color: themeColors.primary
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.openYuYueRepo()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 依賴技術清單
+                        Column {
+                            width: parent.width
+                            spacing: 4
+
+                            Text {
+                                text: "核心框架與技術依賴："
+                                color: themeColors.text
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                text: "• PySide6 / Qt 6：現代化跨平台 GUI 框架與 Qt Quick / QML GPU 加速渲染引擎 (LGPLv3)\n• Google Material Symbols：開源現代扁平化向量圖示系統 (Apache 2.0 License)\n• Python 標準庫：ctypes (Win32 API 原生穿透/置頂/DPAPI)、urllib、hashlib、zlib、base64、json\n• Windows MCI (Media Control Interface)：免裝 FFmpeg 之本機超輕量無延遲音訊引擎"
+                                color: themeColors.textSub
+                                font.pixelSize: 10
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                lineHeight: 1.3
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 6: 全設定與資料安全備份管理
                 Rectangle {
                     width: parent.width
                     height: 140

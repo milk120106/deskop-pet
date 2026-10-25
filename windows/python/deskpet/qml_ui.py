@@ -814,6 +814,19 @@ class QMLBackend(QObject):
     def openIssuesUrl(self):
         webbrowser.open(f"{GITHUB_REPO_URL}/issues")
 
+    @Slot(str)
+    def openExternalUrl(self, url: str):
+        if url.startswith("https://") or url.startswith("http://"):
+            webbrowser.open(url)
+
+    @Slot()
+    def openVk1Repo(self):
+        webbrowser.open("https://github.com/VKmich16/VK-1")
+
+    @Slot()
+    def openYuYueRepo(self):
+        webbrowser.open("https://github.com/YuYue71/YuYue_Encryption")
+
     @Slot()
     def openCustomCharsDir(self):
         CUSTOM_CHARS_DIR.mkdir(parents=True, exist_ok=True)

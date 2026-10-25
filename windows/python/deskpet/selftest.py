@@ -1173,6 +1173,9 @@ def run(qapp) -> int:
     qml_backend.setStrictCustomImageRatio(True)
     check("qml backend has exportSettingsData slot", hasattr(qml_backend, "exportSettingsData"))
     check("qml backend has importSettingsData slot", hasattr(qml_backend, "importSettingsData"))
+    check("qml backend has openVk1Repo slot", hasattr(qml_backend, "openVk1Repo"))
+    check("qml backend has openYuYueRepo slot", hasattr(qml_backend, "openYuYueRepo"))
+    check("qml backend has openExternalUrl slot", hasattr(qml_backend, "openExternalUrl"))
 
     # 清理測試自訂立繪
     pet.set_character("deepseek")

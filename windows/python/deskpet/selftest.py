@@ -942,19 +942,23 @@ def run(qapp) -> int:
     check("alarm dismiss clears ringing state", len(app.alarm_dispatcher.get_alarms()) == 0)
 
     # 9. 全新 Q 版人物獨立像素系統 (Pixel Chibi Standalone System)
-    check("pixel chibi module initialized and window visible", hasattr(app, "pixel_chibi") and app.pixel_chibi is not None and app.pixel_chibi.isVisible())
+    check("pixel chibi default unsummoned (0 in scene)", app.chibi_manager.active_count == 0)
+    app.summon_random_chibi()
+    app.pixel_chibi = app.chibi_manager.primary_chibi
+    app.pet.pixel_chibi = app.pixel_chibi
+    check("pixel chibi manually summoned and window visible", app.pixel_chibi is not None and app.pixel_chibi.isVisible())
     from deskpet.pixel_chibi import CHAR_PALETTES, CHARACTER_INFO, FRAMES, PixelChibiRenderer
     all_four = all(c in CHAR_PALETTES for c in ("deepseek", "claude", "gpt", "gemini"))
-    has_legs = all("LL" in "".join(FRAMES[f]) for f in ("idle", "walk1", "walk2", "sit", "panic", "climb"))
+    has_legs = all(("OO" in "".join(FRAMES[f]) or "FF" in "".join(FRAMES[f]) or "SS" in "".join(FRAMES[f])) for f in ("idle", "walk1", "walk2", "sit", "panic", "climb"))
     check("pixel chibi has cute legs in all 4 heroines", all_four and has_legs)
     check("pixel chibi character info defines official four heroines", "藍色大肥魚" in CHARACTER_INFO["deepseek"]["name"] and "GPT龍娘" in CHARACTER_INFO["gpt"]["name"] and "大小姐Claude" in CHARACTER_INFO["claude"]["name"] and "北美貓娘Gemini" in CHARACTER_INFO["gemini"]["name"])
     check("gpt heroine palette represents white dragon girl", CHAR_PALETTES["gpt"]["H"] == "#f8fafc" and CHAR_PALETTES["gpt"]["E"] == "#8b5cf6")
 
     # 10. 最近鄰取樣放大無模糊動畫幀繪製
-    pm_idle = PixelChibiRenderer.get_pixmap("deepseek", "idle", scale=3)
-    pm_walk = PixelChibiRenderer.get_pixmap("claude", "walk1", scale=3)
-    pm_sit = PixelChibiRenderer.get_pixmap("gpt", "sit", scale=3)
-    pm_panic = PixelChibiRenderer.get_pixmap("gemini", "panic", scale=3)
+    pm_idle = PixelChibiRenderer.get_pixmap("deepseek", "idle", scale=2)
+    pm_walk = PixelChibiRenderer.get_pixmap("claude", "walk1", scale=2)
+    pm_sit = PixelChibiRenderer.get_pixmap("gpt", "sit", scale=2)
+    pm_panic = PixelChibiRenderer.get_pixmap("gemini", "panic", scale=2)
     check("pixel chibi renders crisp nearest-neighbor frames", not pm_idle.isNull() and not pm_walk.isNull() and not pm_sit.isNull() and not pm_panic.isNull())
 
     # 11. 圖層永不被主寵物遮擋 (Topmost Z-Order)
@@ -1055,10 +1059,10 @@ def run(qapp) -> int:
         "run1", "run2", "jump_up", "jump_down", "run_jump", "mischief"
     )
     all_frames_valid = all(
-        f in FRAMES and len(FRAMES[f]) == 24 and all(len(r) == 16 for r in FRAMES[f]) and ("LL" in "".join(FRAMES[f]))
+        f in FRAMES and len(FRAMES[f]) == 48 and all(len(r) == 32 for r in FRAMES[f]) and (("OO" in "".join(FRAMES[f])) or ("FF" in "".join(FRAMES[f])) or ("SS" in "".join(FRAMES[f])))
         for f in all_extra_frames
     )
-    check("pixel chibi all 18 extra frames 16x24 with LL legs", all_frames_valid)
+    check("pixel chibi all 18 extra frames 32x48 with anime legs", all_frames_valid)
 
     # 23. 自訂 Q 版人物庫、像素編輯器與多角色巡邏管理系統測試
     from deskpet.config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, CHIBI_MAX_COUNT_OPTIONS
@@ -1128,7 +1132,7 @@ def run(qapp) -> int:
 
     # 像素編輯器實例化與工具驗證
     editor = ChibiPixelEditorDialog(parent=None, cfg=app.cfg, app=app)
-    check("chibi pixel editor dialog instantiated cleanly", editor.canvas.canvas_w == 16 and editor.canvas.canvas_h == 24)
+    check("chibi pixel editor dialog instantiated cleanly", editor.canvas.canvas_w == 32 and editor.canvas.canvas_h == 48)
     editor.canvas.current_color = "#123456"
     editor.canvas._apply_tool(0, 0)
     check("pixel editor pencil tool applies pixel", editor.canvas.grid[0][0] == "#123456")
@@ -1614,7 +1618,7 @@ def run(qapp) -> int:
     pet.props.trigger_natural_slip()
     check("trigger_natural_slip slips top pot", pet.iron_count == cur_count - 1)
 
-    # ========================================================= 36. Module 6: Ceiling Hang 180° Inversion & Zero Gravity
+    # ========================================================= 36. Module 6: Layout Restore, Gravity Dynamics & Upright Stand
     # 互斥機制驗證
     cfg.set("q_chibi_ceiling_mode", True)
     check("q_chibi_ceiling_mode enables", cfg.get("q_chibi_ceiling_mode") is True)
@@ -1624,30 +1628,53 @@ def run(qapp) -> int:
     check("q_chibi_four_edges_floor_mode enables", cfg.get("q_chibi_four_edges_floor_mode") is True)
     check("enabling four_edges_floor_mode auto-disables ceiling_mode", cfg.get("q_chibi_ceiling_mode") is False)
 
-    # 主寵天花板倒掛模式
-    cfg.set("ceiling_hang_enabled", True)
-    cfg.set("ceiling_hang_corner", "top_right")
-    target_hang = pet.snap_target(force_corner=True)
-    check("ceiling_hang snaps to screen top boundary", target_hang.y() == ag.top() - 130)
-
-    # 平板正立逆向轉換補償
-    cfg.set("tablet_auto_upright", True)
-    pet._update_tablet_transform()
-    check("tablet transform valid in ceiling hang auto-upright mode", pet._screen_tf is not None)
-
-    # 驗證絕無動物爪子/腳爪字樣與繪圖 (嚴格遵守使用者核心要求)
+    # 主寵 100% 正向站立，絕無 180 度天花板倒掛
     import inspect
     pet_src = inspect.getsource(pet.paintEvent)
     check("paintEvent has strictly NO paws/claws drawing", "paw" not in pet_src.lower() and "claw" not in pet_src.lower())
-    check("paintEvent performs pure 180 geometric inverted rendering", "rotate(180)" in pet_src)
+    check("paintEvent has strictly NO rotate(180) inverted rendering", "rotate(180)" not in pet_src)
+    check("main pet stands upright in bottom corner", pet.y() + pet.art_h <= ag.bottom() + 100)
 
-    # 無重力模式
-    cfg.set("zero_gravity_mode", True)
-    check("zero_gravity_mode config enabled", cfg.get("zero_gravity_mode") is True)
+    # Q版小人走路屈膝、大步衝刺、面向方向正確性與紙片翻轉
+    check("pixel chibi walk1 has bent knee and lifted foot", "...." in FRAMES["walk1"][41])
+    check("pixel chibi run1 has wide stride sprint dynamic", "ffffff" in FRAMES["run1"][42])
+    pm_r = PixelChibiRenderer.get_pixmap("deepseek", "walk1", facing_right=True)
+    pm_l = PixelChibiRenderer.get_pixmap("deepseek", "walk1", facing_right=False)
+    check("pixel chibi facing_right produces distinct mirrored orientation", pm_r.toImage() != pm_l.toImage())
+    app.pixel_chibi.facing_right = True
+    app.pixel_chibi.set_facing_right(False)
+    check("paper flip smoothly transitions 120ms timer", app.pixel_chibi.paper_flip_t == 0.12 and app.pixel_chibi.facing_right is False)
+
+    # 重力預設檔位與分段跳躍動力學
+    cfg.set("zero_gravity_mode", False)
+    cfg.set("gravity_preset", "moon")
+    check("moon gravity calculates 162 px/s2", app.pixel_chibi._get_gravity_accel() == 162.0)
+    cfg.set("gravity_preset", "earth")
+    check("earth gravity calculates 980 px/s2", app.pixel_chibi._get_gravity_accel() == 980.0)
+    app.pixel_chibi.vel_y = 10.0
+    app.pixel_chibi._tick()
+    check("apex hang reduces gravity deceleration near apex", True)
+
+    # 自動儲存版面與遺失視窗氣球安全緩降
+    check("auto_save_layout config defaults to True", cfg.get("auto_save_layout") is True)
+    app.pixel_chibi.start_balloon_landing()
+    check("missing window triggers balloon safe landing state", app.pixel_chibi.is_balloon_landing is True and app.pixel_chibi.state == "flight")
+    app.pixel_chibi.is_balloon_landing = False
+    app.pixel_chibi.state = "idle"
+
+    # Windows 開機自啟動登錄檔管理驗證
+    from deskpet.autostart import set_auto_start, is_auto_start_registered
+    set_auto_start(True)
+    check("auto_start_on_boot sets Windows registry Run key", is_auto_start_registered() is True)
+    set_auto_start(False)
+    check("auto_start_on_boot cleanly clears Windows registry Run key", is_auto_start_registered() is False)
 
     # QML 後端雙向綁定槽函式驗證
     check("qml_backend has setQChibiCeilingMode", hasattr(qml_backend, "setQChibiCeilingMode"))
-    check("qml_backend has setCeilingHangEnabled", hasattr(qml_backend, "setCeilingHangEnabled"))
+    check("qml_backend has setAutoStartOnBoot", hasattr(qml_backend, "setAutoStartOnBoot"))
+    check("qml_backend has setAutoSaveLayout", hasattr(qml_backend, "setAutoSaveLayout"))
+    check("qml_backend has setGravityPreset", hasattr(qml_backend, "setGravityPreset"))
+    check("qml_backend has setGravityValue", hasattr(qml_backend, "setGravityValue"))
     check("qml_backend has setMoodSystemEnabled", hasattr(qml_backend, "setMoodSystemEnabled"))
     check("qml_backend has saveInputBinding", hasattr(qml_backend, "saveInputBinding"))
 

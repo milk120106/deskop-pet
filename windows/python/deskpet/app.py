@@ -179,12 +179,22 @@ class App(QObject):
         self.pet.place_initial()
         self.pet.show()
         self._restore_extra_pets()
+        self._restore_saved_layout()
+        try:
+            from .autostart import sync_auto_start
+            sync_auto_start(self.cfg)
+        except Exception:
+            pass
         self._tutorial_dlg = None
         if not self.cfg.get("tutorial_shown", False) and "--selftest" not in sys.argv:
             QTimer.singleShot(600, self.open_tutorial)
         qapp.aboutToQuit.connect(self._cleanup)
 
     def _cleanup(self):
+        try:
+            self.save_layout()
+        except Exception:
+            pass
         try:
             self.stop_pure_voice()
         except Exception:
@@ -199,6 +209,51 @@ class App(QObject):
         except Exception:
             pass
         self.cfg.save()
+
+    def save_layout(self):
+        """自動保存當前大寵物與所有場上活躍 Q 版小人位置與狀態。"""
+        if not bool(self.cfg.get("auto_save_layout", True)):
+            self.cfg.set("saved_chibi_layout", [], save=True)
+            return
+
+        self.cfg.set("pos", [self.pet.x(), self.pet.y()], save=False)
+        chibi_data = []
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            for c in self.chibi_manager.chibis:
+                entry = {
+                    "character": c.character,
+                    "pos_x": float(c.pos_x),
+                    "pos_y": float(c.pos_y),
+                    "facing_right": bool(c.facing_right),
+                    "state": str(c.state),
+                    "climbing_pet": bool(c.climbing_pet),
+                    "pet_mount_slot": str(getattr(c, "pet_mount_slot", "floor")),
+                }
+                chibi_data.append(entry)
+        self.cfg.set("saved_chibi_layout", chibi_data, save=True)
+
+    def _restore_saved_layout(self):
+        """還原上次儲存的版面佈局（若視窗遺失則觸發小氣球安全緩降至地面）。"""
+        if not bool(self.cfg.get("auto_save_layout", True)):
+            return
+        saved_chibis = self.cfg.get("saved_chibi_layout", [])
+        if not saved_chibis or not hasattr(self, "chibi_manager") or not self.chibi_manager:
+            return
+        for entry in saved_chibis:
+            cid = entry.get("character", "deepseek")
+            w = self.chibi_manager.summon(cid, force=True)
+            if w:
+                w.pos_x = float(entry.get("pos_x", w.pos_x))
+                w.pos_y = float(entry.get("pos_y", w.pos_y))
+                w.set_facing_right(bool(entry.get("facing_right", True)))
+                w.move(int(w.pos_x), int(w.pos_y))
+                ag = w._screen_rect()
+                floor_y = float(ag.bottom() + 1 - w.char_h)
+                # 遺失視窗小氣球安全降落：若小人在半空中但沒有附著的視窗，觸發氣球緩降
+                if w.pos_y < floor_y - 30:
+                    win_rect = w._get_active_window_rect()
+                    if not win_rect or not win_rect.isValid() or win_rect.isEmpty():
+                        w.start_balloon_landing()
 
     # ------------------------------------------------------------- Multi-pet Balance Management
     def _restore_extra_pets(self):
@@ -968,8 +1023,17 @@ class App(QObject):
     def set_character(self, cid: str):
         self.cfg.set("character", cid)
         self.pet.set_character(cid)
-        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
-            self.pixel_chibi.set_character(cid)
+        if hasattr(self, "chibi_manager") and self.chibi_manager and self.chibi_manager.chibis:
+            for c in self.chibi_manager.chibis:
+                try:
+                    c.set_character(cid)
+                except Exception:
+                    pass
+        elif hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            try:
+                self.pixel_chibi.set_character(cid)
+            except Exception:
+                pass
         # If this character was in extra pets, remove it from extra pets
         if cid in self.extra_pets:
             self.dismiss_balance_pet(cid)
@@ -1180,8 +1244,13 @@ class App(QObject):
         self.pet.update_fps_timer()
         for ep in self.extra_pets.values():
             ep.update_fps_timer()
-        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
-            self.pixel_chibi.sync_fps()
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.sync_fps()
+        elif hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            try:
+                self.pixel_chibi.sync_fps()
+            except Exception:
+                pass
         if hasattr(self, "chibi_manager") and self.chibi_manager:
             self.chibi_manager.sync_fps()
             self.chibi_manager.enforce_limit()
@@ -1192,8 +1261,13 @@ class App(QObject):
         self.pet.update_fps_timer()
         for ep in self.extra_pets.values():
             ep.update_fps_timer()
-        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
-            self.pixel_chibi.sync_fps()
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.sync_fps()
+        elif hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            try:
+                self.pixel_chibi.sync_fps()
+            except Exception:
+                pass
         self._changed()
 
     def set_vsync_mode(self, mode: int):

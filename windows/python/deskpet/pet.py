@@ -549,10 +549,6 @@ class PetWindow(QWidget):
         else:
             dst_pts = pts
 
-        # 天花板倒掛模式逆向旋轉 180 度補償（維持文字水平正立便於閱讀）
-        if bool(self.cfg.get("ceiling_hang_enabled", False)) and bool(self.cfg.get("tablet_auto_upright", True)):
-            dst_pts = [dst_pts[2], dst_pts[3], dst_pts[0], dst_pts[1]]
-
         self._screen_tf = _quad_transform(SCREEN_W, SCREEN_H, dst_pts)
 
     def _resize_window(self):
@@ -630,13 +626,6 @@ class PetWindow(QWidget):
             w += H * 0.08
             x = cx - w / 2.0
 
-        # 天花板倒掛模式：180 度反轉幾何對齊（倒懸時頭部位於寵物下方）
-        if bool(self.cfg.get("ceiling_hang_enabled", False)):
-            cy = y + h / 2.0
-            new_cx = 2.0 * (o.x() + W / 2.0) - cx
-            new_cy = 2.0 * (o.y() + H / 2.0) - cy
-            return QRectF(new_cx - w / 2.0, new_cy - h / 2.0, w, h)
-
         return QRectF(x, y, w, h)
 
     def tablet_zone_global(self) -> QRectF:
@@ -647,14 +636,6 @@ class PetWindow(QWidget):
         ty = H * 0.60
         tw = W * 0.40
         th = H * 0.35
-
-        # 天花板倒掛模式幾何適配
-        if bool(self.cfg.get("ceiling_hang_enabled", False)):
-            cx = o.x() + tx + tw / 2.0
-            cy = o.y() + ty + th / 2.0
-            new_cx = 2.0 * (o.x() + W / 2.0) - cx
-            new_cy = 2.0 * (o.y() + H / 2.0) - cy
-            return QRectF(new_cx - tw / 2.0, new_cy - th / 2.0, tw, th)
 
         return QRectF(o.x() + tx, o.y() + ty, tw, th)
 
@@ -777,18 +758,6 @@ class PetWindow(QWidget):
         T = self.y() + M_T
         B = self.y() + M_T + self.art_h
         nx, ny = self.x(), self.y()
-
-        # 天花板倒掛模式：停靠螢幕上方邊界 (左上或右上角)
-        if bool(self.cfg.get("ceiling_hang_enabled", False)):
-            corner = self.cfg.get("ceiling_hang_corner", "top_right")
-            if corner == "top_left":
-                nx += (ag.left() - L)
-                self.set_snap_right(False)
-            else:
-                nx += (ag.right() + 1 - R)
-                self.set_snap_right(True)
-            ny += (ag.top() - T)
-            return QPoint(int(nx), int(ny))
 
         if force_corner:
             corner = self.cfg.get("snap_corner", "right")
@@ -1188,15 +1157,8 @@ class PetWindow(QWidget):
             progress = 1.0 - (self.paper_land_t / 0.20)
             paper_squish_y = 0.88 + 0.12 * math.sin(progress * math.pi / 2)
 
-        is_ceiling = bool(self.cfg.get("ceiling_hang_enabled", False))
         ox, oy = M_L + dx, M_T + dy
         p.save()
-        if is_ceiling:
-            # 天花板倒掛模式：純粹幾何 180 度反轉渲染 (絕無任何動物腳爪繪製)
-            p.translate(ox + W / 2, oy + H / 2)
-            p.rotate(180)
-            p.translate(-(ox + W / 2), -(oy + H / 2))
-
         p.translate(ox + W / 2, oy + H + shift_y)
         # 紙片懸空飄蕩微幅傾角 (±5 度)
         if self.flutter_angle != 0.0:
@@ -1524,10 +1486,7 @@ class PetWindow(QWidget):
         """動態計算頭頂空間可容納的最大鐵鍋層數 (1..10)。"""
         ag = self.screen_ag()
         hz = self.head_zone_global()
-        if bool(self.cfg.get("ceiling_hang_enabled", False)):
-            headroom = ag.bottom() - hz.bottom()
-        else:
-            headroom = hz.top() - ag.top()
+        headroom = hz.top() - ag.top()
         pot_step = max(10.0, self.art_h * 0.12)
         max_allowed = int(headroom / pot_step)
         return max(1, min(10, max_allowed if max_allowed >= 1 else 5))

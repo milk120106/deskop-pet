@@ -1177,12 +1177,12 @@ Rectangle {
                             }
                         }
 
-                        // 項目 4: 天花板倒掛模式 (180 度幾何反轉渲染)
+                        // 項目 4: Windows 開機自啟動
                         Row {
                             width: parent.width
                             spacing: 12
                             Text {
-                                text: "天花板倒掛停靠模式（純粹 180 度反轉幾何對齊頂部）"
+                                text: "開機自動啟動桌面寵物（登入 Windows 時背景常駐）"
                                 color: themeColors.text
                                 font.pixelSize: 13
                                 font.family: root.modernFontStack
@@ -1196,7 +1196,7 @@ Rectangle {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 13
-                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    color: (typeof backend !== "undefined" && backend && backend.autoStartOnBoot) ? themeColors.primary : themeColors.surfaceVariant
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     Rectangle {
                                         width: 20
@@ -1204,43 +1204,81 @@ Rectangle {
                                         radius: 10
                                         y: 3
                                         color: "#FFFFFF"
-                                        x: (typeof backend !== "undefined" && backend && backend.ceilingHangEnabled) ? 25 : 3
+                                        x: (typeof backend !== "undefined" && backend && backend.autoStartOnBoot) ? 25 : 3
                                         Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
                                     }
                                 }
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangEnabled(!backend.ceilingHangEnabled)
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setAutoStartOnBoot(!backend.autoStartOnBoot)
                                 }
                             }
                         }
 
-                        // 項目 4.1: 倒掛停靠角落與平板正立
+                        // 項目 4.1: 自動儲存與版面佈局還原
                         Row {
                             width: parent.width
                             spacing: 12
-                            visible: typeof backend !== "undefined" && backend && backend.ceilingHangEnabled
                             Text {
-                                text: "倒掛停靠角落與平板自動正立"
+                                text: "自動儲存與還原版面佈局（記錄位置、視窗關閉時氣球安全降落）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.autoSaveLayout) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.autoSaveLayout) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setAutoSaveLayout(!backend.autoSaveLayout)
+                                }
+                            }
+                        }
+
+                        // 項目 4.2: 重力分段物理預設 (地球 9.8N / 月球 1.62N / 自訂)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "環境重力物理與跳躍動力學"
                                 color: themeColors.textSub
                                 font.pixelSize: 12
                                 font.family: root.modernFontStack
                                 renderType: Text.NativeRendering
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 220
+                                width: 200
                             }
                             Rectangle {
                                 width: 90
                                 height: 28
                                 radius: 8
-                                color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "earth") ? themeColors.primaryContainer : themeColors.surfaceVariant
                                 border.width: 1
-                                border.color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primary : themeColors.border
+                                border.color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "earth") ? themeColors.primary : themeColors.border
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "螢幕左上"
-                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primary : themeColors.text
+                                    text: "地球 (9.8N)"
+                                    color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "earth") ? themeColors.primary : themeColors.text
                                     font.pixelSize: 11
                                     font.bold: true
                                     font.family: root.modernFontStack
@@ -1248,20 +1286,20 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangCorner("top_left")
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setGravityPreset("earth")
                                 }
                             }
                             Rectangle {
                                 width: 90
                                 height: 28
                                 radius: 8
-                                color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "moon") ? themeColors.primaryContainer : themeColors.surfaceVariant
                                 border.width: 1
-                                border.color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primary : themeColors.border
+                                border.color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "moon") ? themeColors.primary : themeColors.border
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "螢幕右上"
-                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primary : themeColors.text
+                                    text: "月球 (1.62N)"
+                                    color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "moon") ? themeColors.primary : themeColors.text
                                     font.pixelSize: 11
                                     font.bold: true
                                     font.family: root.modernFontStack
@@ -1269,20 +1307,20 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangCorner("top_right")
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setGravityPreset("moon")
                                 }
                             }
                             Rectangle {
-                                width: 110
+                                width: 90
                                 height: 28
                                 radius: 8
-                                color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "custom") ? themeColors.primaryContainer : themeColors.surfaceVariant
                                 border.width: 1
-                                border.color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primary : themeColors.border
+                                border.color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "custom") ? themeColors.primary : themeColors.border
                                 Text {
                                     anchors.centerIn: parent
-                                    text: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? "平板正立：開啟" : "平板正立：關閉"
-                                    color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primary : themeColors.text
+                                    text: "低重力 (5N)"
+                                    color: (typeof backend !== "undefined" && backend && backend.gravityPreset === "custom") ? themeColors.primary : themeColors.text
                                     font.pixelSize: 11
                                     font.bold: true
                                     font.family: root.modernFontStack
@@ -1290,7 +1328,7 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setTabletAutoUpright(!backend.tabletAutoUpright)
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setGravityValue(5.0)
                                 }
                             }
                         }

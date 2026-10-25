@@ -279,7 +279,7 @@ DEFAULTS = {
     "telegram_bot_token": "",        # Telegram Bot Token
     "telegram_chat_id": "",          # Telegram Chat ID
     # Q-Chibi standalone pixel system
-    "q_chibi_enabled": True,         # 啟用全新 Q 版獨立像素小人巡邏
+    "q_chibi_enabled": False,        # 啟用全新 Q 版獨立像素小人巡邏（預設關閉）
     "q_chibi_max_count": 10,         # Q 版小人在場數量上限（檔位 5, 10, 15, 20, 25, 30，預設 10）
     "q_climb_windows": False,        # 視窗與按鈕攀爬辨識（預設關閉）
     "q_flight_prop": False,          # 飛行小道具（小氣球空中漂浮模式，預設關閉）
@@ -449,10 +449,12 @@ DEFAULTS = {
     "sky_pot_drop_enabled": True,           # 天降空鍋開關
     "natural_pot_slip_enabled": True,       # 戴鍋自然滑落開關
 
-    # ========================================================= 模組六：寵物天花板倒掛模式
-    "ceiling_hang_enabled": False,          # 天花板倒掛模式（預設關閉）
-    "ceiling_hang_corner": "top_right",     # 倒掛角落: top_left / top_right
-    "tablet_auto_upright": True,            # 平板內容自動回正便於閱讀（預設啟用）
+    # ========================================================= 模組六：系統開機啟動、版面還原與重力配置
+    "auto_start_on_boot": False,            # 開機自啟動（預設關閉）
+    "auto_save_layout": True,               # 自動儲存與還原版面佈局（預設啟用）
+    "saved_chibi_layout": [],               # 保存之活躍 Q 版小人位置與狀態清單
+    "gravity_preset": "earth",              # 重力預設檔位: earth / moon / custom
+    "gravity_value": 9.8,                   # 重力數值 (m/s²，預設地球 9.8)
 }
 
 CHIBI_MAX_COUNT_OPTIONS = (5, 10, 15, 20, 25, 30)
@@ -511,6 +513,9 @@ class Config:
                 for k, v in raw.items():
                     if k in DEFAULTS:
                         self.data[k] = v
+
+                for obsolete_k in ("ceiling_hang_enabled", "ceiling_hang_corner", "tablet_auto_upright"):
+                    self.data.pop(obsolete_k, None)
 
                 # 合併可能缺漏的預設巢狀字典結構 (如 input_bindings, pet_stats)
                 for dict_key in ("input_bindings", "pet_stats"):

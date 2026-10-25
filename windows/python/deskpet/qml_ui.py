@@ -150,7 +150,9 @@ class QMLBackend(QObject):
     bindingConflictsChanged = Signal()
     qChibiBehaviorChanged = Signal()
     petVisualsChanged = Signal()
-    ceilingHangChanged = Signal()
+    layoutSettingsChanged = Signal()
+    gravitySettingsChanged = Signal()
+    autoStartChanged = Signal()
     moodSystemChanged = Signal()
 
     def __init__(self, app, win: QWidget):
@@ -591,14 +593,17 @@ class QMLBackend(QObject):
     def get_pet_expression_enabled(self) -> bool:
         return bool(self.app.cfg.get("pet_expression_enabled", True))
 
-    def get_ceiling_hang_enabled(self) -> bool:
-        return bool(self.app.cfg.get("ceiling_hang_enabled", False))
+    def get_auto_save_layout(self) -> bool:
+        return bool(self.app.cfg.get("auto_save_layout", True))
 
-    def get_ceiling_hang_corner(self) -> str:
-        return str(self.app.cfg.get("ceiling_hang_corner", "top_right"))
+    def get_auto_start_on_boot(self) -> bool:
+        return bool(self.app.cfg.get("auto_start_on_boot", False))
 
-    def get_tablet_auto_upright(self) -> bool:
-        return bool(self.app.cfg.get("tablet_auto_upright", True))
+    def get_gravity_preset(self) -> str:
+        return str(self.app.cfg.get("gravity_preset", "earth"))
+
+    def get_gravity_value(self) -> float:
+        return float(self.app.cfg.get("gravity_value", 9.8))
 
     def get_sky_pot_drop_enabled(self) -> bool:
         return bool(self.app.cfg.get("sky_pot_drop_enabled", True))
@@ -701,9 +706,10 @@ class QMLBackend(QObject):
     zeroGravityMode = Property(bool, get_zero_gravity_mode, notify=qChibiBehaviorChanged)
     petParticlesEnabled = Property(bool, get_pet_particles_enabled, notify=petVisualsChanged)
     petExpressionEnabled = Property(bool, get_pet_expression_enabled, notify=petVisualsChanged)
-    ceilingHangEnabled = Property(bool, get_ceiling_hang_enabled, notify=ceilingHangChanged)
-    ceilingHangCorner = Property(str, get_ceiling_hang_corner, notify=ceilingHangChanged)
-    tabletAutoUpright = Property(bool, get_tablet_auto_upright, notify=ceilingHangChanged)
+    autoSaveLayout = Property(bool, get_auto_save_layout, notify=layoutSettingsChanged)
+    autoStartOnBoot = Property(bool, get_auto_start_on_boot, notify=autoStartChanged)
+    gravityPreset = Property(str, get_gravity_preset, notify=gravitySettingsChanged)
+    gravityValue = Property(float, get_gravity_value, notify=gravitySettingsChanged)
     skyPotDropEnabled = Property(bool, get_sky_pot_drop_enabled, notify=petVisualsChanged)
     naturalPotSlipEnabled = Property(bool, get_natural_pot_slip_enabled, notify=petVisualsChanged)
     moodSystemEnabled = Property(bool, get_mood_system_enabled, notify=moodSystemChanged)
@@ -1634,27 +1640,34 @@ class QMLBackend(QObject):
         self.petVisualsChanged.emit()
 
     @Slot(bool)
-    def setCeilingHangEnabled(self, val: bool):
-        self.app.cfg.set("ceiling_hang_enabled", bool(val), save=True)
-        self.app.pet._update_tablet_transform()
-        self.app.pet.snap_now(force_corner=True)
-        self.app.pet.update()
-        self.ceilingHangChanged.emit()
-
-    @Slot(str)
-    def setCeilingHangCorner(self, corner: str):
-        if corner in ("top_left", "top_right"):
-            self.app.cfg.set("ceiling_hang_corner", corner, save=True)
-            self.app.pet.snap_now(force_corner=True)
-            self.app.pet.update()
-            self.ceilingHangChanged.emit()
+    def setAutoSaveLayout(self, val: bool):
+        self.app.cfg.set("auto_save_layout", bool(val), save=True)
+        self.layoutSettingsChanged.emit()
 
     @Slot(bool)
-    def setTabletAutoUpright(self, val: bool):
-        self.app.cfg.set("tablet_auto_upright", bool(val), save=True)
-        self.app.pet._update_tablet_transform()
-        self.app.pet.update()
-        self.ceilingHangChanged.emit()
+    def setAutoStartOnBoot(self, val: bool):
+        self.app.cfg.set("auto_start_on_boot", bool(val), save=True)
+        from .autostart import set_auto_start
+        set_auto_start(bool(val))
+        self.autoStartChanged.emit()
+
+    @Slot(str)
+    def setGravityPreset(self, preset: str):
+        preset = preset.lower().strip()
+        if preset in ("earth", "moon", "custom"):
+            self.app.cfg.set("gravity_preset", preset, save=True)
+            if preset == "earth":
+                self.app.cfg.set("gravity_value", 9.8, save=True)
+            elif preset == "moon":
+                self.app.cfg.set("gravity_value", 1.62, save=True)
+            self.gravitySettingsChanged.emit()
+
+    @Slot(float)
+    def setGravityValue(self, val: float):
+        v = max(0.0, min(30.0, float(val)))
+        self.app.cfg.set("gravity_value", v, save=True)
+        self.app.cfg.set("gravity_preset", "custom", save=True)
+        self.gravitySettingsChanged.emit()
 
     @Slot(bool)
     def setSkyPotDropEnabled(self, val: bool):
@@ -1733,7 +1746,9 @@ class QMLBackend(QObject):
         self.bindingConflictsChanged.emit()
         self.qChibiBehaviorChanged.emit()
         self.petVisualsChanged.emit()
-        self.ceilingHangChanged.emit()
+        self.layoutSettingsChanged.emit()
+        self.gravitySettingsChanged.emit()
+        self.autoStartChanged.emit()
         self.moodSystemChanged.emit()
         self.statusSummaryChanged.emit(self.get_status_summary())
         self.currentFontChanged.emit(self.get_current_font_family())

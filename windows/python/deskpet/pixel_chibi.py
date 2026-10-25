@@ -46,2120 +46,64 @@ from .config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, id_to_provi
 # P = Balloon string / thread
 # R = Balloon body / sphere
 
-CHAR_PALETTES = {
-    "deepseek": {
-        # 藍色大肥魚 (DeepSeek 鯨魚娘)：深藍長髮、小鯨魚鰭髮飾、鯨魚大尾巴、水手裙、海藍短靴
-        "H": "#1e3a8a", "h": "#172554",  # Deep royal blue long hair
-        "S": "#ffe4d0", "s": "#fbcfe8", "B": "#f472b6",  # Fair skin & pink blush
-        "E": "#0284c7", "e": "#e0f2fe",  # Sky blue eyes
-        "A": "#38bdf8", "a": "#bae6fd",  # Whale fin hairpin & blue whale tail
-        "T": "#ffffff", "D": "#1d4ed8", "d": "#1e40af",  # Navy sailor maid top
-        "K": "#1e3a8a", "k": "#172554",  # Sailor pleated skirt
-        "L": "#ffe4d0", "W": "#ffe4d0",  # Cute bare legs
-        "F": "#1e3a8a", "f": "#0f172a",  # Sailor short boots
-        "P": "#ffffff", "R": "#38bdf8",  # Sky blue balloon
-    },
-    "gpt": {
-        # GPT龍娘 (OpenAI 白龍娘)：銀白長髮微帶丁香紫、白龍角、仙氣白紫長裙、白龍尾巴
-        "H": "#f8fafc", "h": "#cbd5e1",  # Silvery white hair with soft violet shadow
-        "S": "#fff5f5", "s": "#fed7aa", "B": "#f472b6",  # Fair translucent skin & blush
-        "E": "#8b5cf6", "e": "#ede9fe",  # Lilac purple eyes
-        "A": "#f1f5f9", "a": "#c4b5fd",  # White dragon horns & violet cord tassel
-        "T": "#ffffff", "D": "#f8fafc", "d": "#e2e8f0",  # Ethereal white dragon gown with silver lace
-        "K": "#ede9fe", "k": "#ddd6fe",  # Flowing lilac pleated skirt & dragon tail
-        "L": "#fff5f5", "W": "#ffffff",  # Fair slender legs
-        "F": "#ede9fe", "f": "#8b5cf6",  # White & lilac dragon boots
-        "P": "#ffffff", "R": "#34d399",  # Dragon pearl emerald green balloon
-    },
-    "claude": {
-        # 大小姐Claude (Anthropic 大小姐)：暖橘波浪捲髮、黑緞帶金色花朵髮飾、維多利亞宮廷馬甲裙、典雅皮靴
-        "H": "#ea580c", "h": "#c2410c",  # Warm orange ojou-sama wavy hair
-        "S": "#ffedd5", "s": "#fed7aa", "B": "#fb7185",  # Warm fair skin & rose blush
-        "E": "#b45309", "e": "#fef3c7",  # Amber eyes
-        "A": "#1f2937", "a": "#fbbf24",  # Black ribbon & golden flower ornament
-        "T": "#fef3c7", "D": "#78350f", "d": "#451a03",  # Victorian cream blouse & brown corset
-        "K": "#78350f", "k": "#451a03",  # Victorian brown flared skirt
-        "L": "#ffedd5", "W": "#ffedd5",  # Elegant slender legs
-        "F": "#78350f", "f": "#451a03",  # Ojou-sama brown leather boots
-        "P": "#ffffff", "R": "#fb923c",  # Warm coral balloon
-    },
-    "gemini": {
-        # 北美貓娘Gemini (Google 北美貓娘)：紫藍雙色漸層長髮、毛茸茸貓耳與漸層貓尾巴、金黃星芒髮飾、星空魔法洋裝
-        "H": "#7c3aed", "h": "#38bdf8",  # Purple base with bright blue gradient hair
-        "S": "#ffe4e6", "s": "#fecdd3", "B": "#fb7185",  # Soft rosy skin & blush
-        "E": "#ec4899", "e": "#fce7f3",  # Vivid magenta starry eyes
-        "A": "#1e1b4b", "a": "#fbbf24",  # Midnight cat ears & radiant golden starburst
-        "T": "#fbbf24", "D": "#1e1b4b", "d": "#312e81",  # Midnight blue starry dress with gold trim
-        "K": "#1e1b4b", "k": "#0f172a",  # Midnight skirt & fluffy curved cat tail
-        "L": "#ffe4e6", "W": "#ffffff",  # White knee-high socks
-        "F": "#1e1b4b", "f": "#312e81",  # Dark Mary Jane shoes
-        "P": "#ffffff", "R": "#c084fc",  # Radiant purple balloon
-    },
-}
+CHAR_PALETTES = {'deepseek': {'H': '#2563eb', 'Y': '#1d4ed8', 'h': '#172554', 'y': '#60a5fa', 'S': '#ffe8da', 's': '#fcd0ba', 'w': '#fff6f0', 'B': '#f472b6', 'b': '#fbcfe8', 'E': '#0ea5e9', 'e': '#0369a1', 'I': '#38bdf8', 'W': '#ffffff', 'A': '#38bdf8', 'a': '#bae6fd', 'G': '#ffffff', 'g': '#93c5fd', 'C': '#ffffff', 'c': '#cbd5e1', 'T': '#38bdf8', 't': '#0284c7', 'D': '#1d4ed8', 'd': '#1e3a8a', 'K': '#1e3a8a', 'k': '#172554', 'L': '#ffe8da', 'l': '#fcd0ba', 'O': '#ffffff', 'o': '#cbd5e1', 'F': '#1e40af', 'f': '#0f172a', 'P': '#ffffff', 'R': '#38bdf8'}, 'gpt': {'H': '#f8fafc', 'Y': '#e2e8f0', 'h': '#cbd5e1', 'y': '#ffffff', 'S': '#fff5f5', 's': '#fed7aa', 'w': '#ffffff', 'B': '#f472b6', 'b': '#fbcfe8', 'E': '#8b5cf6', 'e': '#6d28d9', 'I': '#c084fc', 'W': '#ffffff', 'A': '#ede9fe', 'a': '#c4b5fd', 'G': '#34d399', 'g': '#059669', 'C': '#ffffff', 'c': '#e2e8f0', 'T': '#a855f7', 't': '#7e22ce', 'D': '#f8fafc', 'd': '#e2e8f0', 'K': '#ede9fe', 'k': '#c4b5fd', 'L': '#fff5f5', 'l': '#fed7aa', 'O': '#ffffff', 'o': '#ede9fe', 'F': '#7c3aed', 'f': '#4c1d95', 'P': '#ffffff', 'R': '#34d399'}, 'claude': {'H': '#ea580c', 'Y': '#c2410c', 'h': '#7c2d12', 'y': '#f97316', 'S': '#ffedd5', 's': '#fed7aa', 'w': '#fff7ed', 'B': '#fb7185', 'b': '#fecdd3', 'E': '#d97706', 'e': '#78350f', 'I': '#fbbf24', 'W': '#ffffff', 'A': '#1f2937', 'a': '#374151', 'G': '#fbbf24', 'g': '#b45309', 'C': '#fffbeb', 'c': '#fef3c7', 'T': '#dc2626', 't': '#991b1b', 'D': '#78350f', 'd': '#451a03', 'K': '#78350f', 'k': '#451a03', 'L': '#ffedd5', 'l': '#fed7aa', 'O': '#fffbeb', 'o': '#fde68a', 'F': '#78350f', 'f': '#291003', 'P': '#ffffff', 'R': '#fb923c'}, 'gemini': {'H': '#8b5cf6', 'Y': '#6366f1', 'h': '#312e81', 'y': '#38bdf8', 'S': '#ffe4e6', 's': '#fecdd3', 'w': '#fff1f2', 'B': '#fb7185', 'b': '#fecdd3', 'E': '#ec4899', 'e': '#be185d', 'I': '#f472b6', 'W': '#ffffff', 'A': '#1e1b4b', 'a': '#f472b6', 'G': '#fbbf24', 'g': '#d97706', 'C': '#ffffff', 'c': '#e2e8f0', 'T': '#fbbf24', 't': '#b45309', 'D': '#1e1b4b', 'd': '#0f172a', 'K': '#1e1b4b', 'k': '#0f172a', 'L': '#ffe4e6', 'l': '#fecdd3', 'O': '#ffffff', 'o': '#e2e8f0', 'F': '#1e1b4b', 'f': '#020617', 'P': '#ffffff', 'R': '#c084fc'}}
 
 CHARACTER_INFO = {
     "deepseek": {
         "id": "deepseek",
         "name": "藍色大肥魚",
         "subtitle": "DeepSeek 鯨魚娘",
-        "description": "深藍長髮、小鯨魚鰭髮飾、鯨魚大尾巴與水手裙",
+        "description": "深藍長髮、小鯨魚鰭髮飾、鯨魚大尾巴、水手連身裙、白短襪與小藍鞋",
     },
     "gpt": {
         "id": "gpt",
         "name": "GPT龍娘",
         "subtitle": "OpenAI 龍娘",
-        "description": "銀白長髮、白龍角、白龍尾巴與仙氣白紫長裙",
+        "description": "銀白長髮微帶丁香紫、白龍角、白龍尾巴、仙氣白紫百褶長裙與龍靴",
     },
     "claude": {
         "id": "claude",
         "name": "大小姐Claude",
         "subtitle": "Anthropic 大小姐",
-        "description": "暖橘波浪捲髮、黑緞帶金色花朵髮飾、維多利亞古典洋裝與皮靴",
+        "description": "暖橘波浪捲髮、黑緞帶金色花朵髮飾、維多利亞古典洋裝與優雅皮靴",
     },
     "gemini": {
         "id": "gemini",
         "name": "北美貓娘Gemini",
         "subtitle": "Google 北美貓娘",
-        "description": "紫藍雙色漸層長髮、毛茸茸漸層貓耳與貓尾、金黃星芒髮飾",
+        "description": "紫藍雙色漸層星空長髮、毛茸茸漸層貓耳與貓尾、金黃星芒髮飾與星空洋裝",
     },
 }
 
-# 16 columns x 24 rows character matrices (嚴格保證包含 "LL" 雙腿雙腳與四位主角色盤相容)
-FRAMES = {
-    # ------------------ Idle: 站立呼吸 (偏右側) ------------------
-    "idle": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "..SDDKKKKKKKDDS.",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-    ],
-    # ------------------ Facing Front: 正臉面向用戶眨眼/招手 ------------------
-    "facing_front": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "..ShTDDDDDDTh...",
-        ".S.DDDDDDDDDD...",
-        "...DDDDDDDDDDS..",
-        "..SDDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-    ],
-    # ------------------ Facing Back: 背影望向螢幕深處 ------------------
-    "facing_back": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhHHHHHHHHHhHH",
-        "HHHhHHHHHHHHHhHH",
-        "HHHhHHHHHHHHHhHH",
-        ".HHhHHHHHHHHhH..",
-        "..HhHHHHHHHHshH.",
-        "...hTddddddTh...",
-        "...DDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "..SDDKKKKKKKDDS.",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-    ],
-    # ------------------ Turn: 轉身過渡 3/4 視角 ------------------
-    "turn": [
-        "....AAAA...AAAA.",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSSEeSSSSEshH",
-        "HHHhSSEESSSSEshH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "..SDDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "...LL....LL.....",
-        "...LL....LL.....",
-        "...LL....LL.....",
-        "...WW....WW.....",
-        "...WW....WW.....",
-        "..FFF....FFF....",
-        "..fff....fff....",
-    ],
-    # ------------------ Walk 1: 邁出左腳，雙腿分明 ------------------
-    "walk1": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "..SDDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKD...",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        ".....LL..LL.....",
-        ".....LL...LL....",
-        "....LL....LL....",
-        "....WW.....WW...",
-        "....WW.....WW...",
-        "...FFF.....FFF..",
-        "...fff.....fff..",
-    ],
-    # ------------------ Walk 2: 邁出右腳，雙腿分明 ------------------
-    "walk2": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDDS..",
-        "..SDDDDDDDDDDDS.",
-        "..DDKKKKKKKDD...",
-        "...DKKKKKKKDS...",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        ".....LL..LL.....",
-        "....LL...LL.....",
-        "....LL....LL....",
-        "...WW.....WW....",
-        "...WW.....WW....",
-        "..FFF.....FFF...",
-        "..fff.....fff..",
-    ],
-    # ------------------ Run 1: 身體大幅前傾衝刺，左腿大步 ------------------
-    "run1": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "..SDDDDDDDDDD...",
-        ".SDDDDDDDDDDDS..",
-        "...DDKKKKKKKDDS.",
-        "....SDKKKKKKDS..",
-        ".....KKKKKKKK...",
-        ".....KKKKKKKK...",
-        ".....LL..LL.....",
-        "....LL....LL....",
-        "...LL......LL...",
-        "...WW......WW...",
-        "...WW......WW...",
-        "..FFF......FFF..",
-        "..fff......fff..",
-    ],
-    # ------------------ Run 2: 身體大幅前傾衝刺，右腿大步 ------------------
-    "run2": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDDS..",
-        "..SDDDDDDDDDDDS.",
-        "..SDDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        ".....KKKKKKKK...",
-        ".....KKKKKKKK...",
-        ".....LL..LL.....",
-        ".....LL..LL.....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-    ],
-    # ------------------ Jump Up: 向上跳躍起飛，雙手上舉 ------------------
-    "jump_up": [
-        "S..............S",
-        "S...AAAA....AAAS",
-        ".S.AAHHAAAAHHAS.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDD...",
-        "...DDDDDDDDDD...",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        ".....LLLLLL.....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-        "................",
-        "................",
-    ],
-    # ------------------ Jump Down: 下落俯衝，雙腿伸直 ------------------
-    "jump_down": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "S..hTDDDDDDTh..S",
-        ".S.DDDDDDDDDD.S.",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        ".....LL..LL.....",
-        ".....LL..LL.....",
-        ".....LL..LL.....",
-        ".....WW..WW.....",
-        ".....WW..WW.....",
-        "....FFF..FFF....",
-        "....fff..fff....",
-    ],
-    # ------------------ Run Jump: 飛撲躍起 ------------------
-    "run_jump": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        ".S.DDDDDDDDDD...",
-        "..SDDDDDDDDDDS..",
-        "...DDKKKKKKKDDS.",
-        "....SDKKKKKKDS..",
-        ".....KKKKKKKK...",
-        ".....KKKKKKKK...",
-        "..LLLL..........",
-        "...LLLL.........",
-        "....WWWW........",
-        ".....FFFF.......",
-        ".....ffff.......",
-        "................",
-        "................",
-    ],
-    # ------------------ Sit: 坐姿，小短腿懸空晃動 ------------------
-    "sit": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "...KKKKKKKKKK...",
-        "...KKKKKKKKKK...",
-        "...LLLL..LLLL...",
-        "...WWWW..WWWW...",
-        "...FFFF..FFFF...",
-        "...ffff..ffff...",
-        "................",
-        "................",
-        "................",
-        "................",
-    ],
-    # ------------------ Sit Down: 坐下過渡動作，屈膝蹲下 ------------------
-    "sit_down": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSEShHH",
-        "HHHhSEESSSSEESHH",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "..SDDKKKKKKKDDS.",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "...LLLL..LLLL...",
-        "..LLLL....LLLL..",
-        "..LLLL....LLLL..",
-        "..WWWW....WWWW..",
-        "..WWWW....WWWW..",
-        "..FFFF....FFFF..",
-        "..ffff....ffff..",
-    ],
-    # ------------------ Splat: 麻糬般軟趴趴攤平 ------------------
-    "splat": [
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        ".....a....a.....",
-        "....AAA..AAA....",
-        "..AAHHHHHHHHAA..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSBeSSeBShHHH",
-        "SSShTDDDDDDThSSS",
-        "SSSDDDDDDDDDDSSS",
-        "..SDDKKKKKKKDDS.",
-        "...KKKKKKKKKK...",
-        "..LLLL....LLLL..",
-        "..LLLL....LLLL..",
-        ".WWWW......WWWW.",
-        "FFFF........FFFF",
-    ],
-    # ------------------ Panic: 失足驚慌亂蹬小腿 ------------------
-    "panic": [
-        "..AA........AA..",
-        ".AAAHHHHHHHHAAA.",
-        ".HHHHHHHHHHHHHH.",
-        "HHhSSSSSSSSSSshH",
-        "HhSSEESSSEEESshH",
-        "HhSEEEEEEEEEshH.",
-        "HhSSEESSSEEESshH",
-        ".HhSBBSSSSBBshH.",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "..SDDDDDDDDDDDS.",
-        ".SDDDDDDDDDDDDDS",
-        "S..DDKKKKKKKD..S",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "...LL......LL...",
-        "..LL........LL..",
-        "..LL........LL..",
-        ".WW..........WW.",
-        ".WW..........WW.",
-        "FFF..........FFF",
-        "fff..........fff",
-        "................",
-    ],
-    # ------------------ Climb: 向上攀爬 (舊相容別名) ------------------
-    "climb": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHHHHHHHHHHHH.",
-        "HHhHHHHHHHHHHshH",
-        "HHhHHHHHHHHHHshH",
-        "HHhHHHHHHHHHHshH",
-        ".HhHHHHHHHHHHshH",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "..SDDDDDDDDDDDS.",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "....LL....LL....",
-        "...LL......LL...",
-        "...LL......LL...",
-        "...WW......WW...",
-        "..FFF......WW...",
-        "..fff.....FFF...",
-        "..........fff...",
-    ],
-    # ------------------ Climb Up: 向上攀爬，背影雙手抓攀 ------------------
-    "climb_up": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHHHHHHHHHHHH.",
-        "HHhHHHHHHHHHHshH",
-        "HHhHHHHHHHHHHshH",
-        "HHhHHHHHHHHHHshH",
-        ".HhHHHHHHHHHHshH",
-        "..HhSSSSSSSSshH.",
-        ".ShTDDDDDDThS...",
-        ".SDDDDDDDDDDS...",
-        ".SDDDDDDDDDDDS..",
-        "..DDKKKKKKKDD...",
-        "..SDKKKKKKKDS...",
-        "...KKKKKKKK.....",
-        "...KKKKKKKK.....",
-        "...LL......LL...",
-        "...LL......LL...",
-        "...WW......LL...",
-        "..FFF......WW...",
-        "..fff......WW...",
-        "..........FFF...",
-        "..........fff...",
-    ],
-    # ------------------ Climb Down: 向下攀爬，小腿小心探路 ------------------
-    "climb_down": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSSSeSSSSeshH",
-        "HHHhSSEESSSSEESh",
-        ".HHhSBSSSSSBShH.",
-        "..HhSSSSSSSSshH.",
-        ".ShTDDDDDDThS...",
-        ".SDDDDDDDDDDS...",
-        ".SDDDDDDDDDDDS..",
-        "..DDKKKKKKKDD...",
-        "..SDKKKKKKKDS...",
-        "...KKKKKKKK.....",
-        "...KKKKKKKK.....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "...LL......LL...",
-        "...WW......WW...",
-        "..FFF......WW...",
-        "..fff.....FFF...",
-        "..........fff...",
-    ],
-    # ------------------ Climb Side: 側攀貼牆走 ------------------
-    "climb_side": [
-        ".AAAA....AAAA...",
-        "AAHHAAAAHHAA....",
-        "HHHHHHHHHHHH....",
-        "HHHHHHHHHHHHHH..",
-        "HHHhSSSSSSShHH..",
-        "HHhSSSSSSSSShHH.",
-        "HHhSEeSSSSEShHH.",
-        "HHhSEESSSSEESHH.",
-        ".HhSBSSSSSBShH..",
-        ".HhSSSSSSSSshH..",
-        "ShTDDDDDDThS....",
-        "SDDDDDDDDDDS....",
-        "SDDDDDDDDDDDS...",
-        ".DDKKKKKKKDD....",
-        ".SDKKKKKKKDS....",
-        "..KKKKKKKK......",
-        "..KKKKKKKK......",
-        ".LL......LL.....",
-        ".LL......LL.....",
-        ".WW......LL.....",
-        "FFF......WW.....",
-        "fff......WW.....",
-        "........FFF.....",
-        "........fff.....",
-    ],
-    # ------------------ Sleep Sprawl: 四腳朝天仰躺呼呼大睡 ------------------
-    "sleep_sprawl": [
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhSSssSSssShHH",
-        "HHHhSBSSSSSBShHH",
-        "S..hTDDDDDDTh..S",
-        "SDDDDDDDDDDDDDDS",
-        "..SDDKKKKKKKDDS.",
-        "...KKKKKKKKKK...",
-        "..LL........LL..",
-        "..LL........LL..",
-        "..LL........LL..",
-        "..WW........WW..",
-        "..WW........WW..",
-        ".FFF........FFF.",
-        ".fff........fff.",
-    ],
-    # ------------------ Sleep Prone: 趴在地上埋頭睡覺，zZZ 氣泡 ------------------
-    "sleep_prone": [
-        "..........a.....",
-        ".........aaa....",
-        "..........a.....",
-        "......a.........",
-        ".....aaa........",
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhHHHHHHHHHhHH",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDDD...",
-        "..SDDDDDDDDDDDS.",
-        "...DDKKKKKKKDD..",
-        "....KKKKKKKK....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....LL....LL....",
-        "....WW....WW....",
-        "....WW....WW....",
-        "...FFF....FFF...",
-        "...fff....fff...",
-        "................",
-        "................",
-    ],
-    # ------------------ Sleep Side: 側臥蜷縮小貓睡姿 ------------------
-    "sleep_side": [
-        "................",
-        "................",
-        "................",
-        "................",
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhSSssSssShHH.",
-        ".HHhSBSSSSshH...",
-        "..HhSSSSSSSSshH.",
-        "...hTDDDDDDTh...",
-        "...DDDDDDDDD....",
-        "..SDDDDDDDDD....",
-        "...DDKKKKKKK....",
-        "....KKKKKKKK....",
-        "....LLLL........",
-        "....LLLL........",
-        "....LLLL........",
-        "....WWWW........",
-        "...FFFF.........",
-        "...ffff.........",
-        "................",
-        "................",
-    ],
-    # ------------------ Wake Startle: 被驚醒，炸毛彈起，呆毛豎立 ------------------
-    "wake_startle": [
-        ".......HH.......",
-        "......HHHH......",
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        "HHHhSEEEESEEEhHH",
-        "HHHhSEEEESEEEhHH",
-        ".HHhSBEEssEEBSh.",
-        "..HhSSSSSSSSshH.",
-        "S..hTDDDDDDTh..S",
-        "S..DDDDDDDDDD..S",
-        ".S.DDDDDDDDDDS..",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "...LL......LL...",
-        "..LL........LL..",
-        "..LL........LL..",
-        "..WW........WW..",
-        ".WW..........WW.",
-        ".WW..........WW.",
-        "FFF..........FFF",
-        "fff..........fff",
-    ],
-    # ------------------ Mischief: 做鬼臉、手舞足蹈 ------------------
-    "mischief": [
-        "....AAAA....AAAA",
-        "...AAHHAAAAHHAA.",
-        "..HHHHHHHHHHHH..",
-        ".HHHHHHHHHHHHHH.",
-        ".HHHhSSSSSSShHH.",
-        "HHHhSSSSSSSSShHH",
-        "HHHhSEeSSSSaShHH",
-        "HHHhSEESSSSaShHH",
-        ".HHhSBSSBBSBShH.",
-        "..HhSSSSSSSSshH.",
-        "S..hTDDDDDDTh...",
-        ".S.DDDDDDDDDDS..",
-        "..SDDDDDDDDDDS..",
-        "...DDKKKKKKKDD..",
-        "...SDKKKKKKKDS..",
-        "....KKKKKKKK....",
-        "....KKKKKKKK....",
-        "...LL......LL...",
-        "...LL......LL...",
-        "...LL.....LLLL..",
-        "..WW......WWWW..",
-        "..WW......FFFF..",
-        ".FFF......ffff..",
-        ".fff............",
-    ],
-}
+FRAMES = {'idle': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_front': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....SSs..', '....s.....kkKKKKKKKKKkk.....s...', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_back': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '.......h....cCCCCCCcc....h......', '...........dDDDDDDDDd...........', '......sS...dDDDDDDDDd...Ss......', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'turn': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhss.SSYHh...', '...hHY.SSShWEEhS..ShWEh..SYHh...', '...hHY.SSShWeEhS..ShWeh..SYHh...', '...hHY.SSSSsIIsSSSSsIIs...SYHh..', '...hHY.SSSsbBbsSSSSsbBs...SYHh..', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCc....h......', '......sS...dDDDTTDDDd...Ss......', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'walk1': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.....s.....cCCCTTCCCcc..........', '....sS.....dDDDTTDDDDd...s......', '...sSS.....dDDDDDDDDDd...Ss.....', '...sSS......dDDDDDDDd....SSs....', '....sS.....kkKKKKKKKkk....SSs...', '..........kkKKKKKKKKKkk....s....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '.........sSSS......SSSs.........', '........sSSS........SSSs........', '.......sSSl..........lSSs.......', '.......cOOc..........cOOc.......', '......cOOc...........cOOc.......', '......ffFFf..........cOOc.......', '.....ffffff..........cOOc.......', '....................ffFFf.......', '...................ffFFFF.......', '...................ffffff.......', '................................', '................................', '................................', '................................'], 'walk2': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc.....s....', '......s....dDDDTTDDDDd....Ss....', '.....sS....dDDDDDDDDDd....SSs...', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....sS...', '....s.....kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '..........sSSS......SSSs........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '........cOOc...........cOOc.....', '........cOOc...........ffFFf....', '........cOOc..........ffffff....', '.......ffFFf....................', '......ffFFFF....................', '......ffffff....................', '................................', '................................', '................................', '................................'], 'run1': ['................................', '................................', '..............hhh..hhh..........', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '...s.........cCCCTTCCCcc........', '..sS.........dDDDTTDDDDd........', '.sSS.........dDDDDDDDDDd....s...', '.sSS..........dDDDDDDDd....sS...', '..sS.........kkKKKKKKKkk...sSS..', '............kkKKKKKKKKKkk..sSS..', '...........kkKKKKKKKKKKKkk..sS..', '..........kkKKKKKKKKKKKKKkk..s..', '..........kKkKkKkKkKkKkKkKk.....', '.......sSSS............SSSs.....', '......sSSS..............SSSs....', '.....sSSl................lSSs...', '.....cOOc................cOOc...', '....cOOc.................cOOc...', '....ffFFf................cOOc...', '...ffffff...............ffFFf...', '.......................ffFFFF...', '.......................ffffff...', '................................', '................................', '................................', '................................', '................................'], 'run2': ['................................', '................................', '..............hhh..hhh..........', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '.............cCCCTTCCCcc.....s..', '.............dDDDTTDDDDd....sS..', '....s........dDDDDDDDDDd...sSS..', '...sS.........dDDDDDDDd....sSS..', '..sSS........kkKKKKKKKkk....sS..', '..sSS.......kkKKKKKKKKKkk....s..', '...sS......kkKKKKKKKKKKKkk......', '....s.....kkKKKKKKKKKKKKKkk.....', '..........kKkKkKkKkKkKkKkKk.....', '..........sSSS............SSSs..', '.........sSSS..............SSSs.', '........sSSl................lSSs', '........cOOc................cOOc', '.......cOOc................cOOc.', '.......cOOc................ffFFf', '......ffFFf...............ffffff', '.....ffFFFF.....................', '.....ffffff.....................', '................................', '................................', '................................', '................................', '................................'], 'jump_up': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'jump_down': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '...s...h....cCCCCCCCc....h...s..', '..sS...s...cCCCTTCCCcc...s...Ss.', '.sSS..sS...dDDDTTDDDDd...Ss..SSs', '..sS.sSS...dDDDDDDDDDd...SSs.sS.', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '............sSS..SSs............', '............sSS..SSs............', '............cOO..OOc............', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'run_jump': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'sit': ['................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'sit_down': ['................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'splat': ['................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '.............hhhhhhh............', '..........hhhHYYYYYYYhhh........', '.......hhhHYYYyyyyyyyyYYYhhh....', '.....hhHYYYYyyyyyyyyyyyyYYYHhh..', '...hhHYYYYYYYYYYYYYYYYYYYYYYYHhh', '..hHYYYYYYYYYYYYYYYYYYYYYYYYYYHh', '..hHYY.SSShWEEhSS.SShWEEhSS.YYHh', '..hHY..SSSsbBbsSS.SSsbBbsSS..YHh', '..sS...SSSSSSSS.ss.SSSSSSSS...Ss', '.sSS...kkKKKKKKKKKKKKKKKKkk..SSs', '..sS..kKkKkKkKkKkKkKkKkKkKk...Ss', '......ffFFff..ffffff..ffFFff....', '......ffffff..........ffffff....'], 'panic': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsWWsSSS.SsWWsSSS.SYHh', '...hHY.SSSsbBbsSSS.SsbBbsSS.SYHh', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '..sSS......cCCCTTCCCcc......sSS.', '.sSS.......dDDDTTDDDDd.......sSS', '..sS.......dDDDDDDDDDd........sS', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '.......cOOc............cOOc.....', '.......ffFFf..........ffFFf.....', '......ffffff..........ffffff....', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_up': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_down': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_side': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_sprawl': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_prone': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_side': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'wake_startle': ['...............HH...............', '..............hYYh..............', '..............hYYh..hhh.........', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'mischief': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShhhhhS.SYHh..', '...hHY.SSShWeEhS..SsssssS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ww.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc.....s....', '......sS...dDDDTTDDDDd....sS....', '.....sSS...dDDDDDDDDDd....sSS...', '.....sSS....dDDDDDDDd......sS...', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................']}
 
-# 小氣球飛行道具像素幀 (Balloon Overlays, Row 0-5)
 BALLOON_FRAMES = [
     [
-        ".....RRRRRR.....",
-        "....RRRRRRRR....",
-        "....RRRRRRRR....",
-        ".....RRRRRR.....",
-        ".......RR.......",
-        ".......PP.......",
+        "............RRRRRRRR............",
+        "...........RRRRRRRRRR...........",
+        "...........RRRRRRRRRR...........",
+        "............RRRRRRRR............",
+        "...............RR...............",
+        "...............PP...............",
+        "...............PP...............",
     ],
     [
-        "......RRRRRR....",
-        ".....RRRRRRRR...",
-        ".....RRRRRRRR...",
-        "......RRRRRR....",
-        "........RR......",
-        ".......PP.......",
+        ".............RRRRRRRR...........",
+        "............RRRRRRRRRR..........",
+        "............RRRRRRRRRR..........",
+        ".............RRRRRRRR...........",
+        "................RR..............",
+        "...............PP...............",
+        "...............PP...............",
     ],
 ]
 
-
 CHAR_SPECIFIC_FRAMES = {
-    "deepseek": {
-        "idle": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_front": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "..ShTDDTTDDTh...",
-            ".S.DDTTTTDDDD...",
-            "...DDDDDDDDDDS..",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_back": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHH..",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            ".HHhHHHHHHHHhH..",
-            "..HhHHHHHHHHshH.",
-            "...hTddddddTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "turn": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSSEeSSSSEshH",
-            "HHHhSSEESSSSEshH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDDTTTTDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL...LL.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "...FFF...FFF....",
-            "...fff...fff....",
-        ],
-        "walk1": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDDTTTTDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKD.AA",
-            "....KKKKKKKK.AAA",
-            "....KKKKKKKK..AA",
-            ".....LL..LL.....",
-            ".....LL...LL....",
-            "....LL....LL....",
-            "....WW.....WW...",
-            "....WW.....WW...",
-            "...FFF.....FFF..",
-            "...fff.....fff..",
-        ],
-        "walk2": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDDTTTTDDDS..",
-            "..SDDDDDDDDDDDS.",
-            "..DDKKKKKKKDD..A",
-            "...DKKKKKKKDS.AA",
-            "....KKKKKKKK.AAA",
-            "....KKKKKKKK....",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL....LL....",
-            "...WW.....WW....",
-            "...WW.....WW....",
-            "..FFF.....FFF...",
-            "..fff.....fff...",
-        ],
-        "run1": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDDTTTTDDD...",
-            ".SDDDDDDDDDDDS..",
-            "...DDKKKKKKKDDS.",
-            "....SDKKKKKKDS.A",
-            ".....KKKKKKKK.AA",
-            ".....KKKKKKKKAAA",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "...LL......LL...",
-            "...WW......WW...",
-            "...WW......WW...",
-            "..FFF......FFF..",
-            "..fff......fff..",
-        ],
-        "run2": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDDTTTTDDDDS.",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            ".....KKKKKKKK..A",
-            ".....KKKKKKKKAAA",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-        ],
-        "sit": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "..KKKKKKKKKKKK.A",
-            "..KKKKKKKKKKKKAA",
-            "...dKKKKKKKKdAAA",
-            ".....LL....LL...",
-            ".....WW....WW...",
-            "....FFF....FFF..",
-            "....fff....fff..",
-            "................",
-            "................",
-            "................",
-        ],
-        "sit_down": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-            "................",
-        ],
-        "splat": [
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "...Aa..........A",
-            "..AAA....Aa...AA",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHSSSSSSSSHHHH",
-            "HHSSSEeSSSSEsSHH",
-            ".HSDDDTTTTDDDS.A",
-            "..KKKKKKKKKKKKAA",
-            "..FF..WWWW..FFAA",
-            "..ff........ff..",
-        ],
-        "jump_up": [
-            "S..............S",
-            "S..Aa..........S",
-            ".S.AAA........S.",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-            "................",
-            "................",
-        ],
-        "jump_down": [
-            "...Aa...........",
-            "..AAA...........",
-            "..HHHHHHHHHHH...",
-            ".HHHHHHHHHHHHH..",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTTTTDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK.AAA",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-        ],
-    },
-    "gpt": {
-        "idle": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_front": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "..ShTddddddTh...",
-            ".S.DDDDDDDDDD...",
-            "...DDDDDDDDDDS..",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_back": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            ".HHhHHHHHHHHhH..",
-            "..HhHHHHHHHHshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "turn": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSSEeSSSSEshH",
-            "HHHhSSEESSSSEshH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "..SDDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL...LL.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "...FFF...FFF....",
-            "...fff...fff....",
-        ],
-        "walk1": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "..SDDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKD.Ak",
-            "....KKKKKKKK.Akk",
-            "....KKKKKKKK..Ak",
-            ".....LL..LL.....",
-            ".....LL...LL....",
-            "....LL....LL....",
-            "....WW.....WW...",
-            "....WW.....WW...",
-            "...FFF.....FFF..",
-            "...fff.....fff..",
-        ],
-        "walk2": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDDS..",
-            "..SDDDDDDDDDDDS.",
-            "..DDKKKKKKKDD..A",
-            "...DKKKKKKKDS.Ak",
-            "....KKKKKKKK.Akk",
-            "....KKKKKKKK....",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL....LL....",
-            "...WW.....WW....",
-            "...WW.....WW....",
-            "..FFF.....FFF...",
-            "..fff.....fff...",
-        ],
-        "run1": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "..SDDDDDDDDDD...",
-            ".SDDDDDDDDDDDS..",
-            "...DDKKKKKKKDDS.",
-            "....SDKKKKKKDS.A",
-            ".....KKKKKKKK.Ak",
-            ".....KKKKKKKKAkk",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "...LL......LL...",
-            "...WW......WW...",
-            "...WW......WW...",
-            "..FFF......FFF..",
-            "..fff......fff..",
-        ],
-        "run2": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDDS..",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            ".....KKKKKKKK..A",
-            ".....KKKKKKKKAkk",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-        ],
-        "sit": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "..KKKKKKKKKKKK.A",
-            "..KKKKKKKKKKKKAk",
-            "...dKKKKKKKKdAkk",
-            ".....LL....LL...",
-            ".....WW....WW...",
-            "....FFF....FFF..",
-            "....fff....fff..",
-            "................",
-            "................",
-            "................",
-        ],
-        "sit_down": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-            "................",
-        ],
-        "splat": [
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "..AA........AA.A",
-            "..AaH......HaAAk",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHSSSSSSSSHHHH",
-            "HHSSSEeSSSSEsSHH",
-            ".HSDDDDDDDDDDDS.",
-            "..KKKKKKKKKKKK..",
-            "..FF..WWWW..FF..",
-            "..ff........ff..",
-        ],
-        "jump_up": [
-            "S..............S",
-            "S.AA........AA.S",
-            ".SAaH......HaAS.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-            "................",
-            "................",
-        ],
-        "jump_down": [
-            "..AA........AA..",
-            "..AaH......HaA..",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..Ak",
-            "....KKKKKKKK.Akk",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-        ],
-    },
-    "claude": {
-        "idle": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_front": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "..ShTDDTTDDTh...",
-            ".S.DDTDDDDTTD...",
-            "...DDDDDDDDDDS..",
-            "..SDDKKKKKKKDD..",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_back": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHHHHHHHHHHHHH",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            "HHHhHHHHHHHHHhHH",
-            ".HHhHHHHHHHHhH..",
-            "..HhHHHHHHHHshH.",
-            "...hTddddddTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "turn": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSSEeSSSSEshH",
-            "HHHhSSEESSSSEshH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD..",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL...LL.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "...FFF...FFF....",
-            "...fff...fff....",
-        ],
-        "walk1": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD..",
-            "...SDKKKKKKKD...",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            ".....LL...LL....",
-            "....LL....LL....",
-            "....WW.....WW...",
-            "....WW.....WW...",
-            "...FFF.....FFF..",
-            "...fff.....fff..",
-        ],
-        "walk2": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTDS..",
-            "..SDDDDDDDDDDDS.",
-            "..DDKKKKKKKDD...",
-            "...DKKKKKKKDS...",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            "....LL...LL.....",
-            "....LL....LL....",
-            "...WW.....WW....",
-            "...WW.....WW....",
-            "..FFF.....FFF...",
-            "..fff.....fff...",
-        ],
-        "run1": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "..SDDTDDDDTTD...",
-            ".SDDDDDDDDDDDS..",
-            "...DDKKKKKKKDDS.",
-            "....SDKKKKKKDS..",
-            ".....KKKKKKKK...",
-            "....dKKKKKKKKd..",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "...LL......LL...",
-            "...WW......WW...",
-            "...WW......WW...",
-            "..FFF......FFF..",
-            "..fff......fff..",
-        ],
-        "run2": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTDDS.",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDD..",
-            "...SDKKKKKKKDS..",
-            ".....KKKKKKKK...",
-            "....dKKKKKKKKd..",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-        ],
-        "sit": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "..KKKKKKKKKKKK..",
-            "..KKKKKKKKKKKK..",
-            "...dKKKKKKKKd...",
-            ".....LL....LL...",
-            ".....WW....WW...",
-            "....FFF....FFF..",
-            "....fff....fff..",
-            "................",
-            "................",
-            "................",
-        ],
-        "sit_down": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-            "................",
-        ],
-        "splat": [
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHSSSSSSSSHHHH",
-            "HHSSSEeSSSSEsSHH",
-            ".HSDDDTTTTDDDS..",
-            "..KKKKKKKKKKKK..",
-            "..FF..WWWW..FF..",
-            "..ff........ff..",
-        ],
-        "jump_up": [
-            "S..............S",
-            "S.AAaAA........S",
-            ".SAAAAAAA.....S.",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            ".....LL..LL.....",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-            "................",
-            "................",
-        ],
-        "jump_down": [
-            "..AAaAA.........",
-            ".AAAAAAA........",
-            "..HHHHHHHHHHHH..",
-            ".HHHHHHHHHHHHHH.",
-            "HHHHhSSSSSSShHHH",
-            "HHHhSSSSSSSSShHH",
-            "HHHhSEeSSSSEShHH",
-            "HHHhSEESSSSEESHH",
-            ".HHhSBSSSSSBShH.",
-            "..HhSSSSSSSSshH.",
-            "...hTDDTTDDTh...",
-            "...DDTDDDDTTD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS..",
-            "....KKKKKKKK....",
-            "...dKKKKKKKKd...",
-            ".....LL..LL.....",
-            "....LL....LL....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-        ],
-    },
-    "gemini": {
-        "idle": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_front": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "..ShTDDTTDDTh...",
-            ".S.DDDDDDDDDD...",
-            "...DDDDDDDDDDS..",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "facing_back": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".hhhhhhhhhhhhhh.",
-            "hhhhhHHHHHHHHhhh",
-            "hhhhhHHHHHHHHhhh",
-            "hhhhhHHHHHHHHhhh",
-            ".hhhHHHHHHHHhhh.",
-            "..hhHHHHHHHHshh.",
-            "...hTddddddTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-        ],
-        "turn": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSSEeSSSSEshh",
-            "hhhhSSEESSSSEshh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "..SDDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "....WW...WW.....",
-            "...FFF...FFF....",
-            "...fff...fff....",
-        ],
-        "walk1": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "..SDDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "...DDKKKKKKKDD.A",
-            "...SDKKKKKKKD.AA",
-            "....KKKKKKKK...A",
-            "....KKKKKKKK..AA",
-            ".....LL..LL.....",
-            ".....WW...WW....",
-            "....WW....WW....",
-            "....WW.....WW...",
-            "....WW.....WW...",
-            "...FFF.....FFF..",
-            "...fff.....fff..",
-        ],
-        "walk2": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDDS..",
-            "..SDDDDDDDDDDDS.",
-            "..DDKKKKKKKDD..A",
-            "...DKKKKKKKDS.AA",
-            "....KKKKKKKK...A",
-            "....KKKKKKKK....",
-            ".....LL..LL.....",
-            "....WW...WW.....",
-            "....WW....WW....",
-            "...WW.....WW....",
-            "...WW.....WW....",
-            "..FFF.....FFF...",
-            "..fff.....fff...",
-        ],
-        "run1": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "..SDDDDDDDDDD...",
-            ".SDDDDDDDDDDDS..",
-            "...DDKKKKKKKDDS.",
-            "....SDKKKKKKDS.A",
-            ".....KKKKKKKK..A",
-            ".....KKKKKKKK.AA",
-            ".....LL..LL.....",
-            "....WW....WW....",
-            "...WW......WW...",
-            "...WW......WW...",
-            "...WW......WW...",
-            "..FFF......FFF..",
-            "..fff......fff..",
-        ],
-        "run2": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDDS..",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDD.A",
-            "...SDKKKKKKKDS.A",
-            ".....KKKKKKKK..A",
-            ".....KKKKKKKK.AA",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-        ],
-        "sit": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "..KKKKKKKKKKKK.A",
-            "..KKKKKKKKKKKKAA",
-            "...dKKKKKKKKd..A",
-            ".....LL....LL...",
-            ".....WW....WW...",
-            "....FFF....FFF..",
-            "....fff....fff..",
-            "................",
-            "................",
-            "................",
-        ],
-        "sit_down": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-            "................",
-        ],
-        "splat": [
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-            "..AA........AA.A",
-            "..AsH......HsAAA",
-            ".HaHHHHHHHHHHH..",
-            "hhhhSSSSSSSSshhh",
-            "hhSSSEeSSSSEsShh",
-            ".HSDDDDDDDDDDDS.",
-            "..KKKKKKKKKKKK..",
-            "..FF..WWWW..FF..",
-            "..ff........ff..",
-        ],
-        "jump_up": [
-            "S..............S",
-            "S.AA........AA.S",
-            ".SAsH......HsAS.",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            ".....LL..LL.....",
-            ".....WW..WW.....",
-            ".....WW..WW.....",
-            "....FFF..FFF....",
-            "....fff..fff....",
-            "................",
-            "................",
-        ],
-        "jump_down": [
-            "..AA........AA..",
-            "..AsH......HsA..",
-            "..HaHHHHHHHHHH..",
-            ".HaaHHHHHHHHHHH.",
-            ".HHHhSSSSSSShHH.",
-            "hhhhSSSSSSSSshhh",
-            "hhhhSEeSSSSEShhh",
-            "hhhhSEESSSSEEShh",
-            ".hhhSBSSSSSBshh.",
-            "..hhSSSSSSSSshh.",
-            "...hTDDTTDDTh...",
-            "...DDDDDDDDDD...",
-            "..SDDDDDDDDDDDS.",
-            "..SDDKKKKKKKDDS.",
-            "...SDKKKKKKKDS.A",
-            "....KKKKKKKK..AA",
-            "....KKKKKKKK...A",
-            ".....LL..LL.....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "....WW....WW....",
-            "...FFF....FFF...",
-            "...fff....fff...",
-            "................",
-        ],
-    },
+    'deepseek': {'idle': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_front': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....SSs..', '....s.....kkKKKKKKKKKkk.....s...', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_back': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '.......h....cCCCCCCcc....h......', '...........dDDDDDDDDd...........', '......sS...dDDDDDDDDd...Ss......', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'turn': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhss.SSYHh...', '...hHY.SSShWEEhS..ShWEh..SYHh...', '...hHY.SSShWeEhS..ShWeh..SYHh...', '...hHY.SSSSsIIsSSSSsIIs...SYHh..', '...hHY.SSSsbBbsSSSSsbBs...SYHh..', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCc....h......', '......sS...dDDDTTDDDd...Ss......', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'walk1': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.....s.....cCCCTTCCCcc..........', '....sS.....dDDDTTDDDDd...s......', '...sSS.....dDDDDDDDDDd...Ss.....', '...sSS......dDDDDDDDd....SSs....', '....sS.....kkKKKKKKKkk....SSs...', '..........kkKKKKKKKKKkk....s....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '.........sSSS......SSSs.........', '........sSSS........SSSs........', '.......sSSl..........lSSs.......', '.......cOOc..........cOOc.......', '......cOOc...........cOOc.......', '......ffFFf..........cOOc.......', '.....ffffff..........cOOc.......', '....................ffFFf.......', '...................ffFFFF.......', '...................ffffff.......', '................................', '................................', '................................', '................................'], 'walk2': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc.....s....', '......s....dDDDTTDDDDd....Ss....', '.....sS....dDDDDDDDDDd....SSs...', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....sS...', '....s.....kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '..........sSSS......SSSs........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '........cOOc...........cOOc.....', '........cOOc...........ffFFf....', '........cOOc..........ffffff....', '.......ffFFf....................', '......ffFFFF....................', '......ffffff....................', '................................', '................................', '................................', '................................'], 'run1': ['................................', '................................', '..............hhh..hhh.AaG......', '............hhHYYhhYYHaAaAG.....', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '...s.........cCCCTTCCCcc........', '..sS.........dDDDTTDDDDd........', '.sSS.........dDDDDDDDDDd....s...', '.sSS..........dDDDDDDDd....sS...', '..sS.........kkKKKKKKKkk...sSS..', '............kkKKKKKKKKKkk..sSS..', '...........kkKKKKKKKKKKKkk..sS..', '..........kkKKKKKKKKKKKKKAaA.s..', '..........kKkKkKkKkKkKkKkKaAa...', '.......sSSS............SSSs.....', '......sSSS..............SSSs....', '.....sSSl................lSSs...', '.....cOOc................cOOc...', '....cOOc.................cOOc...', '....ffFFf................cOOc...', '...ffffff...............ffFFf...', '.......................ffFFFF...', '.......................ffffff...', '................................', '................................', '................................', '................................', '................................'], 'run2': ['................................', '................................', '..............hhh..hhh.AaG......', '............hhHYYhhYYHaAaAG.....', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '.............cCCCTTCCCcc.....s..', '.............dDDDTTDDDDd....sS..', '....s........dDDDDDDDDDd...sSS..', '...sS.........dDDDDDDDd....sSS..', '..sSS........kkKKKKKKKkk....sS..', '..sSS.......kkKKKKKKKKKkk....s..', '...sS......kkKKKKKKKKKKKkk......', '....s.....kkKKKKKKKKKKKKKAaA....', '..........kKkKkKkKkKkKkKkKaAa...', '..........sSSS............SSSs..', '.........sSSS..............SSSs.', '........sSSl................lSSs', '........cOOc................cOOc', '.......cOOc................cOOc.', '.......cOOc................ffFFf', '......ffFFf...............ffffff', '.....ffFFFF.....................', '.....ffffff.....................', '................................', '................................', '................................', '................................', '................................'], 'jump_up': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'jump_down': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '...s...h....cCCCCCCCc....h...s..', '..sS...s...cCCCTTCCCcc...s...Ss.', '.sSS..sS...dDDDTTDDDDd...Ss..SSs', '..sS.sSS...dDDDDDDDDDd...SSs.sS.', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '............sSS..SSs............', '............sSS..SSs............', '............cOO..OOc............', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'run_jump': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'sit': ['................................', '................................', '.......................AaG......', '......................aAaAG.....', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'sit_down': ['................................', '................................', '.......................AaG......', '......................aAaAG.....', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'splat': ['................................', '................................', '.......................AaG......', '......................aAaAG.....', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '.............hhhhhhh............', '..........hhhHYYYYYYYhhh........', '.......hhhHYYYyyyyyyyyYYYhhh....', '.....hhHYYYYyyyyyyyyyyyyYYYHhh..', '...hhHYYYYYYYYYYYYYYYYYYYYYYYHhh', '..hHYYYYYYYYYYYYYYYYYYYYYYYYYYHh', '..hHYY.SSShWEEhSS.SShWEEhSS.YYHh', '..hHY..SSSsbBbsSS.SSsbBbsSS..YHh', '..sS...SSSSSSSS.ss.SSSSSSSS...Ss', '.sSS...kkKKKKKKKKKKKKKKKKkk..SSs', '..sS..kKkKkKkKkKkKkKkKkKkKk...Ss', '......ffFFff..ffffff..ffFFff....', '......ffffff..........ffffff....'], 'panic': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsWWsSSS.SsWWsSSS.SYHh', '...hHY.SSSsbBbsSSS.SsbBbsSS.SYHh', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '..sSS......cCCCTTCCCcc......sSS.', '.sSS.......dDDDTTDDDDd.......sSS', '..sS.......dDDDDDDDDDd........sS', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '.......cOOc............cOOc.....', '.......ffFFf..........ffFFf.....', '......ffffff..........ffffff....', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_up': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_down': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_side': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_sprawl': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_prone': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_side': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'wake_startle': ['...............HH...............', '..............hYYh..............', '..............hYYh..hhhAaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'mischief': ['................................', '................................', '............hhh..hhh...AaG......', '..........hhHYYhhYYHhhaAaAG.....', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShhhhhS.SYHh..', '...hHY.SSShWeEhS..SsssssS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ww.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc.....s....', '......sS...dDDDTTDDDDd....sS....', '.....sSS...dDDDDDDDDDd....sSS...', '.....sSS....dDDDDDDDd......sS...', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................']},
+    'gpt': {'idle': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_front': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....SSs..', '....s.....kkKKKKKKKKKkk.....s...', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_back': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '.......h....cCCCCCCcc....h......', '...........dDDDDDDDDd...........', '......sS...dDDDDDDDDd...Ss......', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'turn': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhss.SSYHh...', '...hHY.SSShWEEhS..ShWEh..SYHh...', '...hHY.SSShWeEhS..ShWeh..SYHh...', '...hHY.SSSSsIIsSSSSsIIs...SYHh..', '...hHY.SSSsbBbsSSSSsbBs...SYHh..', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCc....h......', '......sS...dDDDTTDDDd...Ss......', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'walk1': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.....s.....cCCCTTCCCcc..........', '....sS.....dDDDTTDDDDd...s......', '...sSS.....dDDDDDDDDDd...Ss.....', '...sSS......dDDDDDDDd....SSs....', '....sS.....kkKKKKKKKkk....SSs...', '..........kkKKKKKKKKKkk....s....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '.........sSSS......SSSs.........', '........sSSS........SSSs........', '.......sSSl..........lSSs.......', '.......cOOc..........cOOc.......', '......cOOc...........cOOc.......', '......ffFFf..........cOOc.......', '.....ffffff..........cOOc.......', '....................ffFFf.......', '...................ffFFFF.......', '...................ffffff.......', '................................', '................................', '................................', '................................'], 'walk2': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc.....s....', '......s....dDDDTTDDDDd....Ss....', '.....sS....dDDDDDDDDDd....SSs...', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....sS...', '....s.....kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkkAaA....', '........kKkKkKkKkKkKkKkKk.aAa...', '..........sSSS......SSSs........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '........cOOc...........cOOc.....', '........cOOc...........ffFFf....', '........cOOc..........ffffff....', '.......ffFFf....................', '......ffFFFF....................', '......ffffff....................', '................................', '................................', '................................', '................................'], 'run1': ['................................', '......Aa...............Aa.......', '......AA......hhh..hhh.AA.......', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '...s.........cCCCTTCCCcc........', '..sS.........dDDDTTDDDDd........', '.sSS.........dDDDDDDDDDd....s...', '.sSS..........dDDDDDDDd....sS...', '..sS.........kkKKKKKKKkk...sSS..', '............kkKKKKKKKKKkk..sSS..', '...........kkKKKKKKKKKKKkk..sS..', '..........kkKKKKKKKKKKKKKAaA.s..', '..........kKkKkKkKkKkKkKkKaAa...', '.......sSSS............SSSs.....', '......sSSS..............SSSs....', '.....sSSl................lSSs...', '.....cOOc................cOOc...', '....cOOc.................cOOc...', '....ffFFf................cOOc...', '...ffffff...............ffFFf...', '.......................ffFFFF...', '.......................ffffff...', '................................', '................................', '................................', '................................', '................................'], 'run2': ['................................', '......Aa...............Aa.......', '......AA......hhh..hhh.AA.......', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '.............cCCCTTCCCcc.....s..', '.............dDDDTTDDDDd....sS..', '....s........dDDDDDDDDDd...sSS..', '...sS.........dDDDDDDDd....sSS..', '..sSS........kkKKKKKKKkk....sS..', '..sSS.......kkKKKKKKKKKkk....s..', '...sS......kkKKKKKKKKKKKkk......', '....s.....kkKKKKKKKKKKKKKAaA....', '..........kKkKkKkKkKkKkKkKaAa...', '..........sSSS............SSSs..', '.........sSSS..............SSSs.', '........sSSl................lSSs', '........cOOc................cOOc', '.......cOOc................cOOc.', '.......cOOc................ffFFf', '......ffFFf...............ffffff', '.....ffFFFF.....................', '.....ffffff.....................', '................................', '................................', '................................', '................................', '................................'], 'jump_up': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'jump_down': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '...s...h....cCCCCCCCc....h...s..', '..sS...s...cCCCTTCCCcc...s...Ss.', '.sSS..sS...dDDDTTDDDDd...Ss..SSs', '..sS.sSS...dDDDDDDDDDd...SSs.sS.', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '............sSS..SSs............', '............sSS..SSs............', '............cOO..OOc............', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'run_jump': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'sit': ['................................', '......Aa...............Aa.......', '......AA...............AA.......', '................................', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'sit_down': ['................................', '......Aa...............Aa.......', '......AA...............AA.......', '................................', '................................', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'splat': ['................................', '......Aa...............Aa.......', '......AA...............AA.......', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '.............hhhhhhh............', '..........hhhHYYYYYYYhhh........', '.......hhhHYYYyyyyyyyyYYYhhh....', '.....hhHYYYYyyyyyyyyyyyyYYYHhh..', '...hhHYYYYYYYYYYYYYYYYYYYYYYYHhh', '..hHYYYYYYYYYYYYYYYYYYYYYYYYYYHh', '..hHYY.SSShWEEhSS.SShWEEhSS.YYHh', '..hHY..SSSsbBbsSS.SSsbBbsSS..YHh', '..sS...SSSSSSSS.ss.SSSSSSSS...Ss', '.sSS...kkKKKKKKKKKKKKKKKKkk..SSs', '..sS..kKkKkKkKkKkKkKkKkKkKk...Ss', '......ffFFff..ffffff..ffFFff....', '......ffffff..........ffffff....'], 'panic': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsWWsSSS.SsWWsSSS.SYHh', '...hHY.SSSsbBbsSSS.SsbBbsSS.SYHh', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '..sSS......cCCCTTCCCcc......sSS.', '.sSS.......dDDDTTDDDDd.......sSS', '..sS.......dDDDDDDDDDd........sS', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '.......cOOc............cOOc.....', '.......ffFFf..........ffFFf.....', '......ffffff..........ffffff....', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_up': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_down': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_side': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_sprawl': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_prone': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_side': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'wake_startle': ['...............HH...............', '......Aa......hYYh.....Aa.......', '......AA......hYYh..hhhAA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'mischief': ['................................', '......Aa...............Aa.......', '......AA....hhh..hhh...AA.......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShhhhhS.SYHh..', '...hHY.SSShWeEhS..SsssssS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ww.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc.....s....', '......sS...dDDDTTDDDDd....sS....', '.....sSS...dDDDDDDDDDd....sSS...', '.....sSS....dDDDDDDDd......sS...', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................']},
+    'claude': {'idle': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_front': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....SSs..', '....s.....kkKKKKKKKKKkk.....s...', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_back': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '.......h....cCCCCCCcc....h......', '...........dDDDDDDDDd...........', '......sS...dDDDDDDDDd...Ss......', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'turn': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhss.SSYHh...', '...hHY.SSShWEEhS..ShWEh..SYHh...', '...hHY.SSShWeEhS..ShWeh..SYHh...', '...hHY.SSSSsIIsSSSSsIIs...SYHh..', '...hHY.SSSsbBbsSSSSsbBs...SYHh..', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCc....h......', '......sS...dDDDTTDDDd...Ss......', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'walk1': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.....s.....cCCCTTCCCcc..........', '....sS.....dDDDTTDDDDd...s......', '...sSS.....dDDDDDDDDDd...Ss.....', '...sSS......dDDDDDDDd....SSs....', '....sS.....kkKKKKKKKkk....SSs...', '..........kkKKKKKKKKKkk....s....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '.........sSSS......SSSs.........', '........sSSS........SSSs........', '.......sSSl..........lSSs.......', '.......cOOc..........cOOc.......', '......cOOc...........cOOc.......', '......ffFFf..........cOOc.......', '.....ffffff..........cOOc.......', '....................ffFFf.......', '...................ffFFFF.......', '...................ffffff.......', '................................', '................................', '................................', '................................'], 'walk2': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc.....s....', '......s....dDDDTTDDDDd....Ss....', '.....sS....dDDDDDDDDDd....SSs...', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....sS...', '....s.....kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '..........sSSS......SSSs........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '........cOOc...........cOOc.....', '........cOOc...........ffFFf....', '........cOOc..........ffffff....', '.......ffFFf....................', '......ffFFFF....................', '......ffffff....................', '................................', '................................', '................................', '................................'], 'run1': ['................................', '................................', '..............hhh..hhh..........', '............hhHYYhhYYHGga.......', '..........hhHYYYHYYYYYgGgh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '...s.........cCCCTTCCCcc........', '..sS.........dDDDTTDDDDd........', '.sSS.........dDDDDDDDDDd....s...', '.sSS..........dDDDDDDDd....sS...', '..sS.........kkKKKKKKKkk...sSS..', '............kkKKKKKKKKKkk..sSS..', '...........kkKKKKKKKKKKKkk..sS..', '..........kkKKKKKKKKKKKKKkk..s..', '..........kKkKkKkKkKkKkKkKk.....', '.......sSSS............SSSs.....', '......sSSS..............SSSs....', '.....sSSl................lSSs...', '.....cOOc................cOOc...', '....cOOc.................cOOc...', '....ffFFf................cOOc...', '...ffffff...............ffFFf...', '.......................ffFFFF...', '.......................ffffff...', '................................', '................................', '................................', '................................', '................................'], 'run2': ['................................', '................................', '..............hhh..hhh..........', '............hhHYYhhYYHGga.......', '..........hhHYYYHYYYYYgGgh......', '.........hHYYYyyyyyyyyYYYHh.....', '........hHYYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '.............cCCCTTCCCcc.....s..', '.............dDDDTTDDDDd....sS..', '....s........dDDDDDDDDDd...sSS..', '...sS.........dDDDDDDDd....sSS..', '..sSS........kkKKKKKKKkk....sS..', '..sSS.......kkKKKKKKKKKkk....s..', '...sS......kkKKKKKKKKKKKkk......', '....s.....kkKKKKKKKKKKKKKkk.....', '..........kKkKkKkKkKkKkKkKk.....', '..........sSSS............SSSs..', '.........sSSS..............SSSs.', '........sSSl................lSSs', '........cOOc................cOOc', '.......cOOc................cOOc.', '.......cOOc................ffFFf', '......ffFFf...............ffffff', '.....ffFFFF.....................', '.....ffffff.....................', '................................', '................................', '................................', '................................', '................................'], 'jump_up': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'jump_down': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '...s...h....cCCCCCCCc....h...s..', '..sS...s...cCCCTTCCCcc...s...Ss.', '.sSS..sS...dDDDTTDDDDd...Ss..SSs', '..sS.sSS...dDDDDDDDDDd...SSs.sS.', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '............sSS..SSs............', '............sSS..SSs............', '............cOO..OOc............', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'run_jump': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'sit': ['................................', '................................', '................................', '......................Gga.......', '......................gGg.......', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'sit_down': ['................................', '................................', '................................', '......................Gga.......', '......................gGg.......', '................................', '................................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'splat': ['................................', '................................', '................................', '......................Gga.......', '......................gGg.......', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '.............hhhhhhh............', '..........hhhHYYYYYYYhhh........', '.......hhhHYYYyyyyyyyyYYYhhh....', '.....hhHYYYYyyyyyyyyyyyyYYYHhh..', '...hhHYYYYYYYYYYYYYYYYYYYYYYYHhh', '..hHYYYYYYYYYYYYYYYYYYYYYYYYYYHh', '..hHYY.SSShWEEhSS.SShWEEhSS.YYHh', '..hHY..SSSsbBbsSS.SSsbBbsSS..YHh', '..sS...SSSSSSSS.ss.SSSSSSSS...Ss', '.sSS...kkKKKKKKKKKKKKKKKKkk..SSs', '..sS..kKkKkKkKkKkKkKkKkKkKk...Ss', '......ffFFff..ffffff..ffFFff....', '......ffffff..........ffffff....'], 'panic': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsWWsSSS.SsWWsSSS.SYHh', '...hHY.SSSsbBbsSSS.SsbBbsSS.SYHh', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '..sSS......cCCCTTCCCcc......sSS.', '.sSS.......dDDDTTDDDDd.......sSS', '..sS.......dDDDDDDDDDd........sS', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '.......cOOc............cOOc.....', '.......ffFFf..........ffFFf.....', '......ffffff..........ffffff....', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_up': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_down': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_side': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_sprawl': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_prone': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_side': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'wake_startle': ['...............HH...............', '..............hYYh..............', '..............hYYh..hhh.........', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'mischief': ['................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhhGga.......', '........hhHYYYHYYYYYYHgGg.......', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShhhhhS.SYHh..', '...hHY.SSShWeEhS..SsssssS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ww.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc.....s....', '......sS...dDDDTTDDDDd....sS....', '.....sSS...dDDDDDDDDDd....sSS...', '.....sSS....dDDDDDDDd......sS...', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................']},
+    'gemini': {'idle': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk..Aa.....', '.........kkKKKKKKKKKKKkk.aAa....', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_front': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....SSs..', '....s.....kkKKKKKKKKKkk.....s...', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'facing_back': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '.......h....cCCCCCCcc....h......', '...........dDDDDDDDDd...........', '......sS...dDDDDDDDDd...Ss......', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'turn': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhss.SSYHh...', '...hHY.SSShWEEhS..ShWEh..SYHh...', '...hHY.SSShWeEhS..ShWeh..SYHh...', '...hHY.SSSSsIIsSSSSsIIs...SYHh..', '...hHY.SSSsbBbsSSSSsbBs...SYHh..', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCc....h......', '......sS...dDDDTTDDDd...Ss......', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'walk1': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.....s.....cCCCTTCCCcc..........', '....sS.....dDDDTTDDDDd...s......', '...sSS.....dDDDDDDDDDd...Ss.....', '...sSS......dDDDDDDDd....SSs....', '....sS.....kkKKKKKKKkk....SSs...', '..........kkKKKKKKKKKkk..Aas....', '.........kkKKKKKKKKKKKkk.aAa....', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '.........sSSS......SSSs.........', '........sSSS........SSSs........', '.......sSSl..........lSSs.......', '.......cOOc..........cOOc.......', '......cOOc...........cOOc.......', '......ffFFf..........cOOc.......', '.....ffffff..........cOOc.......', '....................ffFFf.......', '...................ffFFFF.......', '...................ffffff.......', '................................', '................................', '................................', '................................'], 'walk2': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc.....s....', '......s....dDDDTTDDDDd....Ss....', '.....sS....dDDDDDDDDDd....SSs...', '....sSS.....dDDDDDDDd.....SSs...', '...sSS.....kkKKKKKKKkk.....sS...', '....s.....kkKKKKKKKKKkk..Aa.....', '.........kkKKKKKKKKKKKkk.aAa....', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '..........sSSS......SSSs........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '........cOOc...........cOOc.....', '........cOOc...........ffFFf....', '........cOOc..........ffffff....', '.......ffFFf....................', '......ffFFFF....................', '......ffffff....................', '................................', '................................', '................................', '................................'], 'run1': ['................................', '.....AA.................AA......', '.....Aa.......hhh..hhh..aA......', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........GgaYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '...s.........cCCCTTCCCcc........', '..sS.........dDDDTTDDDDd........', '.sSS.........dDDDDDDDDDd....s...', '.sSS..........dDDDDDDDd....sS...', '..sS.........kkKKKKKKKkk...sSS..', '............kkKKKKKKKKKkkAasSS..', '...........kkKKKKKKKKKKKkaAasS..', '..........kkKKKKKKKKKKKKKkk..s..', '..........kKkKkKkKkKkKkKkKk.....', '.......sSSS............SSSs.....', '......sSSS..............SSSs....', '.....sSSl................lSSs...', '.....cOOc................cOOc...', '....cOOc.................cOOc...', '....ffFFf................cOOc...', '...ffffff...............ffFFf...', '.......................ffFFFF...', '.......................ffffff...', '................................', '................................', '................................', '................................', '................................'], 'run2': ['................................', '.....AA.................AA......', '.....Aa.......hhh..hhh..aA......', '............hhHYYhhYYHhh........', '..........hhHYYYHYYYYYYHhh......', '.........hHYYYyyyyyyyyYYYHh.....', '........GgaYYYyyyyyyyyYYYYHh....', '.......hHYYYYYYYYYYYYYYYYYYHh...', '.......hHYYHHHHHHHHHHHHHHHYHh...', '......hHYYHH...HH..HH...HHYYHh..', '......hHYHH.SSS..SS..SSS.HHYHh..', '.....hHYHH.SSSWSSSSSSWSSS.HHYHh.', '.....hHYH.SSSSSSSSSSSSSSSS.HYHh.', '.....hHYH.SSSssSSSSSSssSSS.HYHh.', '.....hHY.SSSshhhhh..hhhhhs.SSYHh', '.....hHY.SSShWEEhS..ShWEEhS.SYHh', '.....hHY.SSShWeEhS..ShWeEhS.SYHh', '.....hHY.SSSSsIIsSSSSsIIsSSS.SYH', '.....hHY.SSSsbBbsSSSSsbBbsSS.SYH', '.....hHY.SSSSSSSS.ss.SSSSSSS.SYH', '.....hHY.SSSSSSSSSSSSSSSSSSS.SYH', '......hYY.SSSSSSSSSSSSSSSSS.YYHh', '.......hYY..sssssssssssss..YYHh.', '........hYY....sSSSSSs....YYHh..', '.........h....cCCCCCCCc....h....', '.............cCCCTTCCCcc.....s..', '.............dDDDTTDDDDd....sS..', '....s........dDDDDDDDDDd...sSS..', '...sS.........dDDDDDDDd....sSS..', '..sSS........kkKKKKKKKkk....sS..', '..sSS.......kkKKKKKKKKKkkAa..s..', '...sS......kkKKKKKKKKKKKkaAa....', '....s.....kkKKKKKKKKKKKKKkk.....', '..........kKkKkKkKkKkKkKkKk.....', '..........sSSS............SSSs..', '.........sSSS..............SSSs.', '........sSSl................lSSs', '........cOOc................cOOc', '.......cOOc................cOOc.', '.......cOOc................ffFFf', '......ffFFf...............ffffff', '.....ffFFFF.....................', '.....ffffff.....................', '................................', '................................', '................................', '................................', '................................'], 'jump_up': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'jump_down': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '...s...h....cCCCCCCCc....h...s..', '..sS...s...cCCCTTCCCcc...s...Ss.', '.sSS..sS...dDDDTTDDDDd...Ss..SSs', '..sS.sSS...dDDDDDDDDDd...SSs.sS.', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '............sSS..SSs............', '............sSS..SSs............', '............cOO..OOc............', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'run_jump': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...s..hHY.SSSSsIIsSSSSsIIsSSS.SY', '..sS..hHY.SSSsbBbsSSSSsbBbsSS.SY', '.sSS..hHY.SSSSSSSS.ss.SSSSSSS.SY', '.sSS..hHY.SSSSSSSSSSSSSSSSSSS.SY', '..sS...hYY.SSSSSSSSSSSSSSSSS.YYH', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '...........cCCCTTCCCcc..........', '...........dDDDTTDDDDd..........', '...........dDDDDDDDDDd..........', '............dDDDDDDDd...........', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffffff..ffffff.........', '................................', '................................', '................................', '................................', '................................', '................................', '................................'], 'sit': ['................................', '.....AA.................AA......', '.....Aa.................aA......', '................................', '................................', '................................', '........Gga.....................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'sit_down': ['................................', '.....AA.................AA......', '.....Aa.................aA......', '................................', '................................', '................................', '........Gga.....................', '................................', '................................', '............hhh..hhh............', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHYYYYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShWEEhS.SYHh..', '...hHY.SSShWeEhS..ShWeEhS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....cCCCCc.....YYHh....', '.......h....cCCCTTCCc....h......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '.......kkKKKKKKKKKKKKKKKkk......', '.......kKkKkKkKkKkKkKkKkKk......', '........ffFFfcOOcOOcffFFf.......', '.......ffffffcOOcOOcffffff......', '........ffff..ffff..ffff........', '................................', '................................', '................................', '................................', '................................'], 'splat': ['................................', '.....AA.................AA......', '.....Aa.................aA......', '................................', '................................', '................................', '........Gga.....................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '................................', '.............hhhhhhh............', '..........hhhHYYYYYYYhhh........', '.......hhhHYYYyyyyyyyyYYYhhh....', '.....hhHYYYYyyyyyyyyyyyyYYYHhh..', '...hhHYYYYYYYYYYYYYYYYYYYYYYYHhh', '..hHYYYYYYYYYYYYYYYYYYYYYYYYYYHh', '..hHYY.SSShWEEhSS.SShWEEhSS.YYHh', '..hHY..SSSsbBbsSS.SSsbBbsSS..YHh', '..sS...SSSSSSSS.ss.SSSSSSSS...Ss', '.sSS...kkKKKKKKKKKKKKKKKKkk..SSs', '..sS..kKkKkKkKkKkKkKkKkKkKk...Ss', '......ffFFff..ffffff..ffFFff....', '......ffffff..........ffffff....'], 'panic': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsWWsSSS.SsWWsSSS.SYHh', '...hHY.SSSsbBbsSSS.SsbBbsSS.SYHh', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '..sSS......cCCCTTCCCcc......sSS.', '.sSS.......dDDDTTDDDDd.......sSS', '..sS.......dDDDDDDDDDd........sS', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '.........sSSS........SSSs.......', '........sSSl..........lSSs......', '........cOOc..........cOOc......', '.......cOOc............cOOc.....', '.......ffFFf..........ffFFf.....', '......ffffff..........ffffff....', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_up': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_down': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'climb_side': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHHHHHHHHHHHHHHHHHYHh....', '....hHYHHHHHHHHHHHHHHHHHHYHh....', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHYHHHHHHHHHHHHHHHHHHHHYHh...', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY.HHHHHHHHHHHHHHHHHH.HYHh..', '...hHY..HHHHHHHHHHHHHHHH..HYHh..', '...hHY...HHHHHHHHHHHHHH...HYHh..', '....hYY...hHHHHHHHHHHh...YYHh...', '.....hYY...ssssssssss...YYHh....', '......hYY....cCCCCc....YYHh.....', '...sSS......cCCCCCCcc......sSS..', '..sSS......dDDDDDDDDd.......sSS.', '...sS......dDDDDDDDDd........sS.', '.....sSS...dDDDDDDDDd...SSs.....', '.....sSS....dDDDDDDd....SSs.....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '..........ffFFf..cOOc...........', '.........ffffff..cOOc...........', '................ffFFf...........', '...............ffffff...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_sprawl': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_prone': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'sleep_side': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSssssss..ssssss.SSYHh..', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSSSsssss..ssssss.SSYHh..', '...hHY.SSSSSSSSSSSSSSSSSSSS.SYHh', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ss.SSSSSSS.SYHh.', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'wake_startle': ['...............HH...............', '.....AA.......hYYh......AA......', '.....Aa.......hYYh..hhh.aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWWWWsS.ShWWWWsS.SYHh.', '...hHY.SSShWeeWsS.ShWeeWsS.SYHh.', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.oo.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc...s......', '......sS...dDDDTTDDDDd...Ss.....', '.....sSS...dDDDDDDDDDd...SSs....', '.....sSS....dDDDDDDDd....SSs....', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................'], 'mischief': ['................................', '.....AA.................AA......', '.....Aa.....hhh..hhh....aA......', '..........hhHYYhhYYHhh..........', '........hhHYYYHYYYYYYHhh........', '.......hHYYYyyyyyyyyYYYHh.......', '......hHGgaYyyyyyyyyYYYYHh......', '.....hHYYYYYYYYYYYYYYYYYYHh.....', '.....hHYYHHHHHHHHHHHHHHHYHh.....', '....hHYYHH...HH..HH...HHYYHh....', '....hHYHH.SSS..SS..SSS.HHYHh....', '...hHYHH.SSSWSSSSSSWSSS.HHYHh...', '...hHYH.SSSSSSSSSSSSSSSS.HYHh...', '...hHYH.SSSssSSSSSSssSSS.HYHh...', '...hHY.SSSshhhhh..hhhhhs.SSYHh..', '...hHY.SSShWEEhS..ShhhhhS.SYHh..', '...hHY.SSShWeEhS..SsssssS.SYHh..', '...hHY.SSSSsIIsSSSSsIIsSSS.SYHh.', '...hHY.SSSsbBbsSSSSsbBbsSS.SYHh.', '...hHY.SSSSSSSS.ww.SSSSSSSS.SYHh', '...hHY.SSSSSSSSSSSSSSSSSSS.SYHh.', '....hYY.SSSSSSSSSSSSSSSSS.YYHh..', '.....hYY..sssssssssssss..YYHh...', '......hYY....sSSSSSs....YYHh....', '.......h....cCCCCCCCc....h......', '.......s...cCCCTTCCCcc.....s....', '......sS...dDDDTTDDDDd....sS....', '.....sSS...dDDDDDDDDDd....sSS...', '.....sSS....dDDDDDDDd......sS...', '......sS...kkKKKKKKKkk...Ss.....', '..........kkKKKKKKKKKkk.........', '.........kkKKKKKKKKKKKkk........', '........kkKKKKKKKKKKKKKkk.......', '........kKkKkKkKkKkKkKkKk.......', '...........sSSS..SSSs...........', '...........sSSS..SSSs...........', '...........sSSl..lSSs...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '...........cOOc..cOOc...........', '..........ffFFf..fFFff..........', '.........ffFFFF..FFFFff.........', '.........ffffff..ffffff.........', '................................', '................................', '................................']},
 }
-
 
 OFFICIAL_CHIBI_IDS = {"deepseek", "gpt", "claude", "gemini"}
 
@@ -2202,8 +146,8 @@ class PixelChibiRegistry:
             if cid in CHAR_SPECIFIC_FRAMES:
                 frames.update(CHAR_SPECIFIC_FRAMES[cid])
             info["frames"] = frames
-            info["width"] = 16
-            info["height"] = 24
+            info["width"] = 32
+            info["height"] = 48
             info["ignore_limits"] = False
             info["is_custom"] = False
             info["is_protected"] = True
@@ -2229,8 +173,8 @@ class PixelChibiRegistry:
         """取得指定角色的寬高尺寸 (width, height)。"""
         info = cls.get_character(cid)
         if info:
-            return int(info.get("width", 16)), int(info.get("height", 24))
-        return 16, 24
+            return int(info.get("width", 32)), int(info.get("height", 48))
+        return 32, 48
 
     @classmethod
     def list_official_characters(cls) -> dict[str, dict]:
@@ -2449,8 +393,8 @@ class PixelChibiRenderer:
         if cache_key in cls._cache:
             return cls._cache[cache_key]
 
-        w = int(info.get("width", 16))
-        h = int(info.get("height", 24))
+        w = int(info.get("width", 32))
+        h = int(info.get("height", 48))
         palette = info.get("palette", {})
         frames = info.get("frames", {})
 
@@ -2495,7 +439,7 @@ class PixelChibiRenderer:
                     if bch in palette:
                         img.setPixelColor(bx, by, QColor(palette[bch]))
 
-        if facing_right:
+        if not facing_right:
             img = img.mirrored(True, False)
 
         # 最近鄰取樣放大 (Qt.FastTransformation) 確保 100% 俐落像素邊緣
@@ -2665,12 +609,20 @@ class PixelChibiWindow(QWidget):
         self.setWindowTitle("Pixel Chibi Patrol")
         self.sync_opacity()
 
-        self.scale_factor = 3  # 16x24 -> 48x72 px (或自訂尺寸 x 3)
         self.character = cfg.get("character", "deepseek")
         w, h = PixelChibiRegistry.get_character_size(self.character)
+        self.scale_factor = 2 if w >= 32 else 3  # 32x48 -> 64x96 px (或舊版 16x24 -> 48x72 px)
         self.char_w = w * self.scale_factor
         self.char_h = h * self.scale_factor
         self.setFixedSize(self.char_w, self.char_h)
+
+        # 紙片馬力歐 2D 物理動態屬性
+        self.paper_scale_x = 1.0
+        self.paper_flip_t = 0.0
+        self._flip_from_right = True
+        self.paper_lean = 0.0
+        self.land_squash_t = 0.0
+        self.is_balloon_landing = False
 
         # 狀態機
         self.state = "idle"  # idle, walk, run, jump, sit, splat, sleep, wake, panic, climb, flight, bowl_smash, bounce
@@ -2731,7 +683,11 @@ class PixelChibiWindow(QWidget):
         else:
             interval = max(1, int(1000 / effective_fps))
 
-        self.timer.setInterval(interval)
+        try:
+            if hasattr(self, 'timer') and self.timer:
+                self.timer.setInterval(interval)
+        except Exception:
+            pass
         return interval
 
     def set_pet(self, pet):
@@ -2739,13 +695,50 @@ class PixelChibiWindow(QWidget):
         if self.pet and (not getattr(self.pet, "pixel_chibi", None) or getattr(self.pet, "pixel_chibi", None) == self):
             self.pet.pixel_chibi = self
 
+    def _get_gravity_accel(self) -> float:
+        """依據重力配置計算當前像素加速度 (px/s²)。支援地球 9.8N、月球 1.62N、自訂 (0..30N) 與無重力模式。"""
+        if bool(self.cfg.get("zero_gravity_mode", False)):
+            return 18.0
+        preset = str(self.cfg.get("gravity_preset", "earth")).lower()
+        if preset == "moon":
+            return 162.0
+        elif preset == "earth":
+            return 980.0
+        else:
+            val = float(self.cfg.get("gravity_value", 9.8))
+            return round(max(0.0, min(3000.0, val * 100.0)), 2)
+
+    def set_facing_right(self, right: bool):
+        """設置面向行進方向，若切換方向則觸發 120ms 紙片平滑翻面動效。"""
+        if getattr(self, "facing_right", None) is None:
+            self.facing_right = right
+            self._flip_from_right = right
+            self.paper_flip_t = 0.0
+            return
+        if self.facing_right != right:
+            self._flip_from_right = self.facing_right
+            self.facing_right = right
+            self.paper_flip_t = 0.12  # 120ms paper flip
+
+    def start_balloon_landing(self):
+        """觸發遺失視窗小氣球安全緩降模式：拉著小氣球緩慢飄蕩降落至工作列/地面。"""
+        self.state = "flight"
+        self.is_balloon_landing = True
+        self.vel_y = 45.0
+        self.vel_x = 0.0
+        self.state_time = 0.0
+
     def set_character(self, ch: str):
-        self.character = ch
-        w, h = PixelChibiRegistry.get_character_size(ch)
-        self.char_w = w * self.scale_factor
-        self.char_h = h * self.scale_factor
-        self.setFixedSize(self.char_w, self.char_h)
-        self.update()
+        try:
+            self.character = ch
+            w, h = PixelChibiRegistry.get_character_size(ch)
+            self.scale_factor = 2 if w >= 32 else 3
+            self.char_w = w * self.scale_factor
+            self.char_h = h * self.scale_factor
+            self.setFixedSize(self.char_w, self.char_h)
+            self.update()
+        except Exception:
+            pass
 
     def _screen_rect(self) -> QRect:
         s = QGuiApplication.screenAt(self.geometry().center()) or QGuiApplication.primaryScreen()
@@ -2782,8 +775,21 @@ class PixelChibiWindow(QWidget):
         floor_y = float(ag.bottom() + 1 - self.char_h)
         ceiling_y = float(ag.top())
 
-        # 重力加速度（支援無重力太空失重模式）
-        g_acc = 18.0 if bool(self.cfg.get("zero_gravity_mode", False)) else 500.0
+        # 重力加速度（支援地球、月球、自訂與無重力太空失重模式）
+        g_acc = self._get_gravity_accel()
+
+        # 更新著陸壓扁與紙片翻轉前傾動態計時
+        if self.land_squash_t > 0:
+            self.land_squash_t = max(0.0, self.land_squash_t - dt)
+        if self.paper_flip_t > 0:
+            self.paper_flip_t = max(0.0, self.paper_flip_t - dt)
+
+        target_lean = 0.0
+        if self.state == "walk":
+            target_lean = 4.0 if self.facing_right else -4.0
+        elif self.state == "run":
+            target_lean = 10.0 if self.facing_right else -10.0
+        self.paper_lean += (target_lean - self.paper_lean) * min(1.0, dt * 12.0)
 
         # 1. 確保圖層永遠高於主寵物 (Z-Order Topmost)
         self.raise_()
@@ -2793,8 +799,8 @@ class PixelChibiWindow(QWidget):
             self.particles = [p for p in self.particles if p.update(dt)]
             self.update()
 
-        # 3. 飛行道具模式 (小氣球)
-        flight_on = bool(self.cfg.get("q_flight_prop", False))
+        # 3. 飛行道具模式 (小氣球) 與 遺失視窗安全緩降 (Balloon Safe Landing)
+        flight_on = bool(self.cfg.get("q_flight_prop", False)) or getattr(self, "is_balloon_landing", False)
         if flight_on:
             self.state = "flight"
             self.balloon_timer += dt
@@ -2802,14 +808,27 @@ class PixelChibiWindow(QWidget):
                 self.balloon_timer = 0.0
                 self.balloon_idx = 1 - self.balloon_idx
 
-            self.pos_x += (28.0 if self.facing_right else -28.0) * dt
-            target_air_y = floor_y - 180.0 + 40.0 * math.sin(self.state_time * 2.5)
-            self.pos_y += (target_air_y - self.pos_y) * min(1.0, 4.0 * dt)
+            if getattr(self, "is_balloon_landing", False):
+                # 遺失視窗安全降落：拉著氣球緩慢飄蕩降落至地面
+                self.pos_y += 45.0 * dt
+                self.pos_x += 16.0 * math.sin(self.state_time * 2.5) * dt
+                if self.pos_y >= floor_y:
+                    self.pos_y = floor_y
+                    self.is_balloon_landing = False
+                    self.state = "idle"
+                    self.state_time = 0.0
+                    self.land_squash_t = 0.10
+                    if self.sounds:
+                        self.sounds.play("land")
+            else:
+                self.pos_x += (28.0 if self.facing_right else -28.0) * dt
+                target_air_y = floor_y - 180.0 + 40.0 * math.sin(self.state_time * 2.5)
+                self.pos_y += (target_air_y - self.pos_y) * min(1.0, 4.0 * dt)
 
-            if self.pos_x > ag.right() - self.char_w - 40:
-                self.facing_right = False
-            elif self.pos_x < ag.left() + 40:
-                self.facing_right = True
+                if self.pos_x > ag.right() - self.char_w - 40:
+                    self.set_facing_right(False)
+                elif self.pos_x < ag.left() + 40:
+                    self.set_facing_right(True)
 
             self.move(int(self.pos_x), int(self.pos_y))
             self.update()
@@ -2828,7 +847,8 @@ class PixelChibiWindow(QWidget):
                 if abs(self.pos_x - win_rect.left()) < 24 and win_rect.top() <= self.pos_y <= win_rect.bottom():
                     self.state = "climb"
                     self.climb_subframe = "climb_up"
-                    self.pos_y -= 30.0 * dt
+                    climb_speed = max(12.0, 50.0 - (g_acc / 980.0) * 20.0)
+                    self.pos_y -= climb_speed * dt
                     if self.pos_y <= win_rect.top() - self.char_h:
                         self.pos_y = win_rect.top() - self.char_h
                         self.state = "walk"
@@ -2892,9 +912,15 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
-        # 8. 跳躍與飛撲物理 (Jump / Run Jump)
+        # 8. 跳躍與飛撲物理 (Jump / Run Jump) - 分段跳躍動力學與頂點滯空
         if self.state in ("jump", "run_jump"):
-            self.vel_y += g_acc * dt
+            if abs(self.vel_y) <= 35.0:
+                # 頂點滯空階段 (Apex Hang)：減緩重力減速度 65%，產生微幅減速停滯浮空感
+                self.vel_y += g_acc * 0.35 * dt
+            else:
+                # 起跳/上升與下落階段
+                self.vel_y += g_acc * dt
+
             self.pos_x += self.vel_x * dt
             self.pos_y += self.vel_y * dt
             if self.pos_y >= floor_y:
@@ -2903,6 +929,7 @@ class PixelChibiWindow(QWidget):
                 self.vel_x = 0.0
                 self.state = "idle"
                 self.state_time = 0.0
+                self.land_squash_t = 0.10  # 著陸 0.1s 壓扁回彈
                 if self.sounds:
                     self.sounds.play("land")
             self.move(int(self.pos_x), int(self.pos_y))
@@ -2916,7 +943,7 @@ class PixelChibiWindow(QWidget):
                 pet_cx = self.pet.x() + self.pet.width() / 2
                 my_cx = self.pos_x + self.char_w / 2
                 dist_to_pet = abs(my_cx - pet_cx)
-                self.facing_right = (pet_cx > my_cx)
+                self.set_facing_right(pet_cx > my_cx)
                 dx = (speed if self.facing_right else -speed) * dt
                 self.pos_x += dx
                 self.walk_phase = (self.walk_phase + dt * 4.5) % 2.0
@@ -2928,9 +955,9 @@ class PixelChibiWindow(QWidget):
                 self.pos_x += dx
                 self.walk_phase = (self.walk_phase + dt * 4.5) % 2.0
                 if self.pos_x > ag.right() - self.char_w - 10:
-                    self.facing_right = False
+                    self.set_facing_right(False)
                 elif self.pos_x < ag.left() + 10:
-                    self.facing_right = True
+                    self.set_facing_right(True)
                 if self.state_time > 12.0:
                     self.state = "idle"
                     self.state_time = 0.0
@@ -2938,8 +965,8 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
-        # 9. 主寵物碰撞偵測與「Duang～」軟彈物理
-        if self.pet and self.pet.isVisible() and not self.climbing_pet:
+        # 9. 主寵物碰撞偵測與「Duang～」軟彈物理 (僅限地板巡邏走動與跑步狀態)
+        if self.pet and self.pet.isVisible() and not self.climbing_pet and self.state in ("walk", "run"):
             pet_geom = self.pet.geometry()
             my_rect = QRect(int(self.pos_x), int(self.pos_y), self.char_w, self.char_h)
             if pet_geom.intersects(my_rect):
@@ -3070,9 +1097,9 @@ class PixelChibiWindow(QWidget):
                 self.walk_phase = (self.walk_phase + dt * rate) % 2.0
 
                 if self.pos_x > ag.right() - self.char_w - 10:
-                    self.facing_right = False
+                    self.set_facing_right(False)
                 elif self.pos_x < ag.left() + 10:
-                    self.facing_right = True
+                    self.set_facing_right(True)
 
                 if self.state == "run" and self.state_time > 2.5:
                     self.state = "walk"
@@ -3103,7 +1130,7 @@ class PixelChibiWindow(QWidget):
                         self.state = "turn"
                     else:
                         self.state = "walk"
-                        self.facing_right = (random.random() > 0.5)
+                        self.set_facing_right(random.random() > 0.5)
                     self.state_time = 0.0
             elif self.state == "facing_front":
                 if self.state_time > 1.8:
@@ -3347,7 +1374,33 @@ class PixelChibiWindow(QWidget):
         else:
             frame_name = "idle"
 
-        # 2. 獲取像素幀並繪製（支援天花板與四邊邊界旋轉矩陣）
+        # 2. 紙片馬力歐動態物理計算：步頻垂直彈跳 (Step Bobbing) 與 壓扁回彈 (Squash & Stretch)
+        bob_y = 0
+        squish_y = 1.0
+        if self.state == "walk":
+            bob_y = -int(round(math.sin(self.walk_phase * math.pi) * 1.5))
+            squish_y = 1.0 - 0.04 * max(0.0, math.sin(self.walk_phase * math.pi))
+        elif self.state == "run":
+            bob_y = -int(round(math.sin(self.walk_phase * math.pi) * 2.5))
+            squish_y = 1.0 - 0.08 * max(0.0, math.sin(self.walk_phase * math.pi))
+        elif getattr(self, "land_squash_t", 0.0) > 0.0:
+            prog = 1.0 - (self.land_squash_t / 0.10)
+            squish_y = 0.90 + 0.10 * math.sin(prog * math.pi / 2.0)
+            bob_y = 1
+
+        # 紙片翻轉計算 (Paper Flip: scale_x 1.0 -> 0.05 -> 1.0 歷時 120ms)
+        curr_scale_x = 1.0
+        draw_facing = self.facing_right
+        if getattr(self, "paper_flip_t", 0.0) > 0.0:
+            prog = 1.0 - (self.paper_flip_t / 0.12)
+            if prog < 0.5:
+                curr_scale_x = max(0.05, 1.0 - (prog / 0.5) * 0.95)
+                draw_facing = getattr(self, "_flip_from_right", self.facing_right)
+            else:
+                curr_scale_x = max(0.05, 0.05 + ((prog - 0.5) / 0.5) * 0.95)
+                draw_facing = self.facing_right
+
+        # 獲取旋轉角度
         rot_angle = 0.0
         if bool(self.cfg.get("q_chibi_ceiling_mode", False)):
             rot_angle = 180.0
@@ -3355,22 +1408,27 @@ class PixelChibiWindow(QWidget):
             edge_map = {"bottom": 0.0, "right": -90.0, "top": 180.0, "left": 90.0}
             rot_angle = edge_map.get(getattr(self, "walk_edge", "bottom"), 0.0)
 
+        p.save()
+        cx = self.char_w / 2.0
+        cy = self.char_h / 2.0
+        p.translate(cx, cy)
         if rot_angle != 0.0:
-            p.save()
-            p.translate(self.char_w / 2.0, self.char_h / 2.0)
             p.rotate(rot_angle)
-            p.translate(-self.char_w / 2.0, -self.char_h / 2.0)
+        if getattr(self, "paper_lean", 0.0) != 0.0:
+            p.rotate(self.paper_lean)
+        p.scale(curr_scale_x, squish_y)
+        p.translate(-cx, -cy)
 
-        has_balloon = (self.state == "flight") or bool(self.cfg.get("q_flight_prop", False))
+        has_balloon = (self.state == "flight") or bool(self.cfg.get("q_flight_prop", False)) or getattr(self, "is_balloon_landing", False)
         pm = PixelChibiRenderer.get_pixmap(
             self.character,
             frame_name,
-            facing_right=self.facing_right,
+            facing_right=draw_facing,
             scale=self.scale_factor,
             has_balloon=has_balloon,
             balloon_idx=self.balloon_idx,
         )
-        p.drawPixmap(0, 0, pm)
+        p.drawPixmap(0, bob_y, pm)
 
         # 2.1 舉鍋巡邏姿態：雙手高舉大鐵鍋
         if self.state == "lift_walk":
@@ -3387,8 +1445,7 @@ class PixelChibiWindow(QWidget):
                 by = int(-self._lift_bowl_pix.height() * 0.35)
                 p.drawPixmap(bx, by, self._lift_bowl_pix)
 
-        if rot_angle != 0.0:
-            p.restore()
+        p.restore()
 
         # 3. 繪製煙火與獨立情緒像素粒子
         if self.particles:
@@ -3606,7 +1663,7 @@ class PixelChibiManager:
         self.pet = pet
         self.app = app
         self.chibis: list[PixelChibiWindow] = []
-        if self.cfg.get("q_chibi_enabled", True):
+        if self.cfg.get("q_chibi_enabled", False):
             self.init_primary()
 
     @property
@@ -3664,6 +1721,10 @@ class PixelChibiManager:
         w.raise_()
 
         self.chibis.append(w)
+        if self.pet and not getattr(self.pet, "pixel_chibi", None):
+            self.pet.pixel_chibi = w
+        if self.app and not getattr(self.app, "pixel_chibi", None):
+            self.app.pixel_chibi = w
         if self.sounds:
             self.sounds.play("land")
         char_info = PixelChibiRegistry.get_character(character_id)
@@ -3778,6 +1839,39 @@ class PixelChibiManager:
         """同步所有在場小人之 FPS 與定時器間隔。"""
         for c in self.chibis:
             c.sync_fps()
+
+    def _get_gravity_accel(self) -> float:
+        """依據重力配置計算當前像素加速度 (px/s²)。支援地球 9.8N、月球 1.62N、自訂 (0..30N) 與無重力模式。"""
+        if bool(self.cfg.get("zero_gravity_mode", False)):
+            return 18.0
+        preset = str(self.cfg.get("gravity_preset", "earth")).lower()
+        if preset == "moon":
+            return 162.0
+        elif preset == "earth":
+            return 980.0
+        else:
+            val = float(self.cfg.get("gravity_value", 9.8))
+            return round(max(0.0, min(3000.0, val * 100.0)), 2)
+
+    def set_facing_right(self, right: bool):
+        """設置面向行進方向，若切換方向則觸發 120ms 紙片平滑翻面動效。"""
+        if getattr(self, "facing_right", None) is None:
+            self.facing_right = right
+            self._flip_from_right = right
+            self.paper_flip_t = 0.0
+            return
+        if self.facing_right != right:
+            self._flip_from_right = self.facing_right
+            self.facing_right = right
+            self.paper_flip_t = 0.12  # 120ms paper flip
+
+    def start_balloon_landing(self):
+        """觸發遺失視窗小氣球安全緩降模式：拉著小氣球緩慢飄蕩降落至工作列/地面。"""
+        self.state = "flight"
+        self.is_balloon_landing = True
+        self.vel_y = 45.0
+        self.vel_x = 0.0
+        self.state_time = 0.0
 
     def set_character(self, ch: str):
         """設定主要小人之角色形象。"""

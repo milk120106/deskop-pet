@@ -1770,19 +1770,20 @@ Rectangle {
                 // 卡片 1: 模型供應商切換
                 Rectangle {
                     width: parent.width
-                    height: 108
+                    height: colCardProv.implicitHeight + 32
                     radius: 14
                     color: themeColors.surface
                     border.width: 1
                     border.color: themeColors.border
 
                     Column {
+                        id: colCardProv
                         anchors.fill: parent
                         anchors.margins: 16
-                        spacing: 10
+                        spacing: 12
 
                         Text {
-                            text: "AI 模型供應商選擇"
+                            text: "AI 模型供應商選擇（支援 23 家雲端平台、聚合服務與本機私有模型）"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
@@ -1790,25 +1791,27 @@ Rectangle {
                             renderType: Text.NativeRendering
                         }
 
-                        Row {
+                        // 熱門快速切換膠囊
+                        Flow {
                             width: parent.width
-                            spacing: 12
+                            spacing: 8
 
                             Repeater {
-                                model: ["DeepSeek", "OpenAI", "Claude", "Google Gemini"]
+                                model: ["DeepSeek", "OpenAI", "Claude", "Google Gemini", "Groq", "Mistral", "xAI / Grok", "Ollama", "OpenRouter", "矽基流動 (SiliconFlow)"]
                                 delegate: Rectangle {
-                                    width: (colTab2.width - 32 - 36) / 4
-                                    height: 38
-                                    radius: 10
+                                    width: txtPill.implicitWidth + 24
+                                    height: 32
+                                    radius: 8
                                     color: (typeof backend !== "undefined" && backend && backend.apiProvider === modelData) ? themeColors.primaryContainer : (provMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant)
                                     border.width: (typeof backend !== "undefined" && backend && backend.apiProvider === modelData) ? 2 : 1
                                     border.color: (typeof backend !== "undefined" && backend && backend.apiProvider === modelData) ? themeColors.primary : themeColors.border
 
                                     Text {
+                                        id: txtPill
                                         anchors.centerIn: parent
                                         text: modelData
                                         color: (typeof backend !== "undefined" && backend && backend.apiProvider === modelData) ? themeColors.primary : themeColors.text
-                                        font.pixelSize: 13
+                                        font.pixelSize: 12
                                         font.bold: true
                                         font.family: root.modernFontStack
                                         renderType: Text.NativeRendering
@@ -1823,8 +1826,42 @@ Rectangle {
                                             if (typeof backend !== "undefined" && backend) {
                                                 backend.setApiProvider(modelData)
                                                 edApiKey.text = backend.apiKey
+                                                edApiEndpoint.text = backend.apiEndpoint
+                                                edChatModel.text = backend.chatModel
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 全部廠商下拉選單
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "或自全部支援清單中選取："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            ComboBox {
+                                id: cmbAllProviders
+                                width: 280
+                                height: 34
+                                model: (typeof backend !== "undefined" && backend && backend.apiProvidersList) ? backend.apiProvidersList : ["DeepSeek", "OpenAI", "Claude", "Google Gemini"]
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                onActivated: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.setApiProvider(currentText)
+                                        edApiKey.text = backend.apiKey
+                                        edApiEndpoint.text = backend.apiEndpoint
+                                        edChatModel.text = backend.chatModel
                                     }
                                 }
                             }
@@ -1832,10 +1869,10 @@ Rectangle {
                     }
                 }
 
-                // 卡片 2: API 金鑰配置與安全加密開關
+                // 卡片 2: API 金鑰配置與連線端點
                 Rectangle {
                     width: parent.width
-                    height: 200
+                    height: 250
                     radius: 14
                     color: themeColors.surface
                     border.width: 1
@@ -1847,7 +1884,7 @@ Rectangle {
                         spacing: 12
 
                         Text {
-                            text: "API 金鑰與安全性保護"
+                            text: "API 金鑰與連線端點配置（" + ((typeof backend !== "undefined" && backend) ? backend.apiProvider : "當前廠商") + "）"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
@@ -1855,11 +1892,11 @@ Rectangle {
                             renderType: Text.NativeRendering
                         }
 
+                        // 金鑰輸入行
                         Row {
                             width: parent.width
                             spacing: 10
 
-                            // API Key 輸入框
                             Rectangle {
                                 width: parent.width - 200
                                 height: 38
@@ -1882,7 +1919,6 @@ Rectangle {
                                 }
                             }
 
-                            // 顯示密碼 CheckBox
                             Rectangle {
                                 width: 75
                                 height: 38
@@ -1908,7 +1944,6 @@ Rectangle {
                                 }
                             }
 
-                            // 儲存金鑰按鈕
                             Rectangle {
                                 width: 100
                                 height: 38
@@ -1935,12 +1970,65 @@ Rectangle {
                             }
                         }
 
+                        // 自訂端點（Base URL）輸入行
+                        Row {
+                            width: parent.width
+                            spacing: 10
+
+                            Rectangle {
+                                width: parent.width - 110
+                                height: 38
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: edApiEndpoint
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    text: (typeof backend !== "undefined" && backend) ? backend.apiEndpoint : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: "Consolas, monospace"
+                                    selectByMouse: true
+                                    clip: true
+                                }
+                            }
+
+                            Rectangle {
+                                width: 100
+                                height: 38
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "儲存端點"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.saveApiEndpoint(backend.apiProvider, edApiEndpoint.text)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 安全開關：Windows DPAPI 與 PIN 認證
                         Row {
                             width: parent.width
                             spacing: 16
 
-                            // DPAPI 開關
                             Row {
                                 spacing: 10
                                 Text {
@@ -1982,7 +2070,6 @@ Rectangle {
 
                             Item { width: 20; height: 1 }
 
-                            // Windows PIN 開關
                             Row {
                                 spacing: 10
                                 Text {
@@ -2022,21 +2109,13 @@ Rectangle {
                                 }
                             }
                         }
-
-                        Text {
-                            text: "金鑰皆以微軟原生 DPAPI 進行硬體關聯加密儲存，保護您的 API 額度與隱私安全。"
-                            color: themeColors.textSub
-                            font.pixelSize: 11
-                            font.family: root.modernFontStack
-                            renderType: Text.NativeRendering
-                        }
                     }
                 }
 
-                // 卡片 3: 線上模型探索與預設模型
+                // 卡片 3: 對話模型選取與線上探索
                 Rectangle {
                     width: parent.width
-                    height: 170
+                    height: 175
                     radius: 14
                     color: themeColors.surface
                     border.width: 1
@@ -2048,7 +2127,7 @@ Rectangle {
                         spacing: 12
 
                         Text {
-                            text: "線上遠端模型探索與預設模型選取"
+                            text: "對話模型配置與線上探索"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
@@ -2103,15 +2182,318 @@ Rectangle {
 
                             ComboBox {
                                 id: cmbModels
-                                width: 340
+                                width: 280
                                 height: 36
-                                model: (typeof backend !== "undefined" && backend && backend.remoteModels.length > 0) ? backend.remoteModels : ["預設模型 (官方標準預設)"]
+                                model: (typeof backend !== "undefined" && backend && backend.remoteModels.length > 0) ? backend.remoteModels : ["deepseek-chat"]
                                 font.pixelSize: 12
                                 font.family: root.modernFontStack
+                                onActivated: {
+                                    edChatModel.text = currentText
+                                }
                             }
 
                             Rectangle {
-                                width: 170
+                                width: 200
+                                height: 36
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: edChatModel
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    text: (typeof backend !== "undefined" && backend) ? backend.chatModel : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: "Consolas, monospace"
+                                    selectByMouse: true
+                                    clip: true
+                                }
+                            }
+
+                            Rectangle {
+                                width: 140
+                                height: 36
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.primary
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "套用對話模型"
+                                    color: themeColors.primary
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setChatModel(edChatModel.text || cmbModels.currentText)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 4: AI 對話行為與系統提示詞
+                Rectangle {
+                    width: parent.width
+                    height: colCardChatBehavior.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCardChatBehavior
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "AI 對話行為與系統提示詞 (System Prompt)"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        // 對話模式選擇
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "對話模式："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Repeater {
+                                model: [
+                                    { "id": "standard", "label": "標準陪伴對話" },
+                                    { "id": "reasoner", "label": "深度思考 (Reasoner)" },
+                                    { "id": "agent", "label": "系統助手 (Agent)" }
+                                ]
+                                delegate: Rectangle {
+                                    width: txtMode.implicitWidth + 24
+                                    height: 32
+                                    radius: 8
+                                    color: (typeof backend !== "undefined" && backend && backend.aiMode === modelData.id) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                    border.width: (typeof backend !== "undefined" && backend && backend.aiMode === modelData.id) ? 2 : 1
+                                    border.color: (typeof backend !== "undefined" && backend && backend.aiMode === modelData.id) ? themeColors.primary : themeColors.border
+
+                                    Text {
+                                        id: txtMode
+                                        anchors.centerIn: parent
+                                        text: modelData.label
+                                        color: (typeof backend !== "undefined" && backend && backend.aiMode === modelData.id) ? themeColors.primary : themeColors.text
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.setAiMode(modelData.id)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 系統提示詞輸入框
+                        Column {
+                            width: parent.width
+                            spacing: 6
+
+                            Text {
+                                text: "自訂系統提示詞 (System Prompt)："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                            }
+
+                            Row {
+                                width: parent.width
+                                spacing: 10
+
+                                Rectangle {
+                                    width: parent.width - 120
+                                    height: 60
+                                    radius: 8
+                                    color: themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+
+                                    Flickable {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        contentWidth: parent.width - 16
+                                        contentHeight: edSysPrompt.implicitHeight
+                                        clip: true
+
+                                        TextEdit {
+                                            id: edSysPrompt
+                                            width: parent.width
+                                            text: (typeof backend !== "undefined" && backend) ? backend.systemPrompt : ""
+                                            color: themeColors.text
+                                            font.pixelSize: 12
+                                            font.family: root.modernFontStack
+                                            wrapMode: TextEdit.Wrap
+                                            selectByMouse: true
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 110
+                                    height: 38
+                                    radius: 8
+                                    color: themeColors.primary
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "儲存提示詞"
+                                        color: "#FFFFFF"
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.setSystemPrompt(edSysPrompt.text)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 溫度滑桿與隱私優先模式
+                        Row {
+                            width: parent.width
+                            spacing: 24
+
+                            Row {
+                                spacing: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    text: "溫度 (創造力): " + ((typeof backend !== "undefined" && backend) ? backend.temperature.toFixed(2) : "0.70")
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Slider {
+                                    id: sldTemp
+                                    from: 0.0
+                                    to: 1.5
+                                    stepSize: 0.05
+                                    value: (typeof backend !== "undefined" && backend) ? backend.temperature : 0.70
+                                    onMoved: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setTemperature(value)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row {
+                                spacing: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    text: "隱私優先脫敏模式"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Item {
+                                    width: 44
+                                    height: 24
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 12
+                                        color: (typeof backend !== "undefined" && backend && backend.privacyMode) ? themeColors.primary : themeColors.surfaceVariant
+                                        Rectangle {
+                                            width: 18
+                                            height: 18
+                                            radius: 9
+                                            y: 3
+                                            color: "#FFFFFF"
+                                            x: (typeof backend !== "undefined" && backend && backend.privacyMode) ? 23 : 3
+                                            Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                        }
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.setPrivacyMode(!backend.privacyMode)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 快捷按鈕列：打開對話視窗、進階設定檔
+                        Row {
+                            spacing: 12
+
+                            Rectangle {
+                                width: 140
+                                height: 36
+                                radius: 8
+                                color: themeColors.primary
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "開啟 AI 對話視窗"
+                                    color: "#FFFFFF"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.openChatDialog()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 180
                                 height: 36
                                 radius: 8
                                 color: themeColors.surfaceVariant
@@ -2119,7 +2501,7 @@ Rectangle {
                                 border.color: themeColors.border
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "套用為對話預設模型"
+                                    text: "開啟進階 API 設定檔管理..."
                                     color: themeColors.text
                                     font.pixelSize: 12
                                     font.bold: true
@@ -2131,7 +2513,7 @@ Rectangle {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
-                                            backend.applyRemoteModel(cmbModels.currentText)
+                                            backend.openApiProfileDialog()
                                         }
                                     }
                                 }

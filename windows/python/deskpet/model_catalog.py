@@ -17,8 +17,14 @@ class ModelCatalogError(RuntimeError):
 OPENAI_BASES = {
     "OpenAI": "https://api.openai.com/v1",
     "DeepSeek": "https://api.deepseek.com",
+    "Claude": "https://api.anthropic.com/v1",
+    "Anthropic": "https://api.anthropic.com/v1",
+    "Google Gemini": "https://generativelanguage.googleapis.com/v1beta",
     "xAI / Grok": "https://api.x.ai/v1",
     "Groq": "https://api.groq.com/openai/v1",
+    "Mistral": "https://api.mistral.ai/v1",
+    "Ollama": "http://localhost:11434/v1",
+    "OpenRouter": "https://openrouter.ai/api/v1",
     "z.ai": "https://api.z.ai/api/paas/v4",
     "GLM": "https://open.bigmodel.cn/api/paas/v4",
     "Cerebras": "https://api.cerebras.ai/v1",
@@ -124,11 +130,38 @@ DYNAMIC_MODEL_ALIASES: dict[str, list[dict]] = {
         {"id": "moonshot-v1-32k", "label": "Moonshot v1 32K (Kimi)", "context_length": 32768},
         {"id": "moonshot-v1-128k", "label": "Moonshot v1 128K (Kimi)", "context_length": 131072},
     ],
+    "Groq": [
+        {"id": "llama-3.3-70b-versatile", "label": "Llama 3.3 70B (極速 Versatile)", "context_length": 131072},
+        {"id": "llama-3.1-8b-instant", "label": "Llama 3.1 8B (極速 Instant)", "context_length": 131072},
+        {"id": "mixtral-8x7b-32768", "label": "Mixtral 8x7B (多專家模型)", "context_length": 32768},
+    ],
+    "Mistral": [
+        {"id": "mistral-large-latest", "label": "Mistral Large (最新旗艦)", "context_length": 128000},
+        {"id": "mistral-small-latest", "label": "Mistral Small (高效輕量)", "context_length": 128000},
+        {"id": "codestral-latest", "label": "Codestral (代碼旗艦)", "context_length": 256000},
+    ],
+    "xAI / Grok": [
+        {"id": "grok-2-latest", "label": "Grok 2 (最新旗艦)", "context_length": 131072},
+        {"id": "grok-beta", "label": "Grok Beta", "context_length": 131072},
+    ],
+    "Ollama": [
+        {"id": "llama3.2", "label": "Llama 3.2 (本地模型)", "context_length": 131072},
+        {"id": "deepseek-r1", "label": "DeepSeek R1 (本地推理)", "context_length": 64000},
+        {"id": "qwen2.5", "label": "Qwen 2.5 (本地模型)", "context_length": 32768},
+    ],
+    "OpenRouter": [
+        {"id": "deepseek/deepseek-chat", "label": "DeepSeek V3 (OpenRouter 聚合)", "context_length": 64000},
+        {"id": "anthropic/claude-3.5-sonnet", "label": "Claude 3.5 Sonnet (OpenRouter 聚合)", "context_length": 200000},
+        {"id": "openai/gpt-4o", "label": "GPT-4o (OpenRouter 聚合)", "context_length": 128000},
+    ],
     "本地 LM Studio": [
         {"id": "local-model", "label": "LM Studio 本地加載模型", "context_length": 32768},
     ],
     "本地 vLLM": [
         {"id": "default", "label": "vLLM 本地高吞吐服務", "context_length": 32768},
+    ],
+    "OpenAI 相容自訂端點": [
+        {"id": "custom-model", "label": "自訂端點模型", "context_length": 32768},
     ],
 }
 

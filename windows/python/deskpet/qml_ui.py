@@ -39,7 +39,7 @@ from .font_manager import (
     resolve_best_default_font,
 )
 from .logger import LOGS_DIR, check_crash, clear_memory_buffer, get_recent_logs, log
-from .model_catalog import PROVIDERS, ModelCatalogError, discover_models
+from .model_catalog import DYNAMIC_MODEL_ALIASES, OPENAI_BASES, PROVIDERS, ModelCatalogError, discover_models
 
 
 class QmlModelDiscoverWorker(QThread):
@@ -108,6 +108,11 @@ class QMLBackend(QObject):
     cueFilesChanged = Signal()
     apiProviderChanged = Signal(str)
     apiKeyChanged = Signal(str)
+    apiEndpointChanged = Signal(str)
+    chatModelChanged = Signal(str)
+    systemPromptChanged = Signal(str)
+    temperatureChanged = Signal(float)
+    privacyModeChanged = Signal(bool)
     dpapiChanged = Signal(bool)
     pinAuthChanged = Signal(bool)
     remoteModelsChanged = Signal(list)
@@ -235,16 +240,70 @@ class QMLBackend(QObject):
     def get_api_provider(self) -> str:
         return self._selected_api_prov
 
+    def get_api_providers_list(self) -> list[str]:
+        return list(PROVIDERS)
+
     def get_api_key(self) -> str:
+        prov = self._selected_api_prov
+        # 1. 優先自 api_profiles 查詢
+        for p in self.app.cfg.get("api_profiles", []):
+            if p.get("provider", "").lower() == prov.lower() or (prov == "Claude" and p.get("provider") == "Anthropic"):
+                k = str(p.get("key", "")).strip()
+                if k:
+                    return k
+        # 2. 自 api_keys 字典查詢
         prov_map = {
             "DeepSeek": "deepseek",
             "OpenAI": "openai",
             "Google Gemini": "gemini",
             "Claude": "anthropic",
+            "Anthropic": "anthropic",
+            "Groq": "groq",
+            "Mistral": "mistral",
+            "xAI / Grok": "grok",
+            "Ollama": "ollama",
+            "OpenRouter": "openrouter",
+            "矽基流動 (SiliconFlow)": "siliconflow",
+            "月之暗面 (Moonshot/Kimi)": "moonshot",
         }
-        pid = prov_map.get(self._selected_api_prov, "deepseek")
+        pid = prov_map.get(prov, prov.lower())
         keys = self.app.cfg.get("api_keys") or {}
-        return str(keys.get(pid, ""))
+        return str(keys.get(pid, keys.get(prov, "")))
+
+    def get_api_endpoint(self) -> str:
+        prov = self._selected_api_prov
+        # 1. 優先自 api_profiles 查詢
+        for p in self.app.cfg.get("api_profiles", []):
+            if p.get("provider", "").lower() == prov.lower() or (prov == "Claude" and p.get("provider") == "Anthropic"):
+                ep = str(p.get("endpoint", "")).strip()
+                if ep:
+                    return ep
+        # 2. 自 api_endpoints 字典查詢
+        eps = self.app.cfg.get("api_endpoints") or {}
+        if prov in eps and eps[prov]:
+            return str(eps[prov])
+        return str(OPENAI_BASES.get(prov, ""))
+
+    def get_chat_model(self) -> str:
+        prov = self._selected_api_prov
+        for p in self.app.cfg.get("api_profiles", []):
+            if p.get("provider", "").lower() == prov.lower() or (prov == "Claude" and p.get("provider") == "Anthropic"):
+                m = str(p.get("model", "")).strip()
+                if m:
+                    return m
+        aliases = DYNAMIC_MODEL_ALIASES.get(prov, [])
+        if aliases:
+            return aliases[0]["id"]
+        return str(self.app.cfg.get("active_model", ""))
+
+    def get_system_prompt(self) -> str:
+        return str(self.app.cfg.get("system_prompt", ""))
+
+    def get_temperature(self) -> float:
+        return float(self.app.cfg.get("temperature", 0.7))
+
+    def get_privacy_mode(self) -> bool:
+        return bool(self.app.cfg.get("privacy_sanitizer_enabled", True))
 
     def get_dpapi_enabled(self) -> bool:
         return bool(self.app.cfg.get("dpapi_enabled", True))
@@ -311,7 +370,13 @@ class QMLBackend(QObject):
     cueLandFile = Property(str, get_cue_land_file, notify=cueFilesChanged)
     cueOffFile = Property(str, get_cue_off_file, notify=cueFilesChanged)
     apiProvider = Property(str, get_api_provider, notify=apiProviderChanged)
+    apiProvidersList = Property(list, get_api_providers_list, constant=True)
     apiKey = Property(str, get_api_key, notify=apiKeyChanged)
+    apiEndpoint = Property(str, get_api_endpoint, notify=apiEndpointChanged)
+    chatModel = Property(str, get_chat_model, notify=chatModelChanged)
+    systemPrompt = Property(str, get_system_prompt, notify=systemPromptChanged)
+    temperature = Property(float, get_temperature, notify=temperatureChanged)
+    privacyMode = Property(bool, get_privacy_mode, notify=privacyModeChanged)
     dpapiEnabled = Property(bool, get_dpapi_enabled, notify=dpapiChanged)
     pinAuthEnabled = Property(bool, get_pin_auth_enabled, notify=pinAuthChanged)
     remoteModels = Property(list, get_remote_models, notify=remoteModelsChanged)
@@ -605,6 +670,16 @@ class QMLBackend(QObject):
         self._selected_api_prov = prov
         self.apiProviderChanged.emit(prov)
         self.apiKeyChanged.emit(self.get_api_key())
+        self.apiEndpointChanged.emit(self.get_api_endpoint())
+        self.chatModelChanged.emit(self.get_chat_model())
+
+        # 自動依動態別名填充可選模型列表
+        aliases = DYNAMIC_MODEL_ALIASES.get(prov, [])
+        if aliases:
+            self._remote_models = [m["id"] for m in aliases]
+            self.remoteModelsChanged.emit(self._remote_models)
+            self._remote_model_status = f"已載入 {prov} 推薦動態模型（共 {len(self._remote_models)} 個）"
+            self.remoteModelStatusChanged.emit(self._remote_model_status)
 
     @Slot(str, str)
     def saveApiKey(self, prov: str, key: str):
@@ -613,10 +688,19 @@ class QMLBackend(QObject):
             "OpenAI": "openai",
             "Google Gemini": "gemini",
             "Claude": "anthropic",
+            "Anthropic": "anthropic",
+            "Groq": "groq",
+            "Mistral": "mistral",
+            "xAI / Grok": "grok",
+            "Ollama": "ollama",
+            "OpenRouter": "openrouter",
+            "矽基流動 (SiliconFlow)": "siliconflow",
+            "月之暗面 (Moonshot/Kimi)": "moonshot",
         }
-        pid = prov_map.get(prov, "deepseek")
+        pid = prov_map.get(prov, prov.lower())
         keys = dict(self.app.cfg.get("api_keys") or {})
         keys[pid] = key.strip()
+        keys[prov] = key.strip()
         self.app.cfg.set("api_keys", keys, save=True)
 
         # 同步至 api_profiles
@@ -629,11 +713,74 @@ class QMLBackend(QObject):
                 break
         if not matched:
             target_prov = "Anthropic" if prov == "Claude" else prov
-            profiles.append({"provider": target_prov, "key": key.strip(), "model": ""})
+            profiles.append({"provider": target_prov, "key": key.strip(), "model": self.get_chat_model(), "endpoint": self.get_api_endpoint()})
         self.app.cfg.set("api_profiles", profiles, save=True)
 
         self.apiKeyChanged.emit(key.strip())
         self.noticeMessage.emit(f"{prov} API 金鑰已安全儲存！", False)
+
+    @Slot(str, str)
+    def saveApiEndpoint(self, prov: str, endpoint: str):
+        eps = dict(self.app.cfg.get("api_endpoints") or {})
+        eps[prov] = endpoint.strip()
+        self.app.cfg.set("api_endpoints", eps, save=True)
+
+        # 同步更新 api_profiles
+        profiles = [dict(x) for x in self.app.cfg.get("api_profiles", [])]
+        for p in profiles:
+            if p.get("provider", "").lower() == prov.lower() or (prov == "Claude" and p.get("provider") == "Anthropic"):
+                p["endpoint"] = endpoint.strip()
+                break
+        self.app.cfg.set("api_profiles", profiles, save=True)
+
+        self.apiEndpointChanged.emit(endpoint.strip())
+        self.noticeMessage.emit(f"{prov} API 端點已儲存！", False)
+
+    @Slot(str)
+    def setChatModel(self, model_name: str):
+        m = model_name.strip()
+        if not m:
+            return
+        prov = self._selected_api_prov
+        self.app.cfg.set("active_model", m, save=True)
+        profiles = [dict(x) for x in self.app.cfg.get("api_profiles", [])]
+        matched = False
+        for p in profiles:
+            if p.get("provider", "").lower() == prov.lower() or (prov == "Claude" and p.get("provider") == "Anthropic"):
+                p["model"] = m
+                matched = True
+                break
+        if not matched:
+            target_prov = "Anthropic" if prov == "Claude" else prov
+            profiles.append({"provider": target_prov, "key": self.get_api_key(), "model": m, "endpoint": self.get_api_endpoint()})
+        self.app.cfg.set("api_profiles", profiles, save=True)
+
+        if prov == "Google Gemini":
+            self.app.cfg.set("gemini_live_model", m, save=True)
+
+        self.chatModelChanged.emit(m)
+        self.noticeMessage.emit(f"已套用對話模型：{m}", False)
+
+    @Slot(str)
+    def setSystemPrompt(self, prompt: str):
+        self.app.cfg.set("system_prompt", prompt.strip(), save=True)
+        self.systemPromptChanged.emit(prompt.strip())
+        self.noticeMessage.emit("系統提示詞已更新！", False)
+
+    @Slot(float)
+    def setTemperature(self, temp: float):
+        self.app.cfg.set("temperature", float(temp), save=True)
+        self.temperatureChanged.emit(float(temp))
+
+    @Slot()
+    def openChatDialog(self):
+        self.app.open_chat_dialog()
+
+    @Slot()
+    def openApiProfileDialog(self):
+        from .chat import ApiProfileDialog
+        d = ApiProfileDialog(self.app.cfg, parent=self.win)
+        d.exec()
 
     @Slot(bool)
     def setDpapiEnabled(self, val: bool):
@@ -696,13 +843,15 @@ class QMLBackend(QObject):
     @Slot(str)
     def fetchRemoteModels(self, prov: str):
         key = self.get_api_key()
-        if not key:
-            self._remote_model_status = f"錯誤：請先輸入並儲存 {prov} 的 API 金鑰"
+        endpoint = self.get_api_endpoint()
+        is_local = prov in ("Ollama", "本地 LM Studio", "LM Studio", "本地 vLLM", "vLLM", "OpenAI 相容自訂端點")
+        if not key and not is_local:
+            self._remote_model_status = f"提示：請先輸入並儲存 {prov} 的 API 金鑰"
             self.remoteModelStatusChanged.emit(self._remote_model_status)
             return
 
         target_prov = "Anthropic" if prov == "Claude" else prov
-        profile = {"provider": target_prov, "key": key, "endpoint": ""}
+        profile = {"provider": target_prov, "key": key, "endpoint": endpoint}
         self._remote_model_status = f"正在連線至 {prov} 查詢最新模型清單..."
         self.remoteModelStatusChanged.emit(self._remote_model_status)
 
@@ -724,9 +873,7 @@ class QMLBackend(QObject):
     def applyRemoteModel(self, model_id: str):
         if not model_id:
             return
-        if self._selected_api_prov == "Google Gemini":
-            self.app.cfg.set("gemini_live_model", model_id, save=True)
-        self.noticeMessage.emit(f"已套用預設模型：{model_id}", False)
+        self.setChatModel(model_id)
 
     # --------------------------------------------------------- 字體排版設定
     @Slot(str)

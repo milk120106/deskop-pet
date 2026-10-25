@@ -166,6 +166,7 @@ class PetWindow(QWidget):
         self.alarm_glowing = False
         self.alarm_glow_t = 0.0
         self.alarm_glow_name = ""
+        self.rotation_angle = float(self.cfg.get("pet_rotation_angle", 0.0))
 
         self.timer = QTimer(self)
         self.timer.setInterval(16)
@@ -589,6 +590,24 @@ class PetWindow(QWidget):
         self._update_tablet_transform()
         self.update()
 
+    def toggle_mirror(self):
+        """水平鏡像翻轉（左右對調）。"""
+        self.set_snap_right(not getattr(self, "snap_right", False))
+
+    def set_rotation_angle(self, angle: float):
+        """設定寵物旋轉角度 (0.0 ~ 360.0)。"""
+        self.rotation_angle = float(angle) % 360.0
+        self.cfg.set("pet_rotation_angle", round(self.rotation_angle, 1), save=True)
+        self.update()
+
+    def rotate_by(self, delta: float):
+        """以相對角度旋轉寵物。"""
+        self.set_rotation_angle(getattr(self, "rotation_angle", 0.0) + delta)
+
+    def reset_rotation(self):
+        """重置旋轉角度為 0.0° (正立)。"""
+        self.set_rotation_angle(0.0)
+
     def sprite_origin(self) -> QPointF:
         return QPointF(self.x() + M_L, self.y() + M_T)
 
@@ -652,7 +671,18 @@ class PetWindow(QWidget):
         return False
 
     def _hit_local(self, pos: QPoint) -> bool:
-        x, y = pos.x() - M_L, pos.y() - M_T
+        rot = getattr(self, "rotation_angle", 0.0)
+        px, py = float(pos.x()), float(pos.y())
+        if rot != 0.0:
+            cx = M_L + self.art_w / 2.0
+            cy = M_T + self.art_h / 2.0
+            rad = math.radians(-rot)
+            dx = px - cx
+            dy = py - cy
+            px = cx + dx * math.cos(rad) - dy * math.sin(rad)
+            py = cy + dx * math.sin(rad) + dy * math.cos(rad)
+
+        x, y = int(px) - M_L, int(py) - M_T
         if not (0 <= x < self.art_w and 0 <= y < self.art_h):
             return False
         return (self._sprite(self.expr)[1].pixel(x, y) >> 24) > 20
@@ -1159,6 +1189,13 @@ class PetWindow(QWidget):
 
         ox, oy = M_L + dx, M_T + dy
         p.save()
+        rot = getattr(self, "rotation_angle", 0.0)
+        if rot != 0.0:
+            cx = ox + W / 2.0
+            cy = oy + H / 2.0
+            p.translate(cx, cy)
+            p.rotate(rot)
+            p.translate(-cx, -cy)
         p.translate(ox + W / 2, oy + H + shift_y)
         # 紙片懸空飄蕩微幅傾角 (±5 度)
         if self.flutter_angle != 0.0:

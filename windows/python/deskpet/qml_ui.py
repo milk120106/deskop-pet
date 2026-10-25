@@ -154,6 +154,7 @@ class QMLBackend(QObject):
     gravitySettingsChanged = Signal()
     autoStartChanged = Signal()
     moodSystemChanged = Signal()
+    destructionFxChanged = Signal()
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -556,6 +557,9 @@ class QMLBackend(QObject):
     def get_q_chibi_balance_display(self) -> bool:
         return bool(self.app.cfg.get("q_chibi_balance_display", False))
 
+    def get_q_chibi_allow_walk(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_walk", True))
+
     def get_q_chibi_auto_bind_provider(self) -> bool:
         return bool(self.app.cfg.get("q_chibi_auto_bind_provider", False))
 
@@ -587,6 +591,15 @@ class QMLBackend(QObject):
         return bool(self.app.cfg.get("zero_gravity_mode", False))
 
     # 模組三與模組六：主寵視覺與天花板倒掛
+    def get_pet_rotation_angle(self) -> float:
+        return float(getattr(self.app.pet, "rotation_angle", 0.0))
+
+    def get_pet_manual_mirror(self) -> bool:
+        return bool(getattr(self.app.pet, "snap_right", False))
+
+    def get_destruction_fx_enabled(self) -> bool:
+        return bool(self.app.cfg.get("destruction_fx_enabled", False))
+
     def get_pet_particles_enabled(self) -> bool:
         return bool(self.app.cfg.get("pet_particles_enabled", True))
 
@@ -694,6 +707,7 @@ class QMLBackend(QObject):
     inputBindings = Property(list, get_input_bindings, notify=inputBindingsChanged)
     bindingConflicts = Property(list, get_binding_conflicts, notify=bindingConflictsChanged)
     qChibiBalanceDisplay = Property(bool, get_q_chibi_balance_display, notify=qChibiBehaviorChanged)
+    qChibiAllowWalk = Property(bool, get_q_chibi_allow_walk, notify=qChibiBehaviorChanged)
     qChibiAutoBindProvider = Property(bool, get_q_chibi_auto_bind_provider, notify=qChibiBehaviorChanged)
     qChibiAllowClimbWindow = Property(bool, get_q_chibi_allow_climb_window, notify=qChibiBehaviorChanged)
     qChibiAllowClimbPet = Property(bool, get_q_chibi_allow_climb_pet, notify=qChibiBehaviorChanged)
@@ -717,6 +731,9 @@ class QMLBackend(QObject):
     moodMaxLimit = Property(float, get_mood_max_limit, notify=moodSystemChanged)
     floatingHudEnabled = Property(bool, get_floating_hud_enabled, notify=moodSystemChanged)
     floatingHudOpacity = Property(int, get_floating_hud_opacity, notify=moodSystemChanged)
+    petRotationAngle = Property(float, get_pet_rotation_angle, notify=petVisualsChanged)
+    petManualMirror = Property(bool, get_pet_manual_mirror, notify=petVisualsChanged)
+    destructionFxEnabled = Property(bool, get_destruction_fx_enabled, notify=destructionFxChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -803,7 +820,7 @@ class QMLBackend(QObject):
     def importCustomCharacter(self):
         """呼叫檔案對話框選擇立繪，並新增自訂角色。"""
         path, _ = QFileDialog.getOpenFileName(
-            self.win, "選擇角色圖片（建議透明背景 PNG）", "", "圖片檔案 (*.png *.jpg *.jpeg *.webp *.bmp)"
+            self.win, "選擇角色圖片（建議透明背景 PNG 或動態 GIF）", "", "圖片檔案 (*.png *.jpg *.jpeg *.webp *.bmp *.gif)"
         )
         if not path:
             return
@@ -821,12 +838,21 @@ class QMLBackend(QObject):
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            img = QImage(path)
-            if img.isNull() or img.height() <= 0:
-                raise ValueError("無法解析圖片檔案格式")
-
-            # 完整保留使用者原始立繪圖片，渲染時依 custom_pet_crop_mode (crop/fit/free) 自動適應
-            img.save(str(dest_dir / "sprite.png"), "PNG")
+            is_gif = path.lower().endswith(".gif")
+            if is_gif:
+                from PySide6.QtGui import QImageReader
+                import shutil
+                reader = QImageReader(path)
+                img = reader.read()
+                if img.isNull() or img.height() <= 0:
+                    raise ValueError("無法解析 GIF 檔案")
+                shutil.copy2(path, dest_dir / "sprite.gif")
+                img.save(str(dest_dir / "sprite.png"), "PNG")
+            else:
+                img = QImage(path)
+                if img.isNull() or img.height() <= 0:
+                    raise ValueError("無法解析圖片檔案格式")
+                img.save(str(dest_dir / "sprite.png"), "PNG")
 
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
             self.setCharacter(cid)
@@ -1570,6 +1596,14 @@ class QMLBackend(QObject):
         self.qChibiBehaviorChanged.emit()
 
     @Slot(bool)
+    def setQChibiAllowWalk(self, val: bool):
+        if hasattr(self.app, "set_q_chibi_allow_walk"):
+            self.app.set_q_chibi_allow_walk(bool(val))
+        else:
+            self.app.cfg.set("q_chibi_allow_walk", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
     def setQChibiAutoBindProvider(self, val: bool):
         self.app.cfg.set("q_chibi_auto_bind_provider", bool(val), save=True)
         self.qChibiBehaviorChanged.emit()
@@ -1753,6 +1787,48 @@ class QMLBackend(QObject):
         self.statusSummaryChanged.emit(self.get_status_summary())
         self.currentFontChanged.emit(self.get_current_font_family())
         self.cueFilesChanged.emit()
+
+
+    @Slot(float)
+    def setPetRotationAngle(self, angle: float):
+        self.app.set_pet_rotation_angle(angle)
+        self.petVisualsChanged.emit()
+
+    @Slot(float)
+    def rotatePetBy(self, delta: float):
+        self.app.rotate_pet_by(delta)
+        self.petVisualsChanged.emit()
+
+    @Slot()
+    def resetPetRotation(self):
+        self.app.reset_pet_rotation()
+        self.petVisualsChanged.emit()
+
+    @Slot()
+    def togglePetMirror(self):
+        self.app.toggle_pet_mirror()
+        self.petVisualsChanged.emit()
+
+    @Slot(bool)
+    def setDestructionFxEnabled(self, enabled: bool):
+        self.app.set_destruction_fx_enabled(enabled)
+        self.destructionFxChanged.emit()
+
+    @Slot()
+    def startInteractiveDestructionMode(self):
+        self.app.start_interactive_destruction_mode()
+
+    @Slot()
+    def stopInteractiveDestructionMode(self):
+        self.app.stop_interactive_destruction_mode()
+
+    @Slot(str)
+    def triggerDestructionFx(self, effect_type: str):
+        self.app.trigger_destruction_effect(effect_type)
+
+    @Slot()
+    def clearDestructionFx(self):
+        self.app.clear_destruction_effects()
 
 
 class QmlControlWindow(QWidget):

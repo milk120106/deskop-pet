@@ -1449,6 +1449,175 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // 項目 8: 主寵旋轉角度調節與水平鏡像
+                        Column {
+                            width: parent.width
+                            spacing: 8
+                            Row {
+                                width: parent.width
+                                spacing: 12
+                                Text {
+                                    text: "主寵旋轉角度調節 (" + Math.round(typeof backend !== "undefined" && backend ? backend.petRotationAngle : 0) + "°)"
+                                    color: themeColors.text
+                                    font.pixelSize: 13
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 190
+                                }
+                                Row {
+                                    spacing: 6
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Rectangle {
+                                        width: 68
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "0° (正立)"
+                                            color: themeColors.text
+                                            font.pixelSize: 11
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.resetPetRotation()
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 50
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "－15°"
+                                            color: themeColors.text
+                                            font.pixelSize: 11
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.rotatePetBy(-15)
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 50
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "＋15°"
+                                            color: themeColors.text
+                                            font.pixelSize: 11
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.rotatePetBy(15)
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 76
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "水平鏡像"
+                                            color: themeColors.text
+                                            font.pixelSize: 11
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.togglePetMirror()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 9: 【大破壞！？】玩家即時互動破壞模式（純視覺效果，絕無破壞）
+                        Column {
+                            width: parent.width
+                            spacing: 8
+                            Row {
+                                width: parent.width
+                                spacing: 12
+                                Column {
+                                    width: 250
+                                    spacing: 2
+                                    Text {
+                                        text: "【大破壞！？】趣味互動玩具箱"
+                                        color: themeColors.text
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                    Text {
+                                        text: "純視覺效果，絕不會造成破壞或資料遺失"
+                                        color: themeColors.textSecondary
+                                        font.pixelSize: 11
+                                        font.family: root.modernFontStack
+                                        renderType: Text.NativeRendering
+                                    }
+                                }
+                                Row {
+                                    spacing: 6
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Rectangle {
+                                        width: 130
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.primary
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "開啟互動玩具箱..."
+                                            color: "#FFFFFF"
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.startInteractiveDestructionMode()
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 72
+                                        height: 28
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "清除特效"
+                                            color: themeColors.text
+                                            font.pixelSize: 11
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: if (typeof backend !== "undefined" && backend) backend.clearDestructionFx()
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1683,6 +1852,45 @@ Rectangle {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiBalanceDisplay(!backend.qChibiBalanceDisplay)
+                                }
+                            }
+                        }
+
+                        // 項目 5.5: 允許地面自由走動（漫遊模式）
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "允許地面自由走動（開啟時巡邏走動，關閉時原地待機）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowWalk) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowWalk) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiAllowWalk(!backend.qChibiAllowWalk)
                                 }
                             }
                         }

@@ -952,7 +952,7 @@ def run(qapp) -> int:
     has_legs = all(("OO" in "".join(FRAMES[f]) or "FF" in "".join(FRAMES[f]) or "SS" in "".join(FRAMES[f])) for f in ("idle", "walk1", "walk2", "sit", "panic", "climb"))
     check("pixel chibi has cute legs in all 4 heroines", all_four and has_legs)
     check("pixel chibi character info defines official four heroines", "藍色大肥魚" in CHARACTER_INFO["deepseek"]["name"] and "GPT龍娘" in CHARACTER_INFO["gpt"]["name"] and "大小姐Claude" in CHARACTER_INFO["claude"]["name"] and "北美貓娘Gemini" in CHARACTER_INFO["gemini"]["name"])
-    check("gpt heroine palette represents white dragon girl", CHAR_PALETTES["gpt"]["H"] == "#f8fafc" and CHAR_PALETTES["gpt"]["E"] == "#8b5cf6")
+    check("gpt heroine palette represents emerald dragon girl", CHAR_PALETTES["gpt"]["H"] == "#10b981")
 
     # 10. 最近鄰取樣放大無模糊動畫幀繪製
     pm_idle = PixelChibiRenderer.get_pixmap("deepseek", "idle", scale=2)
@@ -1677,6 +1677,150 @@ def run(qapp) -> int:
     check("qml_backend has setGravityValue", hasattr(qml_backend, "setGravityValue"))
     check("qml_backend has setMoodSystemEnabled", hasattr(qml_backend, "setMoodSystemEnabled"))
     check("qml_backend has saveInputBinding", hasattr(qml_backend, "saveInputBinding"))
+
+    # ========================================================= 37. Chibi Aesthetic, Physics, Edge Bounce & Editor Upgrades
+    # 預設走動與邊緣防撞邏輯
+    check("q_chibi_allow_walk config defaults to True", cfg.get("q_chibi_allow_walk") is True)
+    check("DEFAULTS has q_chibi_allow_walk True", config.DEFAULTS.get("q_chibi_allow_walk") is True)
+    check("DEFAULTS has q_chibi_ceiling_mode False", config.DEFAULTS.get("q_chibi_ceiling_mode") is False)
+    check("DEFAULTS has q_chibi_four_edges_floor_mode False", config.DEFAULTS.get("q_chibi_four_edges_floor_mode") is False)
+
+    # 復原四邊行走與天花板模式為預設關閉
+    cfg.set("q_chibi_four_edges_floor_mode", False)
+    cfg.set("q_chibi_ceiling_mode", False)
+    check("q_chibi_four_edges_floor_mode restored to False", cfg.get("q_chibi_four_edges_floor_mode") is False)
+    check("q_chibi_ceiling_mode restored to False", cfg.get("q_chibi_ceiling_mode") is False)
+
+    # 走動開關切換驗證
+    app.set_q_chibi_allow_walk(False)
+    check("set_q_chibi_allow_walk disables walking", cfg.get("q_chibi_allow_walk") is False)
+    app.set_q_chibi_allow_walk(True)
+    check("set_q_chibi_allow_walk re-enables walking", cfg.get("q_chibi_allow_walk") is True)
+
+    # 左右螢幕邊緣水平轉向（絕不上牆與上天花板，且穩固停留在 floor_y）
+    floor_y = float(ag.bottom() + 1 - app.pixel_chibi.char_h)
+    app.pixel_chibi.pos_y = floor_y
+    app.pixel_chibi.pos_x = float(ag.right() - 5)
+    app.pixel_chibi.facing_right = True
+    app.pixel_chibi.state = "walk"
+    app.pixel_chibi._tick()
+    check("pixel chibi turns around to left on right boundary", app.pixel_chibi.facing_right is False and app.pixel_chibi.pos_y == floor_y)
+
+    app.pixel_chibi.pos_x = float(ag.left() + 5)
+    app.pixel_chibi.facing_right = False
+    app.pixel_chibi.state = "walk"
+    app.pixel_chibi._tick()
+    check("pixel chibi turns around to right on left boundary", app.pixel_chibi.facing_right is True and app.pixel_chibi.pos_y == floor_y)
+
+    # 嚴格僅有四大官方預設立繪
+    check("strictly only 4 official presets in CHARACTER_INFO", len(CHARACTER_INFO) == 4 and set(CHARACTER_INFO.keys()) == {"deepseek", "gpt", "claude", "gemini"})
+    check("strictly only 4 official presets in CHAR_PALETTES", len(CHAR_PALETTES) == 4 and set(CHAR_PALETTES.keys()) == {"deepseek", "gpt", "claude", "gemini"})
+
+    # 檢查手臂與身體連續性（第 25-29 列無懸空像素點）
+    continuous_arms = True
+    for r in range(25, 30):
+        row_str = FRAMES["idle"][r]
+        indices = [i for i, ch in enumerate(row_str) if ch != '.']
+        if indices:
+            sub = row_str[indices[0]:indices[-1]+1]
+            if "." in sub:
+                continuous_arms = False
+                break
+    check("pixel chibi rows 25-29 have zero floating pixels with continuous arms", continuous_arms)
+    check("pixel chibi all 24 frames have valid 32x48 resolution", len(FRAMES) >= 24 and all(len(FRAMES[f]) == 48 and all(len(r) == 32 for r in FRAMES[f]) for f in FRAMES))
+
+    # 像素編輯器畫布縮放與網格功能
+    from deskpet.chibi_editor import PixelCanvasWidget, AutoPixelizeDialog, ChibiPixelEditorDialog
+    canvas_test = PixelCanvasWidget(32, 48)
+    init_zoom = canvas_test.cell_size
+    canvas_test.zoom_in()
+    check("PixelCanvasWidget zoom_in increases cell_size", canvas_test.cell_size > init_zoom)
+    canvas_test.zoom_out()
+    check("PixelCanvasWidget zoom_out restores cell_size", canvas_test.cell_size == init_zoom)
+    canvas_test.set_show_grid(False)
+    check("PixelCanvasWidget grid toggle disables grid", canvas_test.show_grid is False)
+    canvas_test.set_show_grid(True)
+    check("PixelCanvasWidget grid toggle re-enables grid", canvas_test.show_grid is True)
+
+    # 自動像素化對話框與調色盤提取
+    test_img = QImage(64, 64, QImage.Format_ARGB32)
+    test_img.fill(QColor(60, 120, 200))
+    temp_img_path = OUT / "test_pixelize_source.png"
+    test_img.save(str(temp_img_path))
+    pix_dlg = AutoPixelizeDialog(str(temp_img_path), default_w=32, default_h=48)
+    check("AutoPixelizeDialog computes pixel grid", len(pix_dlg.pixel_grid) == 48 and len(pix_dlg.pixel_grid[0]) == 32)
+    check("AutoPixelizeDialog extracts color palette", len(pix_dlg.extracted_palette) > 0)
+    pix_dlg.close()
+
+    # 像素編輯器功能介面完備性
+    editor_dlg = ChibiPixelEditorDialog(parent=None)
+    check("ChibiPixelEditorDialog has import_gif_file method", hasattr(editor_dlg, "import_gif_file"))
+    check("ChibiPixelEditorDialog has _on_auto_pixelize method", hasattr(editor_dlg, "_on_auto_pixelize"))
+    check("ChibiPixelEditorDialog has _apply_canvas_dimensions method", hasattr(editor_dlg, "_apply_canvas_dimensions"))
+    editor_dlg.close()
+
+    # QML 後端雙向綁定
+    check("qml_backend has qChibiAllowWalk property", hasattr(qml_backend, "qChibiAllowWalk"))
+    check("qml_backend has setQChibiAllowWalk method", hasattr(qml_backend, "setQChibiAllowWalk"))
+
+
+    # ========================================================= 38. Pet Rotator, Horizontal Mirror & Interactive Destruction Sandbox
+    # 寵物旋轉角度與設定預設值
+    check("pet rotation_angle defaults to 0.0", pet.rotation_angle == 0.0)
+    check("DEFAULTS has pet_rotation_angle 0.0", config.DEFAULTS.get("pet_rotation_angle") == 0.0)
+
+    # 旋轉角度控制函式
+    pet.set_rotation_angle(45.0)
+    check("set_rotation_angle sets 45 degrees", pet.rotation_angle == 45.0)
+    pet.rotate_by(15.0)
+    check("rotate_by adds 15 degrees", pet.rotation_angle == 60.0)
+    pet.reset_rotation()
+    check("reset_rotation restores 0.0 degrees", pet.rotation_angle == 0.0)
+
+    # 水平鏡像翻轉
+    orig_snap = pet.snap_right
+    pet.toggle_mirror()
+    check("toggle_mirror inverts snap_right", pet.snap_right != orig_snap)
+    pet.toggle_mirror()
+    check("toggle_mirror restores original snap_right", pet.snap_right == orig_snap)
+
+    # 寵物自由旋轉視窗
+    from deskpet.pet_rotator import PetRotationDialog
+    rot_dlg = PetRotationDialog(pet)
+    check("PetRotationDialog initializes with slider and spinbox", hasattr(rot_dlg, "slider") and hasattr(rot_dlg, "spin"))
+    rot_dlg.close()
+
+    # 【大破壞！？】玩家即時互動破壞模式與特效層
+    check("destruction_fx_enabled config defaults to False", cfg.get("destruction_fx_enabled") is False)
+    check("DEFAULTS has destruction_fx_enabled False", config.DEFAULTS.get("destruction_fx_enabled") is False)
+
+    app.start_interactive_destruction_mode()
+    check("start_interactive_destruction_mode activates overlay", app.destruction_overlay.is_interactive_mode is True)
+
+    app.trigger_destruction_effect("hammer")
+    check("trigger_destruction_effect hammer creates decals", len(app.destruction_overlay.decals) > 0)
+
+    app.trigger_destruction_effect("bomb")
+    check("trigger_destruction_effect bomb spawns bomb", len(app.destruction_overlay.bombs) > 0)
+
+    app.stop_interactive_destruction_mode()
+    check("stop_interactive_destruction_mode initiates cleaning", app.destruction_overlay.cleaning_active is True)
+
+    app.destruction_overlay._finish_exit()
+    check("finish_exit restores non-interactive state and clears decals", app.destruction_overlay.is_interactive_mode is False and len(app.destruction_overlay.decals) == 0)
+
+    # QML 後端雙向綁定槽函式驗證
+    check("qml_backend has petRotationAngle property", hasattr(qml_backend, "petRotationAngle"))
+    check("qml_backend has setPetRotationAngle method", hasattr(qml_backend, "setPetRotationAngle"))
+    check("qml_backend has rotatePetBy method", hasattr(qml_backend, "rotatePetBy"))
+    check("qml_backend has resetPetRotation method", hasattr(qml_backend, "resetPetRotation"))
+    check("qml_backend has togglePetMirror method", hasattr(qml_backend, "togglePetMirror"))
+    check("qml_backend has destructionFxEnabled property", hasattr(qml_backend, "destructionFxEnabled"))
+    check("qml_backend has setDestructionFxEnabled method", hasattr(qml_backend, "setDestructionFxEnabled"))
+    check("qml_backend has startInteractiveDestructionMode method", hasattr(qml_backend, "startInteractiveDestructionMode"))
+    check("qml_backend has stopInteractiveDestructionMode method", hasattr(qml_backend, "stopInteractiveDestructionMode"))
+    check("qml_backend has triggerDestructionFx method", hasattr(qml_backend, "triggerDestructionFx"))
+    check("qml_backend has clearDestructionFx method", hasattr(qml_backend, "clearDestructionFx"))
 
     # 清理測試自訂立繪
     pet.set_character("deepseek")

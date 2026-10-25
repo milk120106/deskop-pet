@@ -82,18 +82,22 @@ BASIC_PALETTE = [
 
 
 class PixelCanvasWidget(QWidget):
-    """可視化像素畫布網格，支援鉛筆、橡皮擦、油漆桶、吸管繪製。"""
+    """可視化像素畫布網格，支援放大/縮小(Zoom)、網格線開關、鉛筆、橡皮擦、油漆桶、吸管繪製。"""
     color_picked = Signal(str)
     pixel_changed = Signal()
+    zoom_changed = Signal(int)
 
-    def __init__(self, width: int = 16, height: int = 24, parent: QWidget | None = None):
+    ZOOM_LEVELS = [4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40]
+
+    def __init__(self, width: int = 32, height: int = 48, parent: QWidget | None = None):
         super().__init__(parent)
         self.canvas_w = width
         self.canvas_h = height
         self.tool = "pencil"  # pencil, eraser, bucket, picker
         self.current_color = "#1e3a8a"
         self.grid: list[list[str | None]] = [[None for _ in range(width)] for _ in range(height)]
-        self.cell_size = 20
+        self.cell_size = 14
+        self.show_grid = True
         self.hover_cell: tuple[int, int] | None = None
 
         self.setMouseTracking(True)
@@ -105,6 +109,38 @@ class PixelCanvasWidget(QWidget):
         h = self.canvas_h * self.cell_size
         self.setFixedSize(w, h)
         self.update()
+
+    def zoom_in(self):
+        """畫布放大一級。"""
+        for z in self.ZOOM_LEVELS:
+            if z > self.cell_size:
+                self.set_cell_size(z)
+                return
+
+    def zoom_out(self):
+        """畫布縮小一級。"""
+        for z in reversed(self.ZOOM_LEVELS):
+            if z < self.cell_size:
+                self.set_cell_size(z)
+                return
+
+    def set_cell_size(self, size: int):
+        self.cell_size = max(4, min(48, int(size)))
+        self._update_widget_size()
+        self.zoom_changed.emit(self.cell_size)
+
+    def set_show_grid(self, on: bool):
+        self.show_grid = bool(on)
+        self.update()
+
+    def wheelEvent(self, e):
+        """支援滑鼠滾輪縮放畫布。"""
+        delta = e.angleDelta().y()
+        if delta > 0:
+            self.zoom_in()
+        elif delta < 0:
+            self.zoom_out()
+        e.accept()
 
     def set_dimensions(self, width: int, height: int, preserve: bool = True):
         width = max(4, min(128, int(width)))
@@ -131,7 +167,7 @@ class PixelCanvasWidget(QWidget):
 
     def set_grid_pixels(self, pixels: list[list[str | None]]):
         h = len(pixels)
-        w = len(pixels[0]) if h > 0 else 16
+        w = len(pixels[0]) if h > 0 else 32
         if w != self.canvas_w or h != self.canvas_h:
             self.canvas_w = w
             self.canvas_h = h
@@ -140,7 +176,7 @@ class PixelCanvasWidget(QWidget):
         self.update()
         self.pixel_changed.emit()
 
-    def load_matrix(self, rows: list[str], palette: dict[str, str], w: int = 16, h: int = 24):
+    def load_matrix(self, rows: list[str], palette: dict[str, str], w: int = 32, h: int = 48):
         self.canvas_w = w
         self.canvas_h = h
         new_grid: list[list[str | None]] = [[None for _ in range(w)] for _ in range(h)]
@@ -194,21 +230,21 @@ class PixelCanvasWidget(QWidget):
             for x in range(self.canvas_w):
                 rx = x * cs
                 ry = y * cs
-                # 棋盤底圖
                 p.fillRect(rx, ry, cs, cs, check1 if ((x + y) % 2 == 0) else check2)
 
                 col_hex = self.grid[y][x]
                 if col_hex:
                     p.fillRect(rx, ry, cs, cs, QColor(col_hex))
 
-        # 2. 繪製精細格線
-        pen = QPen(QColor(180, 190, 205, 120))
-        pen.setWidth(1)
-        p.setPen(pen)
-        for x in range(self.canvas_w + 1):
-            p.drawLine(x * cs, 0, x * cs, self.canvas_h * cs)
-        for y in range(self.canvas_h + 1):
-            p.drawLine(0, y * cs, self.canvas_w * cs, y * cs)
+        # 2. 繪製精細格線 (受 show_grid 開關控制)
+        if self.show_grid and self.cell_size >= 4:
+            pen = QPen(QColor(180, 190, 205, 120))
+            pen.setWidth(1)
+            p.setPen(pen)
+            for x in range(self.canvas_w + 1):
+                p.drawLine(x * cs, 0, x * cs, self.canvas_h * cs)
+            for y in range(self.canvas_h + 1):
+                p.drawLine(0, y * cs, self.canvas_w * cs, y * cs)
 
         # 3. 繪製游標懸停提示邊框
         if self.hover_cell:
@@ -234,7 +270,6 @@ class PixelCanvasWidget(QWidget):
         if e.button() == Qt.LeftButton:
             self._apply_tool(x, y)
         elif e.button() == Qt.RightButton:
-            # 右鍵吸管或快速擦除
             if self.grid[y][x]:
                 self.color_picked.emit(self.grid[y][x])
             else:
@@ -297,6 +332,165 @@ class PixelCanvasWidget(QWidget):
         self.update()
         self.pixel_changed.emit()
 
+
+class AutoPixelizeDialog(QDialog):
+    """圖片智慧自動像素化配置與預覽對話框。
+    支援解析度自適應、像素粒度微調、色彩量化（16-32色）、去背透明度門檻與即時預覽。
+    """
+    def __init__(self, image_path: str, default_w: int = 32, default_h: int = 48, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setWindowTitle("圖片智慧自動像素化")
+        self.setFixedSize(620, 520)
+        self.image_path = image_path
+        self.orig_image = None
+        self.pixel_grid: list[list[str | None]] = []
+        self.extracted_palette: list[str] = []
+
+        try:
+            from PIL import Image
+            self.orig_image = Image.open(image_path).convert("RGBA")
+        except Exception as e:
+            log("AutoPixelize", f"載入圖片失敗：{e}")
+
+        self._build_ui(default_w, default_h)
+        self._update_pixelize()
+
+    def _build_ui(self, default_w: int, default_h: int):
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setSpacing(12)
+
+        lbl_desc = QLabel("智慧像素化演算法：將任意高解析圖片自適應降採樣、邊緣保護重採樣並自動量化為精緻像素調色盤。")
+        lbl_desc.setWordWrap(True)
+        lay.addWidget(lbl_desc)
+
+        content_row = QHBoxLayout()
+        content_row.setSpacing(16)
+
+        # 預覽圖框
+        prev_box = QGroupBox("像素化即時預覽")
+        prev_lay = QVBoxLayout(prev_box)
+        prev_lay.setAlignment(Qt.AlignCenter)
+        self.lbl_preview = QLabel()
+        self.lbl_preview.setFixedSize(200, 260)
+        self.lbl_preview.setAlignment(Qt.AlignCenter)
+        self.lbl_preview.setStyleSheet("background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px;")
+        prev_lay.addWidget(self.lbl_preview)
+        content_row.addWidget(prev_box, 1)
+
+        # 參數設置
+        param_box = QGroupBox("轉換參數設定")
+        param_lay = QVBoxLayout(param_box)
+        param_lay.setSpacing(10)
+
+        # 寬度
+        w_row = QHBoxLayout()
+        w_row.addWidget(QLabel("目標寬度："))
+        self.spin_target_w = QSpinBox()
+        self.spin_target_w.setRange(8, 128)
+        self.spin_target_w.setValue(default_w)
+        self.spin_target_w.valueChanged.connect(self._update_pixelize)
+        w_row.addWidget(self.spin_target_w)
+        param_lay.addLayout(w_row)
+
+        # 高度
+        h_row = QHBoxLayout()
+        h_row.addWidget(QLabel("目標高度："))
+        self.spin_target_h = QSpinBox()
+        self.spin_target_h.setRange(8, 128)
+        self.spin_target_h.setValue(default_h)
+        self.spin_target_h.valueChanged.connect(self._update_pixelize)
+        h_row.addWidget(self.spin_target_h)
+        param_lay.addLayout(h_row)
+
+        # 色彩數量 (量化)
+        col_row = QHBoxLayout()
+        col_row.addWidget(QLabel("調色盤色彩數："))
+        self.spin_colors = QSpinBox()
+        self.spin_colors.setRange(8, 48)
+        self.spin_colors.setValue(24)
+        self.spin_colors.valueChanged.connect(self._update_pixelize)
+        col_row.addWidget(self.spin_colors)
+        param_lay.addLayout(col_row)
+
+        # 透明度門檻
+        alpha_row = QHBoxLayout()
+        alpha_row.addWidget(QLabel("去背門檻 (Alpha)："))
+        self.spin_alpha = QSpinBox()
+        self.spin_alpha.setRange(0, 255)
+        self.spin_alpha.setValue(32)
+        self.spin_alpha.valueChanged.connect(self._update_pixelize)
+        alpha_row.addWidget(self.spin_alpha)
+        param_lay.addLayout(alpha_row)
+
+        param_lay.addStretch(1)
+        content_row.addWidget(param_box, 1)
+        lay.addLayout(content_row)
+
+        # 底部按鈕
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        self.btn_confirm = QPushButton("確定轉換並載入畫布")
+        self.btn_confirm.setObjectName("primary")
+        self.btn_confirm.clicked.connect(self.accept)
+        btn_row.addWidget(self.btn_confirm)
+
+        btn_cancel = QPushButton("取消")
+        btn_cancel.clicked.connect(self.reject)
+        btn_row.addWidget(btn_cancel)
+        lay.addLayout(btn_row)
+
+    def _update_pixelize(self):
+        if not self.orig_image:
+            return
+        try:
+            from PIL import Image
+            tw = self.spin_target_w.value()
+            th = self.spin_target_h.value()
+            n_colors = self.spin_colors.value()
+            alpha_th = self.spin_alpha.value()
+
+            # 1. 影像重取樣（Lanczos高品質抗鋸齒降採樣）
+            resized = self.orig_image.resize((tw, th), Image.Resampling.LANCZOS)
+
+            # 2. 分離 Alpha 與 RGB 量化
+            alpha = resized.split()[3]
+            rgb = resized.convert("RGB")
+            quantized = rgb.quantize(colors=n_colors, method=Image.Quantize.MEDIANCUT).convert("RGB")
+
+            grid: list[list[str | None]] = [[None for _ in range(tw)] for _ in range(th)]
+            palette_set = set()
+
+            for y in range(th):
+                for x in range(tw):
+                    a_val = alpha.getpixel((x, y))
+                    if a_val >= alpha_th:
+                        r, g, b = quantized.getpixel((x, y))
+                        hex_col = f"#{r:02x}{g:02x}{b:02x}"
+                        grid[y][x] = hex_col
+                        palette_set.add(hex_col)
+                    else:
+                        grid[y][x] = None
+
+            self.pixel_grid = grid
+            self.extracted_palette = sorted(list(palette_set))
+
+            # 3. 渲染預覽 QPixmap
+            scale_preview = max(2, min(8, 240 // max(tw, th)))
+            pm_w = tw * scale_preview
+            pm_h = th * scale_preview
+            qimg = QImage(pm_w, pm_h, QImage.Format_ARGB32)
+            qimg.fill(Qt.transparent)
+            qp = QPainter(qimg)
+            for y in range(th):
+                for x in range(tw):
+                    c = grid[y][x]
+                    if c:
+                        qp.fillRect(x * scale_preview, y * scale_preview, scale_preview, scale_preview, QColor(c))
+            qp.end()
+            self.lbl_preview.setPixmap(QPixmap.fromImage(qimg))
+        except Exception as e:
+            log("AutoPixelize", f"像素化即時預覽失敗：{e}")
 
 class MiniPreviewWidget(QWidget):
     """即時動態小人行走預覽視窗。"""
@@ -507,21 +701,22 @@ class ChibiPixelEditorDialog(QDialog):
         # 寬高調節與不顧限制
         info_lay.addWidget(QLabel("寬度："))
         self.spin_w = QSpinBox()
-        self.spin_w.setRange(4, 128)
-        self.spin_w.setValue(16)
-        self.spin_w.setEnabled(False)
+        self.spin_w.setRange(8, 128)
+        self.spin_w.setValue(32)
+        self.spin_w.setEnabled(True)
         self.spin_w.valueChanged.connect(self._on_size_spin_changed)
         info_lay.addWidget(self.spin_w)
 
         info_lay.addWidget(QLabel("高度："))
         self.spin_h = QSpinBox()
-        self.spin_h.setRange(4, 128)
-        self.spin_h.setValue(24)
-        self.spin_h.setEnabled(False)
+        self.spin_h.setRange(8, 128)
+        self.spin_h.setValue(48)
+        self.spin_h.setEnabled(True)
         self.spin_h.valueChanged.connect(self._on_size_spin_changed)
         info_lay.addWidget(self.spin_h)
 
-        self.chk_ignore_limits = QCheckBox("不顧限制（允許非 16x24 任意尺寸）")
+        self.chk_ignore_limits = QCheckBox("允許自訂解析度")
+        self.chk_ignore_limits.setChecked(True)
         self.chk_ignore_limits.toggled.connect(self._on_ignore_limits_toggled)
         info_lay.addWidget(self.chk_ignore_limits)
 
@@ -547,13 +742,65 @@ class ChibiPixelEditorDialog(QDialog):
 
         center_lay.addLayout(frame_bar_row)
 
+        # 畫布縮放與規格快捷工具列
+        zoom_bar = QHBoxLayout()
+        zoom_bar.setSpacing(8)
+
+        lbl_zoom_title = QLabel("畫布縮放：")
+        zoom_bar.addWidget(lbl_zoom_title)
+
+        self.btn_zoom_out = QPushButton("－ 縮小")
+        self.btn_zoom_out.setFixedWidth(64)
+        self.btn_zoom_out.clicked.connect(self._canvas_zoom_out)
+        zoom_bar.addWidget(self.btn_zoom_out)
+
+        self.lbl_zoom = QLabel("14px")
+        self.lbl_zoom.setFixedWidth(45)
+        self.lbl_zoom.setAlignment(Qt.AlignCenter)
+        zoom_bar.addWidget(self.lbl_zoom)
+
+        self.btn_zoom_in = QPushButton("＋ 放大")
+        self.btn_zoom_in.setFixedWidth(64)
+        self.btn_zoom_in.clicked.connect(self._canvas_zoom_in)
+        zoom_bar.addWidget(self.btn_zoom_in)
+
+        self.chk_grid = QCheckBox("顯示像素網格")
+        self.chk_grid.setChecked(True)
+        self.chk_grid.toggled.connect(self._toggle_grid)
+        zoom_bar.addWidget(self.chk_grid)
+
+        zoom_bar.addSpacing(14)
+
+        # 快速解析度預設
+        zoom_bar.addWidget(QLabel("解析度規格："))
+        self.cmb_res_preset = QComboBox()
+        self.cmb_res_preset.addItems([
+            "32 x 48 (精緻 Q 版標準)",
+            "16 x 24 (經典微型像素)",
+            "24 x 32 (緊湊萌系)",
+            "32 x 32 (正方頭像)",
+            "48 x 48 (高解析正方)",
+            "64 x 64 (極致高精繪畫)",
+        ])
+        self.cmb_res_preset.currentIndexChanged.connect(self._on_res_preset_changed)
+        zoom_bar.addWidget(self.cmb_res_preset)
+
+        btn_apply_res = QPushButton("套用畫布尺寸")
+        btn_apply_res.clicked.connect(self._apply_canvas_dimensions)
+        zoom_bar.addWidget(btn_apply_res)
+
+        zoom_bar.addStretch(1)
+        center_lay.addLayout(zoom_bar)
+
         # 像素畫布滾動區域
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setAlignment(Qt.AlignCenter)
         scroll.setStyleSheet("background-color: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 8px;")
 
-        self.canvas = PixelCanvasWidget(16, 24, self)
+        self.canvas = PixelCanvasWidget(32, 48, self)
+        self.canvas.zoom_changed.connect(lambda sz: self.lbl_zoom.setText(f"{sz}px"))
+        self.lbl_zoom.setText(f"{self.canvas.cell_size}px")
         self.canvas.color_picked.connect(self._on_color_picked)
         self.canvas.pixel_changed.connect(self._on_canvas_pixel_changed)
         scroll.setWidget(self.canvas)
@@ -572,6 +819,14 @@ class ChibiPixelEditorDialog(QDialog):
         btn_import = QPushButton("匯入外部檔案 (JSON/PNG)...")
         btn_import.clicked.connect(self._import_file)
         btn_row.addWidget(btn_import)
+
+        btn_import_gif = QPushButton("匯入 GIF 動畫 (*.gif)...")
+        btn_import_gif.clicked.connect(self._import_gif)
+        btn_row.addWidget(btn_import_gif)
+
+        btn_auto_pixelize = QPushButton("匯入圖片自動像素化...")
+        btn_auto_pixelize.clicked.connect(self._on_auto_pixelize)
+        btn_row.addWidget(btn_auto_pixelize)
 
         btn_export = QPushButton("匯出為 .json...")
         btn_export.clicked.connect(self._export_json)
@@ -837,6 +1092,172 @@ class ChibiPixelEditorDialog(QDialog):
         self._update_preview()
 
     # ----------------------------------------------------------------- 清空畫布警告
+    def _canvas_zoom_in(self):
+        self.canvas.zoom_in()
+
+    def _canvas_zoom_out(self):
+        self.canvas.zoom_out()
+
+    def _toggle_grid(self, on: bool):
+        self.canvas.set_show_grid(on)
+
+    def _on_res_preset_changed(self, idx: int):
+        presets = [
+            (32, 48),
+            (16, 24),
+            (24, 32),
+            (32, 32),
+            (48, 48),
+            (64, 64),
+        ]
+        if 0 <= idx < len(presets):
+            w, h = presets[idx]
+            self.spin_w.blockSignals(True)
+            self.spin_h.blockSignals(True)
+            self.spin_w.setValue(w)
+            self.spin_h.setValue(h)
+            self.spin_w.blockSignals(False)
+            self.spin_h.blockSignals(False)
+
+    def _apply_canvas_dimensions(self):
+        """套用寬高數值框尺寸至畫布與所有動畫幀。"""
+        new_w = self.spin_w.value()
+        new_h = self.spin_h.value()
+        if new_w == self.canvas.canvas_w and new_h == self.canvas.canvas_h:
+            return
+
+        self.canvas.set_dimensions(new_w, new_h, preserve=True)
+        for fname, old_grid in list(self.frames_data.items()):
+            new_grid = [[None for _ in range(new_w)] for _ in range(new_h)]
+            for y in range(min(new_h, len(old_grid))):
+                for x in range(min(new_w, len(old_grid[0]))):
+                    new_grid[y][x] = old_grid[y][x]
+            self.frames_data[fname] = new_grid
+        self._update_preview()
+        ModernMessageBox.information(self, "解析度變更", f"畫布尺寸已成功平滑重塑為 {new_w}x{new_h}！")
+
+    def _import_gif(self):
+        """呼叫檔案對話框選擇 GIF 動畫檔案並自動映射至動作幀。"""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "選擇 GIF 動畫檔案", "", "GIF 動畫 (*.gif)"
+        )
+        if not path:
+            return
+        self.import_gif_file(path)
+
+    def import_gif_file(self, path: str | Path):
+        """使用 QImageReader / PIL 解析 GIF 多影格並載入至編輯器。"""
+        reader = QImageReader(str(path))
+        if not reader.canRead():
+            ModernMessageBox.warning(self, "讀取失敗", "無法解析此 GIF 檔案！")
+            return
+
+        frames: list[QImage] = []
+        count = reader.imageCount()
+        if count > 0:
+            for _ in range(count):
+                img = reader.read()
+                if not img.isNull():
+                    frames.append(img.convertToFormat(QImage.Format_ARGB32))
+        else:
+            while True:
+                img = reader.read()
+                if img.isNull():
+                    break
+                frames.append(img.convertToFormat(QImage.Format_ARGB32))
+
+        if not frames:
+            ModernMessageBox.warning(self, "讀取失敗", "GIF 中未找到有效的影像幀！")
+            return
+
+        w = self.canvas.canvas_w
+        h = self.canvas.canvas_h
+        mapping_keys = [af[0] for af in ACTION_FRAMES]
+
+        palette_set = set()
+        for i, img in enumerate(frames):
+            if i >= len(mapping_keys):
+                break
+            key = mapping_keys[i]
+            scaled = img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.FastTransformation)
+            grid = [[None for _ in range(w)] for _ in range(h)]
+            for y in range(h):
+                for x in range(w):
+                    pix = scaled.pixelColor(x, y)
+                    if pix.alpha() > 25:
+                        hex_col = pix.name(QColor.HexRgb).lower()
+                        grid[y][x] = hex_col
+                        palette_set.add(hex_col)
+                    else:
+                        grid[y][x] = None
+            self.frames_data[key] = grid
+
+        # 補齊其餘未包含之動作幀為 idle
+        if len(frames) < len(mapping_keys) and "idle" in self.frames_data:
+            idle_grid = self.frames_data["idle"]
+            for key in mapping_keys[len(frames):]:
+                self.frames_data[key] = [row[:] for row in idle_grid]
+
+        # 擴充色盤網格
+        if palette_set:
+            new_pal = sorted(list(palette_set))
+            self._populate_swatches(new_pal)
+
+        cur = self.frames_data.get(self.current_frame, self.frames_data["idle"])
+        self.canvas.set_grid_pixels(cur)
+        self._update_preview()
+        ModernMessageBox.information(
+            self, "匯入成功", f"成功解析 GIF 動畫並匯入 {len(frames)} 影格！"
+        )
+
+    def _on_auto_pixelize(self):
+        """開啟圖片智慧自動像素化對話框。"""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "選擇圖片以進行自動像素化",
+            "",
+            "圖片檔案 (*.png *.jpg *.jpeg *.bmp *.webp *.gif)"
+        )
+        if not path:
+            return
+
+        p = Path(path)
+        if p.suffix.lower() == ".gif":
+            self.import_gif_file(p)
+            return
+
+        dlg = AutoPixelizeDialog(
+            str(path),
+            default_w=self.canvas.canvas_w,
+            default_h=self.canvas.canvas_h,
+            parent=self
+        )
+        if dlg.exec() == QDialog.Accepted and dlg.pixel_grid:
+            tw = dlg.spin_target_w.value()
+            th = dlg.spin_target_h.value()
+
+            self.spin_w.blockSignals(True)
+            self.spin_h.blockSignals(True)
+            self.spin_w.setValue(tw)
+            self.spin_h.setValue(th)
+            self.spin_w.blockSignals(False)
+            self.spin_h.blockSignals(False)
+
+            self.canvas.set_dimensions(tw, th, preserve=False)
+            self.canvas.set_grid_pixels(dlg.pixel_grid)
+
+            # 將像素化幀套用至當前動作幀
+            self.frames_data[self.current_frame] = [row[:] for row in dlg.pixel_grid]
+
+            # 注入提取出的調色盤
+            if dlg.extracted_palette:
+                self._populate_swatches(dlg.extracted_palette)
+
+            self._update_preview()
+            ModernMessageBox.information(
+                self, "像素化完成", f"已成功將圖片轉換為 {tw}x{th} 像素網格並更新調色盤！"
+            )
+
     def _on_clear_canvas_clicked(self):
         """清空畫布（Clear）：點擊清空時必須彈出警告確認：「確定要清空當前畫布嗎？未儲存的繪圖將會遺失！」"""
         ret = ModernMessageBox.question(
@@ -891,10 +1312,7 @@ class ChibiPixelEditorDialog(QDialog):
 
         w = self.canvas.canvas_w
         h = self.canvas.canvas_h
-        ignore_limits = self.chk_ignore_limits.isChecked()
-        if not ignore_limits and (w != 16 or h != 24):
-            ModernMessageBox.warning(self, "規格不符", f"當前尺寸為 {w}x{h}，超出預設 16x24 限制。請勾選「不顧限制」標記！")
-            return
+        ignore_limits = True
 
         # 整合色盤與編譯像素矩陣
         all_colors = set()
@@ -1019,7 +1437,7 @@ class ChibiPixelEditorDialog(QDialog):
             self,
             "匯入外部 Q 版人物檔案",
             "",
-            "支援檔案 (*.json *.png);;JSON 檔案 (*.json);;PNG 圖片 (*.png)"
+            "支援檔案 (*.json *.png *.gif);;JSON 檔案 (*.json);;PNG 圖片 (*.png);;GIF 動畫 (*.gif)"
         )
         if not path:
             return
@@ -1029,6 +1447,8 @@ class ChibiPixelEditorDialog(QDialog):
             self._import_json(p)
         elif p.suffix.lower() == ".png":
             self._import_png(p)
+        elif p.suffix.lower() == ".gif":
+            self.import_gif_file(p)
 
     def _import_json(self, p: Path):
         try:

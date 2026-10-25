@@ -185,6 +185,8 @@ class App(QObject):
             sync_auto_start(self.cfg)
         except Exception:
             pass
+        from .destruction_fx import DestructionOverlay
+        self.destruction_overlay = DestructionOverlay(app_controller=self)
         self._tutorial_dlg = None
         if not self.cfg.get("tutorial_shown", False) and "--selftest" not in sys.argv:
             QTimer.singleShot(600, self.open_tutorial)
@@ -817,6 +819,12 @@ class App(QObject):
             act_clear_extra.setEnabled(cur_chibi_count > 1)
             act_clear_extra.triggered.connect(self.clear_extra_chibis)
 
+            # 5.5 允許地面走動（漫遊模式）開關
+            act_walk = sub_chibi.addAction("允許地面自由走動")
+            act_walk.setCheckable(True)
+            act_walk.setChecked(bool(self.cfg.get("q_chibi_allow_walk", True)))
+            act_walk.triggered.connect(lambda chk: self.set_q_chibi_allow_walk(chk))
+
             # 6. 上限檔位切換子選單 (5, 10, 15, 20, 25, 30)
             sub_limit = sub_chibi.addMenu(f"在場數量上限（目前：{max_chibi_limit} 隻）")
             sub_limit.setStyleSheet(m.styleSheet())
@@ -841,6 +849,49 @@ class App(QObject):
         act("滑鼠穿透", self.set_click_through, c["click_through"])
         act("自動貼邊", self.set_auto_snap, c["auto_snap"])
         act("回到角落", lambda: self.go_corner(c["snap_corner"]))
+
+        # 寵物旋轉角度子選單
+        cur_rot_val = int(round(getattr(cur_pet, "rotation_angle", 0.0))) % 360
+        sub_rot = m.addMenu(f"旋轉角度 (當前: {cur_rot_val}°)")
+        sub_rot.setStyleSheet(m.styleSheet())
+        sub_rot.setAttribute(Qt.WA_TranslucentBackground, True)
+        sub_rot.setWindowFlags(sub_rot.windowFlags() | Qt.FramelessWindowHint)
+
+        sub_rot.addAction("向左旋轉 15°").triggered.connect(lambda: self.rotate_pet_by(-15.0, pet=cur_pet))
+        sub_rot.addAction("向右旋轉 15°").triggered.connect(lambda: self.rotate_pet_by(15.0, pet=cur_pet))
+        sub_rot.addAction("向左旋轉 90°").triggered.connect(lambda: self.rotate_pet_by(-90.0, pet=cur_pet))
+        sub_rot.addAction("向右旋轉 90°").triggered.connect(lambda: self.rotate_pet_by(90.0, pet=cur_pet))
+        sub_rot.addSeparator()
+        sub_rot.addAction("重置為 0° (正立)").triggered.connect(lambda: self.reset_pet_rotation(pet=cur_pet))
+        sub_rot.addAction("自由旋轉...").triggered.connect(lambda: self.open_rotation_slider_dialog(pet=cur_pet))
+
+        # 水平鏡像翻轉
+        act_mirror = m.addAction("水平鏡像翻轉")
+        act_mirror.triggered.connect(lambda: self.toggle_pet_mirror(pet=cur_pet))
+
+        # 【大破壞！？】玩家即時互動破壞模式（純視覺效果，絕無破壞）
+        sub_destruct = m.addMenu("【大破壞！？】(純視覺互動)")
+        sub_destruct.setStyleSheet(m.styleSheet())
+        sub_destruct.setAttribute(Qt.WA_TranslucentBackground, True)
+        sub_destruct.setWindowFlags(sub_destruct.windowFlags() | Qt.FramelessWindowHint)
+
+        act_play_mode = sub_destruct.addAction("開啟大破壞互動模式 (玩具箱)...")
+        act_play_mode.triggered.connect(self.start_interactive_destruction_mode)
+
+        act_des_toggle = sub_destruct.addAction("允許大破壞視覺效果")
+        act_des_toggle.setCheckable(True)
+        act_des_toggle.setChecked(bool(self.cfg.get("destruction_fx_enabled", False)))
+        act_des_toggle.triggered.connect(lambda chk: self.set_destruction_fx_enabled(chk))
+        sub_destruct.addSeparator()
+
+        sub_destruct.addAction("充氣大鐵錘 (咚～！)").triggered.connect(
+            lambda: self.trigger_destruction_effect("hammer")
+        )
+        sub_destruct.addAction("放置定時炸彈 (砰～！)").triggered.connect(
+            lambda: self.trigger_destruction_effect("bomb")
+        )
+        sub_destruct.addSeparator()
+        sub_destruct.addAction("一鍵修復海綿 (Esc 清除)").triggered.connect(self.clear_destruction_effects)
         act("聲音開關", self.set_sound, c["sound"])
         act(
             "模式：" + ("模擬" if c["mode"] == "sim" else "API") + "（點此切換）",
@@ -902,6 +953,66 @@ class App(QObject):
             winapi.set_topmost(int(win.winId()), True)
         except Exception:
             pass
+
+    def set_pet_rotation_angle(self, angle: float, pet: PetWindow | None = None):
+        target = pet or self.pet
+        target.set_rotation_angle(angle)
+        self._changed()
+
+    def rotate_pet_by(self, delta: float, pet: PetWindow | None = None):
+        target = pet or self.pet
+        target.rotate_by(delta)
+        self._changed()
+
+    def reset_pet_rotation(self, pet: PetWindow | None = None):
+        target = pet or self.pet
+        target.reset_rotation()
+        self._changed()
+
+    def toggle_pet_mirror(self, pet: PetWindow | None = None):
+        target = pet or self.pet
+        target.toggle_mirror()
+        self._changed()
+
+    def open_rotation_slider_dialog(self, pet: PetWindow | None = None):
+        from .pet_rotator import PetRotationDialog
+        target = pet or self.pet
+        dlg = PetRotationDialog(target)
+        dlg.exec()
+
+    def set_destruction_fx_enabled(self, enabled: bool):
+        self.cfg.set("destruction_fx_enabled", bool(enabled), save=True)
+        if not enabled and hasattr(self, "destruction_overlay"):
+            self.destruction_overlay.stop_interactive_mode()
+        self._changed()
+
+    def start_interactive_destruction_mode(self):
+        if hasattr(self, "destruction_overlay"):
+            self.destruction_overlay.start_interactive_mode()
+
+    def stop_interactive_destruction_mode(self):
+        if hasattr(self, "destruction_overlay"):
+            self.destruction_overlay.stop_interactive_mode()
+
+    def trigger_destruction_effect(self, effect_type: str, pos=None):
+        if not hasattr(self, "destruction_overlay"):
+            return
+        if effect_type == "bomb":
+            self.destruction_overlay.trigger_cartoon_bomb(pos)
+        elif effect_type in ("hammer", "chibi_hammer"):
+            self.destruction_overlay.trigger_chibi_hammer(pos)
+        elif effect_type == "giant_hammer":
+            self.destruction_overlay.trigger_giant_hammer(pos)
+        try:
+            if hasattr(self, "sounds") and self.sounds:
+                self.sounds.play("hit")
+        except Exception:
+            pass
+
+    def clear_destruction_effects(self):
+        if hasattr(self, "destruction_overlay"):
+            self.destruction_overlay.clear_all_effects()
+
 
     def pet_menu(self, gpos: QPoint, pet: PetWindow | None = None):
         target = pet or self.pet
@@ -1179,6 +1290,18 @@ class App(QObject):
     def clear_extra_chibis(self):
         if hasattr(self, "chibi_manager") and self.chibi_manager:
             self.chibi_manager.clear_extra_chibis()
+
+    def set_q_chibi_allow_walk(self, on: bool):
+        self.cfg.set("q_chibi_allow_walk", bool(on), save=True)
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            for c in self.chibi_manager.chibis:
+                if not on and not self.cfg.get("q_chibi_ceiling_mode", False) and not self.cfg.get("q_chibi_four_edges_floor_mode", False):
+                    if c.state in ("walk", "run"):
+                        c.state = "idle"
+                        c.vel_x = 0.0
+                        c.state_time = 0.0
+                        c.update()
+        self._changed()
 
     def set_q_chibi_max_count(self, count: int):
         self.cfg.set("q_chibi_max_count", int(count), save=True)

@@ -178,6 +178,7 @@ DEFAULTS = {
     "snap_distance": 120,
     "snap_corner": "right",   # left / right (default right)
     "pos": None,              # [x, y]
+    "pet_rotation_angle": 0.0, # 寵物旋轉角度 (0.0 ~ 360.0)
     "tutorial_shown": False,  # whether novice tutorial has been shown
     # character & look
     "character": "deepseek",  # deepseek / claude / gemini / gpt / custom_<name>
@@ -365,6 +366,7 @@ DEFAULTS = {
     # ========================================================= 模組二：Q 版人物純淨巡邏與精細行為開關
     "q_chibi_balance_display": False,       # Q 版人物餘額顯示（預設關閉，回歸純可愛巡邏）
     "q_chibi_auto_bind_provider": False,    # 是否自動綁定廠商（預設關閉）
+    "q_chibi_allow_walk": True,             # 地面自由漫遊/走動開關（預設啟用，正常於地面巡邏走動，關閉時原地待機）
     "q_chibi_allow_climb_window": False,    # 是否允許攀爬視窗邊界（預設關閉）
     "q_chibi_allow_climb_pet": True,        # 是否允許攀爬主寵物（預設啟用）
     "q_chibi_allow_play_buttons": False,    # 是否允許踩跳視窗按鈕（預設關閉）
@@ -377,6 +379,7 @@ DEFAULTS = {
     "q_chibi_ceiling_mode": False,          # Q 版人物天花板模式（與四邊皆地板模式互斥）
     "q_chibi_four_edges_floor_mode": False, # Q 版人物四邊皆地板模式（與天花板模式互斥）
     "zero_gravity_mode": False,             # 全局無重力太空失重漂浮模式
+    "destruction_fx_enabled": False,        # 【大破壞！？】趣味視覺效果（純視覺渲染）
 
     # ========================================================= 模組三：大寵物視覺開關
     "pet_particles_enabled": True,          # 大寵物粒子情緒開關（愛心、浮動金錢與飄字）
@@ -531,6 +534,11 @@ class Config:
                         self.data["mood_max_limit"] = max(100.0, float(self.data["mood_max_limit"]))
                     except Exception:
                         self.data["mood_max_limit"] = 100.0
+
+                # 強制天花板與四邊皆地板模式防護（預設嚴格為關閉，除非有明確顯式設定標記）
+                if not self.data.get("_explicit_wall_modes", False):
+                    self.data["q_chibi_ceiling_mode"] = False
+                    self.data["q_chibi_four_edges_floor_mode"] = False
 
                 # 使用 Windows DPAPI 解密還原 api_keys
                 if "api_keys" in self.data and isinstance(self.data["api_keys"], dict):
@@ -764,10 +772,12 @@ class Config:
                 v = max(100.0, float(v))
             except Exception:
                 v = 100.0
-        elif k == "q_chibi_ceiling_mode" and bool(v):
-            self.data["q_chibi_four_edges_floor_mode"] = False
-        elif k == "q_chibi_four_edges_floor_mode" and bool(v):
-            self.data["q_chibi_ceiling_mode"] = False
+        elif k in ("q_chibi_ceiling_mode", "q_chibi_four_edges_floor_mode"):
+            self.data["_explicit_wall_modes"] = True
+            if k == "q_chibi_ceiling_mode" and bool(v):
+                self.data["q_chibi_four_edges_floor_mode"] = False
+            elif k == "q_chibi_four_edges_floor_mode" and bool(v):
+                self.data["q_chibi_ceiling_mode"] = False
         self.data[k] = v
         if save:
             self.save()

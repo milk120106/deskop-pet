@@ -2250,7 +2250,7 @@ Rectangle {
                                     border.color: themeColors.border
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "召喚專屬餘額寵物"
+                                        text: (typeof backend !== "undefined" && backend && ["deepseek", "openai", "anthropic", "gemini"].indexOf(backend.apiProvider.toLowerCase()) !== -1) ? "召喚專屬大寵物" : "召喚 Q 版額度小人"
                                         color: themeColors.text
                                         font.pixelSize: 12
                                         font.bold: true
@@ -2393,6 +2393,534 @@ Rectangle {
                                 font.family: root.modernFontStack
                                 renderType: Text.NativeRendering
                                 anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 2.6: 當前在場寵物監視目標與 API Key 綁定管理 (外觀與監控完全解耦)
+                Rectangle {
+                    width: parent.width
+                    implicitHeight: colPetMonitors.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colPetMonitors
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "當前在場寵物監視目標與金鑰綁定管理"
+                                color: themeColors.text
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // 同廠商多 Key 額度整合計算開關
+                            Row {
+                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: 36
+                                    height: 20
+                                    radius: 10
+                                    color: (typeof backend !== "undefined" && backend && backend.aggregateSameProviderKeys) ? themeColors.primary : themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+
+                                    Rectangle {
+                                        width: 14
+                                        height: 14
+                                        radius: 7
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.aggregateSameProviderKeys) ? 19 : 3
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Behavior on x { NumberAnimation { duration: 150 } }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (typeof backend !== "undefined" && backend) {
+                                                backend.setAggregateSameProviderKeys(!backend.aggregateSameProviderKeys)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: "同廠商多 Key 額度整合計算"
+                                    color: themeColors.textSub
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "外觀與監控目標完全解耦：每隻寵物可獨立指定監視哪一家 API 廠商與金鑰組；開啟整合計算時同廠商多組金鑰自動加總。"
+                            color: themeColors.textSub
+                            font.pixelSize: 11
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                        }
+
+                        // 各寵物清單
+                        Column {
+                            width: parent.width
+                            spacing: 8
+
+                            Repeater {
+                                model: (typeof backend !== "undefined" && backend) ? backend.activePetsList : []
+
+                                Rectangle {
+                                    width: parent.width
+                                    height: 44
+                                    radius: 8
+                                    color: themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 12
+                                        anchors.rightMargin: 12
+                                        spacing: 12
+
+                                        // 寵物標籤
+                                        Rectangle {
+                                            width: 60
+                                            height: 24
+                                            radius: 6
+                                            color: (modelData.type === "大寵物") ? themeColors.primaryContainer : "#10b98122"
+                                            anchors.verticalCenter: parent.verticalCenter
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: modelData.type
+                                                color: (modelData.type === "大寵物") ? themeColors.primary : "#10b981"
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                font.family: root.modernFontStack
+                                                renderType: Text.NativeRendering
+                                            }
+                                        }
+
+                                        // 寵物名稱
+                                        Text {
+                                            width: 130
+                                            text: modelData.name
+                                            color: themeColors.text
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                            elide: Text.ElideRight
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        // 當前監控目標
+                                        Text {
+                                            text: "監視：" + modelData.provider_name
+                                            color: themeColors.primary
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        // 金鑰組
+                                        Text {
+                                            text: (modelData.key_index >= 0) ? ("Key #" + (modelData.key_index + 1)) : "全部/輪替"
+                                            color: themeColors.textSub
+                                            font.pixelSize: 11
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        // 餘額展示
+                                        Text {
+                                            text: modelData.balance
+                                            color: themeColors.text
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        Item { width: 1; height: 1 }
+
+                                        // 綁定為當前選取之 API 廠商按鈕
+                                        Rectangle {
+                                            width: 120
+                                            height: 28
+                                            radius: 6
+                                            color: themeColors.surface
+                                            border.width: 1
+                                            border.color: themeColors.border
+                                            anchors.verticalCenter: parent.verticalCenter
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "綁定為當前廠商"
+                                                color: themeColors.text
+                                                font.pixelSize: 11
+                                                font.family: root.modernFontStack
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (typeof backend !== "undefined" && backend) {
+                                                        backend.setPetMonitorTarget(modelData.id, backend.apiProvider, -1)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 2.7: 多來源即時匯率換算與幣值切換系統
+                Rectangle {
+                    width: parent.width
+                    implicitHeight: colCurrencySystem.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCurrencySystem
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "多來源匯率換算與幣別顯示系統"
+                                color: themeColors.text
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // 即時重新整理匯率按鈕
+                            Rectangle {
+                                width: 110
+                                height: 28
+                                radius: 6
+                                color: themeColors.primary
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "即時更新匯率"
+                                    color: "#FFFFFF"
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.refreshCurrencyRates()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "最後更新：" + ((typeof backend !== "undefined" && backend) ? backend.currencyLastUpdated : "尚未更新")
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        // 匯率行情即時預覽條
+                        Rectangle {
+                            width: parent.width
+                            height: 28
+                            radius: 6
+                            color: themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: (typeof backend !== "undefined" && backend) ? backend.currencyRatesSnippet : "匯率加載中..."
+                                color: themeColors.primary
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                            }
+                        }
+
+                        // 1. 目標顯示幣別選擇
+                        Row {
+                            spacing: 10
+                            width: parent.width
+
+                            Text {
+                                text: "目標幣別："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Flow {
+                                spacing: 6
+                                width: parent.width - 90
+
+                                Repeater {
+                                    model: (typeof backend !== "undefined" && backend) ? backend.currencyTargetsList : ["TWD", "USD", "CNY", "EUR", "JPY", "HKD", "GBP"]
+
+                                    Rectangle {
+                                        width: 54
+                                        height: 28
+                                        radius: 6
+                                        color: (typeof backend !== "undefined" && backend && backend.currencyTarget === modelData) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                        border.width: 1
+                                        border.color: (typeof backend !== "undefined" && backend && backend.currencyTarget === modelData) ? themeColors.primary : themeColors.border
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            color: (typeof backend !== "undefined" && backend && backend.currencyTarget === modelData) ? themeColors.primary : themeColors.text
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.setCurrencyTarget(modelData)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. 匯率資料來源選擇
+                        Row {
+                            spacing: 10
+                            width: parent.width
+
+                            Text {
+                                text: "匯率來源："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Flow {
+                                spacing: 6
+                                width: parent.width - 90
+
+                                Repeater {
+                                    model: (typeof backend !== "undefined" && backend) ? backend.currencySourcesList : []
+
+                                    Rectangle {
+                                        height: 28
+                                        width: txtSrcLabel.implicitWidth + 18
+                                        radius: 6
+                                        color: (typeof backend !== "undefined" && backend && backend.currencySource === modelData.id) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                        border.width: 1
+                                        border.color: (typeof backend !== "undefined" && backend && backend.currencySource === modelData.id) ? themeColors.primary : themeColors.border
+
+                                        Text {
+                                            id: txtSrcLabel
+                                            anchors.centerIn: parent
+                                            text: modelData.name + (modelData.requires_key ? " (需Key)" : "")
+                                            color: (typeof backend !== "undefined" && backend && backend.currencySource === modelData.id) ? themeColors.primary : themeColors.text
+                                            font.pixelSize: 11
+                                            font.bold: (typeof backend !== "undefined" && backend && backend.currencySource === modelData.id)
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.setCurrencySource(modelData.id)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. 需 Key 來源之 API Key / 自訂端點輸入
+                        Row {
+                            spacing: 10
+                            width: parent.width
+
+                            Text {
+                                text: "來源金鑰："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Rectangle {
+                                width: parent.width - 200
+                                height: 32
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: edCurrencyApiKey
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    text: (typeof backend !== "undefined" && backend) ? backend.currencyApiKey : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                    selectByMouse: true
+                                }
+                            }
+
+                            Rectangle {
+                                width: 80
+                                height: 32
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "儲存 Key"
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setCurrencyApiKey(backend.currencySource, edCurrencyApiKey.text)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. 顯示模式切換
+                        Row {
+                            spacing: 10
+                            width: parent.width
+
+                            Text {
+                                text: "顯示模式："
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Flow {
+                                spacing: 8
+                                width: parent.width - 90
+
+                                Repeater {
+                                    model: (typeof backend !== "undefined" && backend) ? backend.currencyDisplayModesList : []
+
+                                    Rectangle {
+                                        height: 28
+                                        width: txtModeLabel.implicitWidth + 18
+                                        radius: 6
+                                        color: (typeof backend !== "undefined" && backend && backend.currencyDisplayMode === modelData.id) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                        border.width: 1
+                                        border.color: (typeof backend !== "undefined" && backend && backend.currencyDisplayMode === modelData.id) ? themeColors.primary : themeColors.border
+
+                                        Text {
+                                            id: txtModeLabel
+                                            anchors.centerIn: parent
+                                            text: modelData.name
+                                            color: (typeof backend !== "undefined" && backend && backend.currencyDisplayMode === modelData.id) ? themeColors.primary : themeColors.text
+                                            font.pixelSize: 11
+                                            font.bold: (typeof backend !== "undefined" && backend && backend.currencyDisplayMode === modelData.id)
+                                            font.family: root.modernFontStack
+                                            renderType: Text.NativeRendering
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.setCurrencyDisplayMode(modelData.id)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

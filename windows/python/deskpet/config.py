@@ -281,12 +281,32 @@ DEFAULTS = {
     "q_climb_windows": False,        # 視窗與按鈕攀爬辨識（預設關閉）
     "q_flight_prop": False,          # 飛行小道具（小氣球空中漂浮模式，預設關閉）
     "q_fireworks_prop": False,       # 像素煙火發射小道具（預設關閉）
+    # 大寵物數量上限檔位 (5, 10, 15, 20, 25, 30 隻，預設 10)
+    "pet_max_count": 10,
+    # 多 Key 額度整合計算開關 (預設關閉)
+    "aggregate_same_provider_keys": False,
+    # 寵物獨立監視目標與 Key 綁定配置 {pet_id: {"provider": str, "key_index": int | None}}
+    "pet_monitors": {},
+    "chibi_monitors": {},
+    # 幣值選擇與多來源匯率換算系統配置
+    "currency_target": "TWD",                       # 目標顯示幣別 (TWD, USD, CNY, EUR, JPY, HKD, GBP)
+    "currency_source": "exchangerate_api",          # 匯率來源 (exchangerate_api, frankfurter, fawazahmed0, openexchangerates, currencyfreaks, exchangeratesapi, custom)
+    "currency_display_mode": "dual",                # 顯示模式 (dual: 原幣別 (約 換算幣別), converted: 純換算幣別, original: 純原幣別)
+    "currency_api_keys": {
+        "openexchangerates": "",
+        "currencyfreaks": "",
+        "exchangeratesapi": "",
+        "custom": "",
+    },
+    "currency_custom_endpoint": "",                 # 自訂匯率 API 端點網址
+    "currency_cache": {},                           # 匯率本機快取 {rates: {...}, last_updated: "...", source: "..."}
 }
 
 CHIBI_MAX_COUNT_OPTIONS = (5, 10, 15, 20, 25, 30)
+PET_MAX_COUNT_OPTIONS = (5, 10, 15, 20, 25, 30)
 
 def get_effective_chibi_max_count(cfg) -> int:
-    """取得當前生效的 Q 版人物在場上限（若效能模式開啟則最高限制 10 隻）。"""
+    """取得當前生效的 Q 版人物在場上限（若效能模式開啟則自動限制在較低檔位 10 隻）。"""
     try:
         raw = int(cfg.get("q_chibi_max_count", 10))
     except Exception:
@@ -296,6 +316,19 @@ def get_effective_chibi_max_count(cfg) -> int:
     perf = bool(cfg.get("performance_mode", False))
     if perf:
         return min(raw, 10)
+    return raw
+
+def get_effective_pet_max_count(cfg) -> int:
+    """取得當前生效的大寵物在場上限（若效能模式開啟則自動限制在較低檔位 5 隻或 10 隻）。"""
+    try:
+        raw = int(cfg.get("pet_max_count", 10))
+    except Exception:
+        raw = 10
+    if raw not in PET_MAX_COUNT_OPTIONS:
+        raw = 10
+    perf = bool(cfg.get("performance_mode", False))
+    if perf:
+        return min(raw, 5) if raw <= 5 else min(raw, 10)
     return raw
 
 _lock = threading.Lock()

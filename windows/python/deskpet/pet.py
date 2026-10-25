@@ -757,14 +757,20 @@ class PetWindow(QWidget):
             body = self.ledger.text
             self._outlined(p, title, QRectF(0, 12, SCREEN_W, 70), 34, bold=False)
 
-            size = 110
-            f = QFont("Segoe UI", 1, QFont.Bold)
-            while size > 28:
-                f.setPixelSize(size)
-                if QFontMetrics(f).horizontalAdvance(body) <= SCREEN_W * 0.86:
-                    break
-                size -= 4
-            self._outlined(p, body, QRectF(0, 78, SCREEN_W, 160), size, bold=True)
+            if " (約 " in body:
+                line1, line2 = body.split(" (約 ", 1)
+                line2 = "(約 " + line2
+                self._outlined(p, line1, QRectF(0, 72, SCREEN_W, 85), 62, bold=True)
+                self._outlined(p, line2, QRectF(0, 162, SCREEN_W, 64), 30, bold=False, fill_color=QColor(230, 240, 255))
+            else:
+                size = 110
+                f = QFont("Segoe UI", 1, QFont.Bold)
+                while size > 26:
+                    f.setPixelSize(size)
+                    if QFontMetrics(f).horizontalAdvance(body) <= SCREEN_W * 0.86:
+                        break
+                    size -= 4
+                self._outlined(p, body, QRectF(0, 78, SCREEN_W, 160), size, bold=True)
 
             if not self.ledger.online:
                 p.setPen(Qt.NoPen)

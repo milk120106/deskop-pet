@@ -53,10 +53,11 @@ class Ledger(QObject):
     topup = Signal(float)              # recharge of X yuan/dollars -> drop rice bowl
     _fetched = Signal(object, str)     # (balance|None, error) from worker thread
 
-    def __init__(self, cfg, provider_override: str | None = None):
+    def __init__(self, cfg, provider_override: str | None = None, key_index: int | None = None):
         super().__init__()
         self.cfg = cfg
         self._provider_override = provider_override
+        self._key_index = key_index
         self.real: float | None = None
         self.shown: float | None = None
         self.online = False
@@ -73,6 +74,14 @@ class Ledger(QObject):
         self.sim.timeout.connect(self._sim_event)
 
         self.apply_mode()
+
+    @property
+    def key_index(self) -> int | None:
+        return self._key_index
+
+    def set_key_index(self, idx: int | None):
+        self._key_index = idx
+        self.refresh()
 
     @property
     def mode(self) -> str:
@@ -118,13 +127,26 @@ class Ledger(QObject):
         return ""
 
     @property
+    def raw_text(self) -> str:
+        if self.shown is None:
+            return "--"
+        if self.currency == "FREE":
+            return "FREE"
+        prefix = "¥" if self.currency == "CNY" else "$"
+        return f"{prefix}{self.shown:.2f}"
+
+    @property
     def text(self) -> str:
         if self.shown is None:
             return "--"
         if self.currency == "FREE":
             return "FREE"
-        prefix = "" if self.currency == "CNY" else "$"
-        return f"{prefix}{self.shown:.2f}"
+        try:
+            from .currency import get_currency_converter
+            conv = get_currency_converter(self.cfg)
+            return conv.format_balance(self.shown, self.currency)
+        except Exception:
+            return self.raw_text
 
     def note_event(self, delta: float, new_bal: float):
         ts = datetime.now().strftime("%m-%d %H:%M:%S")
@@ -225,6 +247,43 @@ class Ledger(QObject):
         from .model_catalog import OPENAI_BASES
         return str(OPENAI_BASES.get(pname, OPENAI_BASES.get(prov_id, "")))
 
+    def _query_key_balance(self, pid: str, k: str) -> float:
+        """調用指定廠商之即時餘額/額度查詢 API。"""
+        if pid == "deepseek":
+            return self._query_deepseek(k)
+        elif pid == "openai":
+            return self._query_openai(k)
+        elif pid == "anthropic":
+            return self._query_anthropic(k)
+        elif pid == "gemini":
+            return self._query_gemini(k)
+        elif pid == "openrouter":
+            return self._query_openrouter(k)
+        elif pid == "siliconflow":
+            return self._query_siliconflow(k)
+        elif pid == "moonshot":
+            return self._query_moonshot(k)
+        elif pid in ("custom_openai", "oneapi", "newapi"):
+            return self._query_custom_openai(k)
+        elif pid == "groq":
+            return self._query_groq(k)
+        elif pid == "mistral":
+            return self._query_mistral(k)
+        elif pid == "grok":
+            return self._query_grok(k)
+        elif pid == "together":
+            return self._query_together(k)
+        elif pid == "cerebras":
+            return self._query_cerebras(k)
+        elif pid == "deepinfra":
+            return self._query_deepinfra(k)
+        elif pid == "fireworks":
+            return self._query_fireworks(k)
+        elif pid == "glm":
+            return self._query_glm(k)
+        else:
+            return self._query_custom_openai(k)
+
     def _worker(self, prov: str, key: str):
         pid = provider_to_id(prov)
         if pid in ("ollama", "lmstudio", "vllm"):
@@ -243,6 +302,39 @@ class Ledger(QObject):
             self._fetched.emit(None, f"未設定 {self.provider_display_name} API Key")
             return
 
+        # 1. 同廠商多 API Key 額度整合計算（若開啟且未指定單一 Key）
+        aggregate = bool(self.cfg.get("aggregate_same_provider_keys", False))
+        if aggregate and self._key_index is None and len(keys) > 1:
+            total_bal = 0.0
+            success_count = 0
+            err_msgs = []
+            for idx, k in enumerate(keys):
+                try:
+                    b = self._query_key_balance(pid, k)
+                    total_bal += b
+                    success_count += 1
+                except Exception as e:
+                    err_msgs.append(f"Key #{idx+1}: {e}")
+            if success_count > 0:
+                log(f"[{prov}] 同廠商多 Key 額度整合計算：共 {success_count}/{len(keys)} 組 Key 查詢成功，加總總額度 = {total_bal:.2f}")
+                self._fetched.emit(total_bal, "")
+                return
+            else:
+                self._fetched.emit(None, "; ".join(err_msgs) or "全部 Key 查詢失敗")
+                return
+
+        # 2. 獨立指定特定 API Key 監測
+        if self._key_index is not None and 0 <= self._key_index < len(keys):
+            target_key = keys[self._key_index]
+            try:
+                bal = self._query_key_balance(pid, target_key)
+                self._fetched.emit(bal, "")
+                return
+            except Exception as e:
+                self._fetched.emit(None, f"指定 Key #{self._key_index+1} 查詢失敗: {e}")
+                return
+
+        # 3. 預設單一 Key 輪替查詢
         cur_key = self.cfg.get_current_api_key(prov) if hasattr(self.cfg, "get_current_api_key") else keys[0]
         if cur_key and cur_key in keys:
             start_idx = keys.index(cur_key)
@@ -253,40 +345,7 @@ class Ledger(QObject):
         last_err = ""
         for i, k in enumerate(ordered_keys):
             try:
-                if pid == "deepseek":
-                    bal = self._query_deepseek(k)
-                elif pid == "openai":
-                    bal = self._query_openai(k)
-                elif pid == "anthropic":
-                    bal = self._query_anthropic(k)
-                elif pid == "gemini":
-                    bal = self._query_gemini(k)
-                elif pid == "openrouter":
-                    bal = self._query_openrouter(k)
-                elif pid == "siliconflow":
-                    bal = self._query_siliconflow(k)
-                elif pid == "moonshot":
-                    bal = self._query_moonshot(k)
-                elif pid in ("custom_openai", "oneapi", "newapi"):
-                    bal = self._query_custom_openai(k)
-                elif pid == "groq":
-                    bal = self._query_groq(k)
-                elif pid == "mistral":
-                    bal = self._query_mistral(k)
-                elif pid == "grok":
-                    bal = self._query_grok(k)
-                elif pid == "together":
-                    bal = self._query_together(k)
-                elif pid == "cerebras":
-                    bal = self._query_cerebras(k)
-                elif pid == "deepinfra":
-                    bal = self._query_deepinfra(k)
-                elif pid == "fireworks":
-                    bal = self._query_fireworks(k)
-                elif pid == "glm":
-                    bal = self._query_glm(k)
-                else:
-                    bal = self._query_custom_openai(k)
+                bal = self._query_key_balance(pid, k)
                 self._fetched.emit(bal, "")
                 return
             except Exception as e:

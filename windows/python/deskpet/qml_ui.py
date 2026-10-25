@@ -132,6 +132,17 @@ class QMLBackend(QObject):
     strictCustomImageRatioChanged = Signal(bool)
     activeBalanceChanged = Signal()
     activeBalanceProviderChanged = Signal(str)
+    petMaxCountChanged = Signal(int)
+    qChibiMaxCountChanged = Signal(int)
+    aggregateSameProviderKeysChanged = Signal(bool)
+    currencyTargetChanged = Signal(str)
+    currencySourceChanged = Signal(str)
+    currencyDisplayModeChanged = Signal(str)
+    currencyApiKeyChanged = Signal(str)
+    currencyCustomEndpointChanged = Signal(str)
+    currencyLastUpdatedChanged = Signal(str)
+    currencyRatesSnippetChanged = Signal(str)
+    activePetsListChanged = Signal()
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -371,6 +382,119 @@ class QMLBackend(QObject):
             return bool(self.app.ledger.online)
         return False
 
+    def get_pet_max_count(self) -> int:
+        from .config import get_effective_pet_max_count
+        return get_effective_pet_max_count(self.app.cfg)
+
+    def get_q_chibi_max_count(self) -> int:
+        from .config import get_effective_chibi_max_count
+        return get_effective_chibi_max_count(self.app.cfg)
+
+    def get_aggregate_same_provider_keys(self) -> bool:
+        return bool(self.app.cfg.get("aggregate_same_provider_keys", False))
+
+    def get_currency_target(self) -> str:
+        from .currency import get_currency_converter
+        return get_currency_converter(self.app.cfg).target_currency
+
+    def get_currency_source(self) -> str:
+        from .currency import get_currency_converter
+        return get_currency_converter(self.app.cfg).current_source
+
+    def get_currency_display_mode(self) -> str:
+        from .currency import get_currency_converter
+        return get_currency_converter(self.app.cfg).display_mode
+
+    def get_currency_api_key(self) -> str:
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        return conv.get_source_api_key(conv.current_source)
+
+    def get_currency_custom_endpoint(self) -> str:
+        return str(self.app.cfg.get("currency_custom_endpoint", ""))
+
+    def get_currency_last_updated(self) -> str:
+        from .currency import get_currency_converter
+        return get_currency_converter(self.app.cfg).last_updated
+
+    def get_currency_rates_snippet(self) -> str:
+        from .currency import get_currency_converter
+        return get_currency_converter(self.app.cfg).get_rates_snippet()
+
+    def get_currency_targets_list(self) -> list:
+        from .currency import SUPPORTED_TARGET_CURRENCIES
+        return list(SUPPORTED_TARGET_CURRENCIES.keys())
+
+    def get_currency_sources_list(self) -> list:
+        from .currency import CURRENCY_SOURCES
+        res = []
+        for sid, spec in CURRENCY_SOURCES.items():
+            res.append({
+                "id": sid,
+                "name": spec["name"],
+                "requires_key": bool(spec.get("requires_key", False)),
+                "description": spec.get("description", ""),
+            })
+        return res
+
+    def get_currency_display_modes_list(self) -> list:
+        return [
+            {"id": "dual", "name": "雙幣顯示（例：$10.00 (約 NT$325.00)）"},
+            {"id": "converted", "name": "純換算幣別（例：NT$325.00）"},
+            {"id": "original", "name": "純原幣別（例：$10.00）"},
+        ]
+
+    def get_active_pets_list(self) -> list:
+        res = []
+        main_prov = self.app.ledger.provider if hasattr(self.app, "ledger") and self.app.ledger else "deepseek"
+        main_kidx = self.app.ledger.key_index if hasattr(self.app, "ledger") and self.app.ledger else None
+        main_keys = self.app.cfg.get_api_keys(main_prov) if hasattr(self.app.cfg, "get_api_keys") else []
+        res.append({
+            "id": "main",
+            "name": f"主要寵物 ({self.app.pet.character})",
+            "type": "大寵物",
+            "character": self.app.pet.character,
+            "provider": main_prov,
+            "provider_name": id_to_provider_name(main_prov),
+            "key_index": -1 if main_kidx is None else main_kidx,
+            "keys_count": len(main_keys),
+            "balance": self.app.ledger.text if hasattr(self.app, "ledger") and self.app.ledger else "--",
+        })
+        for cid, ep in self.app.extra_pets.items():
+            ep_ledger = getattr(ep, "ledger", None)
+            ep_prov = ep_ledger.provider if ep_ledger else "deepseek"
+            ep_kidx = ep_ledger.key_index if ep_ledger else None
+            ep_keys = self.app.cfg.get_api_keys(ep_prov) if hasattr(self.app.cfg, "get_api_keys") else []
+            res.append({
+                "id": cid,
+                "name": f"額外寵物 ({ep.character})",
+                "type": "大寵物",
+                "character": ep.character,
+                "provider": ep_prov,
+                "provider_name": id_to_provider_name(ep_prov),
+                "key_index": -1 if ep_kidx is None else ep_kidx,
+                "keys_count": len(ep_keys),
+                "balance": ep_ledger.text if ep_ledger else "--",
+            })
+        if hasattr(self.app, "chibi_manager") and self.app.chibi_manager:
+            for idx, ch in enumerate(self.app.chibi_manager.chibis):
+                if getattr(ch, "monitor_provider", None):
+                    ch_prov = ch.monitor_provider
+                    ch_kidx = ch.monitor_key_index
+                    ch_keys = self.app.cfg.get_api_keys(ch_prov) if hasattr(self.app.cfg, "get_api_keys") else []
+                    res.append({
+                        "id": f"chibi_{idx}",
+                        "name": f"Q版額度小人 #{idx+1} ({id_to_provider_name(ch_prov)})",
+                        "type": "Q版小人",
+                        "character": ch.character,
+                        "provider": ch_prov,
+                        "provider_name": id_to_provider_name(ch_prov),
+                        "key_index": -1 if ch_kidx is None else ch_kidx,
+                        "keys_count": len(ch_keys),
+                        "balance": ch.ledger.text if ch.ledger else "--",
+                    })
+        return res
+
     def _update_logs_cache(self, level: str | None = None, search: str | None = None):
         lvl_arg = None if (not level or "ALL" in level or "全部" in level) else level
         query_arg = search.strip() if search and search.strip() else None
@@ -431,6 +555,20 @@ class QMLBackend(QObject):
     activeBalanceStatus = Property(str, get_active_balance_status, notify=activeBalanceChanged)
     activeBalanceCurrency = Property(str, get_active_balance_currency, notify=activeBalanceChanged)
     activeBalanceIsOnline = Property(bool, get_active_balance_is_online, notify=activeBalanceChanged)
+    petMaxCount = Property(int, get_pet_max_count, notify=petMaxCountChanged)
+    qChibiMaxCount = Property(int, get_q_chibi_max_count, notify=qChibiMaxCountChanged)
+    aggregateSameProviderKeys = Property(bool, get_aggregate_same_provider_keys, notify=aggregateSameProviderKeysChanged)
+    currencyTarget = Property(str, get_currency_target, notify=currencyTargetChanged)
+    currencySource = Property(str, get_currency_source, notify=currencySourceChanged)
+    currencyDisplayMode = Property(str, get_currency_display_mode, notify=currencyDisplayModeChanged)
+    currencyApiKey = Property(str, get_currency_api_key, notify=currencyApiKeyChanged)
+    currencyCustomEndpoint = Property(str, get_currency_custom_endpoint, notify=currencyCustomEndpointChanged)
+    currencyLastUpdated = Property(str, get_currency_last_updated, notify=currencyLastUpdatedChanged)
+    currencyRatesSnippet = Property(str, get_currency_rates_snippet, notify=currencyRatesSnippetChanged)
+    currencyTargetsList = Property(list, get_currency_targets_list, constant=True)
+    currencySourcesList = Property(list, get_currency_sources_list, constant=True)
+    currencyDisplayModesList = Property(list, get_currency_display_modes_list, constant=True)
+    activePetsList = Property(list, get_active_pets_list, notify=activePetsListChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -834,18 +972,137 @@ class QMLBackend(QObject):
     def summonBalancePet(self, prov: str):
         pid = provider_to_id(prov)
         from .app import BALANCE_PET_SPECS
-        target_cid = None
-        for cid, spec in BALANCE_PET_SPECS.items():
-            if cid == pid or spec.get("prov") == pid:
-                target_cid = cid
-                break
-        if not target_cid:
-            target_cid = pid if pid in BALANCE_PET_SPECS else "deepseek"
-        pet = self.app.summon_balance_pet(target_cid)
-        if pet:
-            self.noticeMessage.emit(f"已在桌面召喚【{BALANCE_PET_SPECS.get(target_cid, {}).get('name', target_cid)}】餘額寵物！", False)
+        if pid in BALANCE_PET_SPECS:
+            pet = self.app.summon_balance_pet(pid)
+            if pet:
+                self.activePetsListChanged.emit()
+                self.noticeMessage.emit(f"已在桌面召喚【{BALANCE_PET_SPECS[pid]['name']}】大寵物！", False)
+            else:
+                self.noticeMessage.emit("召喚大寵物失敗或已達數量上限", True)
         else:
-            self.noticeMessage.emit("召喚餘額寵物失敗或該寵物已在場上", True)
+            self.summonApiChibi(pid)
+
+    @Slot(int)
+    def setPetMaxCount(self, count: int):
+        self.app.set_pet_max_count(count)
+        self.petMaxCountChanged.emit(self.get_pet_max_count())
+        self.noticeMessage.emit(f"大寵物在場上限已調整為：{count} 隻！", False)
+
+    @Slot(int)
+    def setQChibiMaxCount(self, count: int):
+        self.app.set_q_chibi_max_count(count)
+        self.qChibiMaxCountChanged.emit(self.get_q_chibi_max_count())
+        self.noticeMessage.emit(f"Q 版小人在場上限已調整為：{count} 隻！", False)
+
+    @Slot(bool)
+    def setAggregateSameProviderKeys(self, enabled: bool):
+        self.app.set_aggregate_same_provider_keys(enabled)
+        self.aggregateSameProviderKeysChanged.emit(bool(enabled))
+        self.activeBalanceChanged.emit()
+        self.activePetsListChanged.emit()
+        self.noticeMessage.emit(f"同廠商多 Key 額度整合計算已{'開啟' if enabled else '關閉'}！", False)
+
+    @Slot(str)
+    def setCurrencyTarget(self, target: str):
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        conv.set_target_currency(target)
+        self.currencyTargetChanged.emit(conv.target_currency)
+        self.activeBalanceChanged.emit()
+        self.activePetsListChanged.emit()
+        if hasattr(self.app, "pet") and self.app.pet:
+            self.app.pet._build_screen()
+            self.app.pet.update()
+        for ep in self.app.extra_pets.values():
+            ep._build_screen()
+            ep.update()
+        self.noticeMessage.emit(f"目標顯示幣別已切換為：{target}！", False)
+
+    @Slot(str)
+    def setCurrencySource(self, source: str):
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        ok, err = conv.set_source(source)
+        if not ok:
+            self.noticeMessage.emit(err, True)
+            return
+        self.currencySourceChanged.emit(conv.current_source)
+        self.currencyApiKeyChanged.emit(conv.get_source_api_key(conv.current_source))
+        self.noticeMessage.emit(f"匯率來源已切換為：{conv.current_source}！", False)
+
+    @Slot(str)
+    def setCurrencyDisplayMode(self, mode: str):
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        conv.set_display_mode(mode)
+        self.currencyDisplayModeChanged.emit(conv.display_mode)
+        self.activeBalanceChanged.emit()
+        self.activePetsListChanged.emit()
+        if hasattr(self.app, "pet") and self.app.pet:
+            self.app.pet._build_screen()
+            self.app.pet.update()
+        for ep in self.app.extra_pets.values():
+            ep._build_screen()
+            ep.update()
+        self.noticeMessage.emit("貨幣顯示模式已更新！", False)
+
+    @Slot(str, str)
+    def setCurrencyApiKey(self, source: str, key: str):
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        conv.set_source_api_key(source, key)
+        self.currencyApiKeyChanged.emit(key)
+        self.noticeMessage.emit("匯率來源 API Key 已儲存！", False)
+
+    @Slot(str)
+    def setCurrencyCustomEndpoint(self, url: str):
+        self.app.cfg.set("currency_custom_endpoint", url.strip(), save=True)
+        self.currencyCustomEndpointChanged.emit(url.strip())
+        self.noticeMessage.emit("自訂匯率 API 端點已儲存！", False)
+
+    @Slot()
+    def refreshCurrencyRates(self):
+        from .currency import get_currency_converter
+        conv = get_currency_converter(self.app.cfg)
+        ok = conv.refresh_rates()
+        self.currencyLastUpdatedChanged.emit(conv.last_updated)
+        self.currencyRatesSnippetChanged.emit(conv.get_rates_snippet())
+        self.activeBalanceChanged.emit()
+        self.activePetsListChanged.emit()
+        if hasattr(self.app, "pet") and self.app.pet:
+            self.app.pet._build_screen()
+            self.app.pet.update()
+        for ep in self.app.extra_pets.values():
+            ep._build_screen()
+            ep.update()
+        if ok:
+            self.noticeMessage.emit("匯率數據已即時更新完成！", False)
+        else:
+            self.noticeMessage.emit("匯率網路更新失敗，已自動使用本機快取匯率！", True)
+
+    @Slot(str, str, int)
+    def setPetMonitorTarget(self, pet_id: str, provider: str, key_index: int):
+        kidx = None if key_index < 0 else key_index
+        self.app.set_pet_monitor(pet_id, provider, kidx)
+        self.activePetsListChanged.emit()
+        self.activeBalanceChanged.emit()
+        self.noticeMessage.emit(f"寵物「{pet_id}」已設定監控【{id_to_provider_name(provider)}】！", False)
+
+    @Slot(str)
+    def summonApiChibi(self, provider: str):
+        w = self.app.summon_api_chibi(provider)
+        if w:
+            self.activePetsListChanged.emit()
+            self.noticeMessage.emit(f"已在桌面召喚【{id_to_provider_name(provider)}】Q 版額度小人！", False)
+        else:
+            self.noticeMessage.emit("召喚 Q 版小人已取消或達數量上限！", True)
+
+    @Slot(str)
+    def dismissDesktopPet(self, pet_id: str):
+        if pet_id in self.app.extra_pets:
+            self.app.dismiss_balance_pet(pet_id)
+            self.activePetsListChanged.emit()
+            self.noticeMessage.emit(f"已收回大寵物「{pet_id}」！", False)
 
     @Slot(str, result=float)
     def getProviderBudget(self, prov: str) -> float:

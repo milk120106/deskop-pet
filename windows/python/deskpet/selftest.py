@@ -484,8 +484,22 @@ def run(qapp) -> int:
     app.dismiss_all_balance_pets()
     check("dismissed all extra balance pets", len(app.extra_pets) == 0)
 
-    # ========================================================= 16.5 擴充更多 API 額度與餘額監控測試
+    # ========================================================= 16.5 核心四大角色大寵物、Q版額度小人、匯率換算與金鑰解耦測試
+    from .app import BALANCE_PET_SPECS
     from .balance import Ledger, SUPPORTED_BALANCE_PROVIDERS
+    from .config import (
+        PET_MAX_COUNT_OPTIONS,
+        CHIBI_MAX_COUNT_OPTIONS,
+        get_effective_pet_max_count,
+        get_effective_chibi_max_count,
+    )
+    from .currency import (
+        get_currency_converter,
+        CurrencyConverter,
+        SUPPORTED_TARGET_CURRENCIES,
+        CURRENCY_SOURCES,
+    )
+
     check("balance supports expanded providers", "openrouter" in SUPPORTED_BALANCE_PROVIDERS and "siliconflow" in SUPPORTED_BALANCE_PROVIDERS and "moonshot" in SUPPORTED_BALANCE_PROVIDERS and "custom_openai" in SUPPORTED_BALANCE_PROVIDERS)
 
     l_sf = Ledger(app.cfg, provider_override="siliconflow")
@@ -497,28 +511,81 @@ def run(qapp) -> int:
     check("openrouter balance currency is USD", l_or.currency == "USD")
     check("ollama balance currency is FREE", l_ol.currency == "FREE")
 
-    p_or = app.summon_balance_pet("openrouter")
-    p_sf = app.summon_balance_pet("siliconflow")
-    p_ms = app.summon_balance_pet("moonshot")
-    wait(200)
-    check("openrouter balance pet summoned", p_or is not None and p_or.isVisible() and app.extra_ledgers["openrouter"].provider == "openrouter")
-    check("siliconflow balance pet summoned", p_sf is not None and p_sf.isVisible() and app.extra_ledgers["siliconflow"].provider == "siliconflow")
-    check("moonshot balance pet summoned", p_ms is not None and p_ms.isVisible() and app.extra_ledgers["moonshot"].provider == "moonshot")
+    # 1. 嚴格限制大寵物只有 4 位核心官方角色，絕不允許其他角色
+    check("BALANCE_PET_SPECS strictly contains only 4 official roles", set(BALANCE_PET_SPECS.keys()) == {"deepseek", "gpt", "claude", "gemini"})
+    check("big pet rejects non-official characters", app.summon_balance_pet("openrouter") is None and app.summon_balance_pet("siliconflow") is None)
 
-    p_or.page = 0
-    p_or._build_screen()
-    p_sf.page = 0
-    p_sf._build_screen()
-    p_ms.page = 0
-    p_ms._build_screen()
-    check("openrouter tablet rendered", p_or._screen_img is not None)
-    check("siliconflow tablet rendered", p_sf._screen_img is not None)
-    check("moonshot tablet rendered", p_ms._screen_img is not None)
+    # 2. 其他 API 廠商全部做成 Q 版獨立像素人物巡邏監控並顯示想法框
+    c_or = app.summon_api_chibi("openrouter")
+    c_sf = app.summon_api_chibi("siliconflow")
+    c_ms = app.summon_api_chibi("moonshot")
+    wait(100)
+    check("openrouter Q-chibi monitor summoned", c_or is not None and c_or.isVisible() and c_or.monitor_provider == "openrouter")
+    check("siliconflow Q-chibi monitor summoned", c_sf is not None and c_sf.isVisible() and c_sf.monitor_provider == "siliconflow")
+    check("moonshot Q-chibi monitor summoned", c_ms is not None and c_ms.isVisible() and c_ms.monitor_provider == "moonshot")
+    check("Q-chibi monitor has thought bubble", c_sf.thought_bubble is not None and c_sf.thought_bubble.isVisible())
+    app.chibi_manager.dismiss(c_or)
+    app.chibi_manager.dismiss(c_sf)
+    app.chibi_manager.dismiss(c_ms)
 
-    app.dismiss_balance_pet("openrouter")
-    app.dismiss_balance_pet("siliconflow")
-    app.dismiss_balance_pet("moonshot")
-    check("dismissed expanded balance pets", "openrouter" not in app.extra_pets and "siliconflow" not in app.extra_pets and "moonshot" not in app.extra_pets)
+    # 3. 寵物數量上限檔位 (5, 10, 15, 20, 25, 30) 與效能模式自動調節
+    check("pet max count options include 5,10,15,20,25,30", PET_MAX_COUNT_OPTIONS == (5, 10, 15, 20, 25, 30))
+    check("chibi max count options include 5,10,15,20,25,30", CHIBI_MAX_COUNT_OPTIONS == (5, 10, 15, 20, 25, 30))
+    app.set_pet_max_count(20)
+    check("set_pet_max_count updates to 20", app.cfg.get("pet_max_count") == 20 and get_effective_pet_max_count(app.cfg) == 20)
+    app.cfg.set("performance_mode", True)
+    check("performance_mode caps pet limit to lower tier", get_effective_pet_max_count(app.cfg) <= 10)
+    check("performance_mode caps chibi limit to lower tier", get_effective_chibi_max_count(app.cfg) <= 10)
+    app.cfg.set("performance_mode", False)
+    app.set_pet_max_count(10)
+
+    # 4. 外觀與監控目標解耦：大寵物獨立指定廠商與 Key 綁定
+    app.set_pet_monitor("main", "openai", 1)
+    check("appearance decoupled: main pet monitors OpenAI Key #2", app.ledger.provider == "openai" and app.ledger.key_index == 1)
+    app.set_pet_monitor("main", "deepseek", None)
+    check("appearance decoupled: restored main pet to DeepSeek", app.ledger.provider == "deepseek" and app.ledger.key_index is None)
+
+    # 5. 同廠商多 API Key 額度整合計算（預設關閉，開啟時逐一查詢累加）
+    check("aggregate_same_provider_keys default is False", app.cfg.get("aggregate_same_provider_keys") is False)
+    app.set_aggregate_same_provider_keys(True)
+    check("set_aggregate_same_provider_keys updates config to True", app.cfg.get("aggregate_same_provider_keys") is True)
+    app.cfg.set("mode", "api", save=False)
+    test_ledger = Ledger(app.cfg, provider_override="deepseek")
+    test_ledger._query_key_balance = lambda pid, k: 20.0 if "k1" in k else (30.0 if "k2" in k else 50.0)
+    app.cfg.set_api_keys("deepseek", ["sk-k1", "sk-k2", "sk-k3"], save=False)
+    test_ledger._worker("deepseek", "")
+    check("multi-key aggregation sums all keys (20+30+50=100)", test_ledger.shown == 100.0)
+    app.cfg.set("mode", "sim", save=False)
+    app.set_aggregate_same_provider_keys(False)
+    check("set_aggregate_same_provider_keys updates config to False", app.cfg.get("aggregate_same_provider_keys") is False)
+
+    # 6. 幣值選擇與多來源匯率換算系統 (deskpet/currency.py)
+    conv = get_currency_converter(app.cfg)
+    check("currency converter initialized", conv is not None)
+    check("supports TWD, USD, CNY, EUR, JPY, HKD, GBP", all(c in SUPPORTED_TARGET_CURRENCIES for c in ["TWD", "USD", "CNY", "EUR", "JPY", "HKD", "GBP"]))
+    conv._rates["USD"] = 1.0
+    conv._rates["TWD"] = 32.0
+    conv._rates["CNY"] = 7.0
+    check("convert USD 10 to TWD 320", round(conv.convert(10.0, "USD", "TWD"), 2) == 320.0)
+    check("convert CNY 70 to USD 10", round(conv.convert(70.0, "CNY", "USD"), 2) == 10.0)
+    conv.set_target_currency("TWD", save=False)
+    conv.set_display_mode("dual", save=False)
+    check("dual display format", "(約 " in conv.format_balance(10.0, "USD"))
+    conv.set_display_mode("converted", save=False)
+    check("converted display format", conv.format_balance(10.0, "USD") == "NT$320.00")
+    conv.set_display_mode("original", save=False)
+    check("original display format", conv.format_balance(10.0, "USD") == "$10.00")
+    # 需 Key 來源防護：未填寫 Key 禁止切換
+    ok_free, _ = conv.set_source("frankfurter", save=False)
+    check("free source switch succeeds without key", ok_free and conv.current_source == "frankfurter")
+    conv.set_source_api_key("openexchangerates", "", save=False)
+    ok_key, err = conv.set_source("openexchangerates", save=False)
+    check("key-required source blocked when key empty", not ok_key and "需填寫有效 Key 方可啟用" in err)
+    conv.set_source_api_key("openexchangerates", "test_key_sample_123", save=False)
+    ok_key2, _ = conv.set_source("openexchangerates", save=False)
+    check("key-required source allows switch with key", ok_key2 and conv.current_source == "openexchangerates")
+    conv.set_source("exchangerate_api", save=False)
+    conv.set_display_mode("dual", save=False)
 
     # ========================================================= 17. AI Chat Dialog, Model Catalog & Memory
     from .model_catalog import _normalise, discover_models
@@ -1220,6 +1287,19 @@ def run(qapp) -> int:
     qml_backend.setActiveBalanceProvider("SiliconFlow")
     check("qml backend active balance provider switched to SiliconFlow", "SiliconFlow" in qml_backend.get_active_balance_provider() or "矽基" in qml_backend.get_active_balance_provider())
     qml_backend.setActiveBalanceProvider("DeepSeek")
+
+    check("qml backend has aggregateSameProviderKeys", hasattr(qml_backend, "get_aggregate_same_provider_keys"))
+    check("qml backend has setAggregateSameProviderKeys", hasattr(qml_backend, "setAggregateSameProviderKeys"))
+    check("qml backend has currencyTarget", hasattr(qml_backend, "get_currency_target"))
+    check("qml backend has setCurrencyTarget", hasattr(qml_backend, "setCurrencyTarget"))
+    check("qml backend has currencySource", hasattr(qml_backend, "get_currency_source"))
+    check("qml backend has setCurrencySource", hasattr(qml_backend, "setCurrencySource"))
+    check("qml backend has currencyDisplayMode", hasattr(qml_backend, "get_currency_display_mode"))
+    check("qml backend has setCurrencyDisplayMode", hasattr(qml_backend, "setCurrencyDisplayMode"))
+    check("qml backend has refreshCurrencyRates", hasattr(qml_backend, "refreshCurrencyRates"))
+    check("qml backend has setPetMonitorTarget", hasattr(qml_backend, "setPetMonitorTarget"))
+    check("qml backend has summonApiChibi", hasattr(qml_backend, "summonApiChibi"))
+    check("qml backend has activePetsList", hasattr(qml_backend, "get_active_pets_list") and len(qml_backend.get_active_pets_list()) >= 1)
 
     # 清理測試自訂立繪
     pet.set_character("deepseek")

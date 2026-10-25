@@ -14,10 +14,10 @@ import random
 import time
 from pathlib import Path
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QGuiApplication, QImage, QPainter, QPixmap
-from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QFontMetrics, QGuiApplication, QImage, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtWidgets import QMenu, QWidget
 
-from .config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, log
+from .config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, id_to_provider_name, log, provider_to_id
 
 
 # =====================================================================
@@ -2526,6 +2526,78 @@ class PixelParticle:
         return self.age < self.life
 
 
+class ChibiThoughtBubble(QWidget):
+    """Q 版小人專屬想法框，展示被監控 API 的即時額度/餘額與即時匯率換算。"""
+    def __init__(self, owner: PixelChibiWindow):
+        super().__init__(
+            None,
+            Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
+        )
+        self.owner = owner
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setMouseTracking(True)
+        self.title_text = ""
+        self.body_text = "--"
+        self.setFixedSize(140, 52)
+        self.hide()
+
+    def set_content(self, title: str, body: str):
+        self.title_text = title
+        self.body_text = body
+        fm = QFontMetrics(QFont("Microsoft JhengHei UI", 9, QFont.Bold))
+        w1 = fm.horizontalAdvance(self.title_text)
+        w2 = fm.horizontalAdvance(self.body_text)
+        new_w = max(130, min(240, max(w1, w2) + 24))
+        if new_w != self.width():
+            self.setFixedWidth(new_w)
+        self.update()
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton:
+            if self.owner and hasattr(self.owner, "ledger") and self.owner.ledger:
+                self.owner.ledger.refresh()
+            e.accept()
+        else:
+            super().mousePressEvent(e)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
+
+        is_dark = (self.owner.cfg.get("theme", "light") == "dark") if (self.owner and self.owner.cfg) else False
+        bg_col = QColor(22, 24, 29, 235) if is_dark else QColor(255, 255, 255, 240)
+        border_col = QColor(70, 80, 100, 180) if is_dark else QColor(210, 220, 235, 220)
+        text_title_col = QColor(148, 163, 184) if is_dark else QColor(100, 116, 139)
+        text_body_col = QColor(56, 189, 248) if is_dark else QColor(14, 116, 144)
+
+        # 1. 繪製想法框主圓角矩形
+        main_rect = QRectF(4, 2, self.width() - 8, self.height() - 14)
+        path = QPainterPath()
+        path.addRoundedRect(main_rect, 10, 10)
+
+        # 2. 繪製底部延伸小圓泡泡
+        cx = self.width() / 2.0
+        path.addEllipse(QPointF(cx - 2, self.height() - 9), 3, 3)
+        path.addEllipse(QPointF(cx + 4, self.height() - 4), 2, 2)
+
+        painter.setPen(QPen(border_col, 1.2))
+        painter.setBrush(QBrush(bg_col))
+        painter.drawPath(path)
+
+        # 3. 繪製文字
+        f_title = QFont("Microsoft JhengHei UI", 8)
+        painter.setFont(f_title)
+        painter.setPen(text_title_col)
+        painter.drawText(QRectF(8, 5, self.width() - 16, 16), Qt.AlignCenter, self.title_text)
+
+        f_body = QFont("Microsoft JhengHei UI", 9, QFont.Bold)
+        painter.setFont(f_body)
+        painter.setPen(text_body_col)
+        painter.drawText(QRectF(8, 20, self.width() - 16, 18), Qt.AlignCenter, self.body_text)
+
+
 class PixelChibiWindow(QWidget):
     """Q 版小人獨立桌面巡邏與互動視窗。"""
     panic_fall_started = Signal()
@@ -2542,7 +2614,13 @@ class PixelChibiWindow(QWidget):
         self.pet = pet
         self.app = app
 
-        if self.pet:
+        # 獨立 API 額度監控與想法框
+        self.monitor_provider: str | None = None
+        self.monitor_key_index: int | None = None
+        self.ledger = None
+        self.thought_bubble: ChibiThoughtBubble | None = None
+
+        if self.pet and (not getattr(self.pet, "pixel_chibi", None) or getattr(self.pet, "pixel_chibi", None) == self):
             self.pet.pixel_chibi = self
 
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -2612,7 +2690,7 @@ class PixelChibiWindow(QWidget):
 
     def set_pet(self, pet):
         self.pet = pet
-        if self.pet:
+        if self.pet and (not getattr(self.pet, "pixel_chibi", None) or getattr(self.pet, "pixel_chibi", None) == self):
             self.pet.pixel_chibi = self
 
     def set_character(self, ch: str):
@@ -3125,6 +3203,65 @@ class PixelChibiWindow(QWidget):
                 c.setAlpha(alpha)
                 p.fillRect(int(pt.x), int(pt.y), 4, 4, c)
 
+    def set_monitor(self, provider: str, key_index: int | None = None):
+        """設定此 Q 版小人監控的 API 供應商與 Key，並啟動專屬想法框。"""
+        from .balance import Ledger
+        self.monitor_provider = provider
+        self.monitor_key_index = key_index
+        if self.ledger:
+            self.ledger.poll.stop()
+            self.ledger.sim.stop()
+        self.ledger = Ledger(self.cfg, provider_override=provider, key_index=key_index)
+        self.ledger.changed.connect(self._update_bubble_content)
+        if self.thought_bubble is None:
+            self.thought_bubble = ChibiThoughtBubble(self)
+        self._update_bubble_content()
+        self._update_thought_bubble_pos()
+        self.thought_bubble.show()
+        self.thought_bubble.raise_()
+
+    def _update_bubble_content(self):
+        if not self.thought_bubble or not self.ledger:
+            return
+        pname = self.ledger.provider_display_name
+        bal_text = self.ledger.text
+        self.thought_bubble.set_content(f"{pname} 額度", bal_text)
+
+    def _update_thought_bubble_pos(self):
+        if self.thought_bubble and self.thought_bubble.isVisible():
+            bx = int(self.pos_x + (self.char_w - self.thought_bubble.width()) / 2)
+            by = int(self.pos_y - self.thought_bubble.height() + 4)
+            ag = self._screen_rect()
+            if by < ag.top() + 4:
+                by = int(self.pos_y + self.char_h + 4)
+            self.thought_bubble.move(bx, by)
+            self.thought_bubble.raise_()
+
+    def moveEvent(self, e):
+        super().moveEvent(e)
+        self._update_thought_bubble_pos()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self.thought_bubble and self.monitor_provider:
+            self.thought_bubble.show()
+            self._update_thought_bubble_pos()
+
+    def hideEvent(self, e):
+        super().hideEvent(e)
+        if self.thought_bubble:
+            self.thought_bubble.hide()
+
+    def closeEvent(self, e):
+        if self.thought_bubble:
+            self.thought_bubble.close()
+            self.thought_bubble.deleteLater()
+            self.thought_bubble = None
+        if self.ledger:
+            self.ledger.poll.stop()
+            self.ledger.sim.stop()
+        super().closeEvent(e)
+
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
             if self.climbing_pet:
@@ -3150,7 +3287,75 @@ class PixelChibiWindow(QWidget):
                 self.update()
 
     def contextMenuEvent(self, e):
-        """右鍵點擊 Q 版小人時，呼叫桌面寵物右鍵巡邏隊選單。"""
+        """右鍵點擊 Q 版小人時，提供解耦監控目標設定與巡邏選單。"""
+        import sys
+        if self.monitor_provider and self.ledger:
+            m = QMenu()
+            theme = self.cfg.get("theme", "light") if self.cfg else "light"
+            from .app import get_menu_qss
+            m.setStyleSheet(get_menu_qss(theme))
+            m.setAttribute(Qt.WA_TranslucentBackground, True)
+            m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
+
+            act_title = m.addAction(f"【{self.ledger.provider_display_name}】Q 版額度小人")
+            act_title.setEnabled(False)
+            m.addSeparator()
+
+            # 1. 切換監控廠商
+            m_prov = m.addMenu(f"切換監控廠商（目前：{self.ledger.provider_display_name}）")
+            m_prov.setStyleSheet(m.styleSheet())
+            m_prov.setAttribute(Qt.WA_TranslucentBackground, True)
+            m_prov.setWindowFlags(m_prov.windowFlags() | Qt.FramelessWindowHint)
+            from .balance import SUPPORTED_BALANCE_PROVIDERS
+            for prov in SUPPORTED_BALANCE_PROVIDERS:
+                pname = id_to_provider_name(prov)
+                a = m_prov.addAction(pname)
+                a.setCheckable(True)
+                a.setChecked(provider_to_id(self.monitor_provider) == provider_to_id(prov))
+                a.triggered.connect(lambda _=False, p=prov: self.set_monitor(p, self.monitor_key_index))
+
+            # 2. 切換監控 API Key
+            keys = self.cfg.get_api_keys(self.monitor_provider) if hasattr(self.cfg, "get_api_keys") else []
+            m_keys = m.addMenu(f"切換監控 API Key（配置 {len(keys)} 組）")
+            m_keys.setStyleSheet(m.styleSheet())
+            m_keys.setAttribute(Qt.WA_TranslucentBackground, True)
+            m_keys.setWindowFlags(m_keys.windowFlags() | Qt.FramelessWindowHint)
+
+            a_all = m_keys.addAction("預設 / 全部 Key 輪替")
+            a_all.setCheckable(True)
+            a_all.setChecked(self.monitor_key_index is None)
+            a_all.triggered.connect(lambda: self.set_monitor(self.monitor_provider, None))
+
+            for kidx, k in enumerate(keys):
+                masked = k[:6] + "..." + k[-4:] if len(k) > 12 else k
+                label = f"Key #{kidx + 1} ({masked})"
+                a_k = m_keys.addAction(label)
+                a_k.setCheckable(True)
+                a_k.setChecked(self.monitor_key_index == kidx)
+                a_k.triggered.connect(lambda _=False, idx=kidx: self.set_monitor(self.monitor_provider, idx))
+
+            # 3. 顯示/隱藏想法框
+            if self.thought_bubble:
+                is_vis = self.thought_bubble.isVisible()
+                a_bubble = m.addAction("隱藏額度想法框" if is_vis else "顯示額度想法框")
+                a_bubble.triggered.connect(lambda: self.thought_bubble.hide() if is_vis else (self.thought_bubble.show(), self._update_thought_bubble_pos()))
+
+            # 4. 手動刷新餘額
+            m.addAction("即時刷新此 API 餘額").triggered.connect(lambda: self.ledger.refresh())
+
+            # 5. 移除此小人
+            if self.app and hasattr(self.app, "chibi_manager") and self.app.chibi_manager:
+                m.addAction("移除此額度監控小人").triggered.connect(lambda: self.app.chibi_manager.dismiss(self))
+
+            m.addSeparator()
+            m.addAction("開啟全部巡邏隊選單...").triggered.connect(lambda: self.app.pet_menu(e.globalPos()) if (self.app and hasattr(self.app, "pet_menu")) else None)
+
+            if "--selftest" in sys.argv:
+                QTimer.singleShot(10, m.close)
+            QTimer.singleShot(0, lambda: m.exec(e.globalPos()))
+            return
+
+        # 預設行為
         if self.app and hasattr(self.app, "pet_menu"):
             self.app.pet_menu(e.globalPos())
 
@@ -3197,9 +3402,9 @@ class PixelChibiManager:
                 self.pet.pixel_chibi = w
         return self.chibis[0]
 
-    def summon(self, character_id: str | None = None) -> PixelChibiWindow | None:
-        """召喚一隻 Q 版人物降落到桌面上（若達到上限則禁止召喚）。"""
-        if not self.can_summon:
+    def summon(self, character_id: str | None = None, force: bool = False) -> PixelChibiWindow | None:
+        """召喚一隻 Q 版人物降落到桌面上（若未強制且達上限則禁止召喚）。"""
+        if not self.can_summon and not force:
             log("PixelChibiManager", f"在場 Q 版小人已達上限 ({self.active_count}/{self.max_count} 隻)，禁止繼續召喚！")
             return None
 
@@ -3230,16 +3435,52 @@ class PixelChibiManager:
         log("PixelChibiManager", f"成功召喚 Q 版人物「{name}」降落巡邏！目前在場：{self.active_count}/{self.max_count} 隻")
         return w
 
-    def summon_random(self) -> PixelChibiWindow | None:
+    def summon_api_monitor(
+        self,
+        provider: str,
+        key_index: int | None = None,
+        character_id: str | None = None,
+        force: bool = False,
+    ) -> PixelChibiWindow | None:
+        """召喚專屬 API 額度監控 Q 版小人（於桌面上巡邏、在想法框中顯示該 API 的額度/餘額）。"""
+        if not self.can_summon and not force:
+            log("PixelChibiManager", f"在場 Q 版小人已達上限 ({self.active_count}/{self.max_count} 隻)")
+            return None
+
+        if not character_id:
+            pid = provider_to_id(provider)
+            if pid in ("deepseek", "siliconflow", "glm", "ollama"):
+                character_id = "deepseek"
+            elif pid in ("openai", "groq", "grok", "cerebras", "custom_openai"):
+                character_id = "gpt"
+            elif pid in ("anthropic", "moonshot", "mistral", "deepinfra"):
+                character_id = "claude"
+            else:
+                character_id = "gemini"
+
+        w = self.summon(character_id, force=force)
+        if w:
+            w.set_monitor(provider, key_index)
+            log("PixelChibiManager", f"成功召喚【{id_to_provider_name(provider)}】額度監控 Q 版小人！")
+        return w
+
+    def summon_random(self, force: bool = False) -> PixelChibiWindow | None:
         """從預設4隻 + 自訂角色庫隨機抽選一隻降落。"""
         all_ids = PixelChibiRegistry.list_all_ids()
         cid = random.choice(all_ids) if all_ids else "deepseek"
-        return self.summon(cid)
+        return self.summon(cid, force=force)
 
     def dismiss(self, chibi: PixelChibiWindow):
         """移除指定的一隻 Q 版小人。"""
         if chibi in self.chibis:
             self.chibis.remove(chibi)
+            if self.pet and getattr(self.pet, "pixel_chibi", None) == chibi:
+                self.pet.pixel_chibi = self.primary_chibi
+            if chibi.thought_bubble:
+                chibi.thought_bubble.hide()
+                chibi.thought_bubble.close()
+                chibi.thought_bubble.deleteLater()
+                chibi.thought_bubble = None
             chibi.hide()
             chibi.close()
             chibi.deleteLater()
@@ -3252,20 +3493,24 @@ class PixelChibiManager:
         main_chibi = self.chibis[0]
         extras = self.chibis[1:]
         self.chibis = [main_chibi]
+        if self.pet and getattr(self.pet, "pixel_chibi", None) in extras:
+            self.pet.pixel_chibi = main_chibi
         for c in extras:
+            if c.thought_bubble:
+                c.thought_bubble.hide()
+                c.thought_bubble.close()
+                c.thought_bubble.deleteLater()
+                c.thought_bubble = None
             c.hide()
             c.close()
             c.deleteLater()
         log("PixelChibiManager", "已清除場上所有額外 Q 版小人，僅保留主要小人 1 隻。")
 
     def enforce_limit(self):
-        """根據當前生效上限強制修剪超額小人。"""
+        """根據當前生效上限發出溫和提醒，絕不霸道阻斷或突兀刪除在場寵物。"""
         limit = self.max_count
-        while len(self.chibis) > limit and len(self.chibis) > 1:
-            extra = self.chibis.pop()
-            extra.hide()
-            extra.close()
-            extra.deleteLater()
+        if len(self.chibis) > limit:
+            log("PixelChibiManager", f"提示：目前在場 Q 版小人 ({len(self.chibis)} 隻) 超過當前上限檔位 ({limit} 隻)，建議收回部分小人以維持最佳系統效能。")
 
     def set_enabled(self, on: bool):
         """啟用或隱藏巡邏隊。"""

@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 from . import winapi
 from .audio import Sounds
 from .balance import Ledger
-from .config import ASSETS, Config, asset, log
+from .config import ASSETS, Config, asset, id_to_provider_name, log, provider_to_id
 from .dialogs import CharPickerDialog, SoundLibraryDialog
 from .panel import ControlPanel
 from .pet import PetWindow
@@ -21,22 +21,11 @@ from .web import WebServer
 MAX_CHARS = 8
 
 BALANCE_PET_SPECS = {
-    # 核心四大 AI 形象
+    # 嚴格限制只有最初的 4 個核心官方角色（藍色大肥魚 DeepSeek、GPT龍娘、大小姐Claude、北美貓娘Gemini）
     "deepseek": {"name": "藍色大肥魚", "sub": "DeepSeek 鯨魚娘", "title": "DeepSeek 餘額", "prov": "deepseek", "char": "deepseek"},
     "gpt": {"name": "GPT龍娘", "sub": "OpenAI 龍娘", "title": "OpenAI 餘額", "prov": "openai", "char": "gpt"},
     "claude": {"name": "大小姐Claude", "sub": "Anthropic 大小姐", "title": "Claude 餘額", "prov": "anthropic", "char": "claude"},
     "gemini": {"name": "北美貓娘Gemini", "sub": "Google 北美貓娘", "title": "Gemini 餘額", "prov": "gemini", "char": "gemini"},
-    # 更多雲端與轉發 API 餘額寵物
-    "openrouter": {"name": "OpenRouter 巡警", "sub": "OpenRouter 額度監控", "title": "OpenRouter 餘額", "prov": "openrouter", "char": "gemini"},
-    "siliconflow": {"name": "矽基小夥伴", "sub": "SiliconFlow 額度監控", "title": "矽基流動 餘額", "prov": "siliconflow", "char": "deepseek"},
-    "moonshot": {"name": "月之小暗面", "sub": "Moonshot Kimi 額度監控", "title": "Moonshot 餘額", "prov": "moonshot", "char": "claude"},
-    "groq": {"name": "極速 Groq", "sub": "Groq 額度監控", "title": "Groq 額度", "prov": "groq", "char": "gpt"},
-    "mistral": {"name": "西北風 Mistral", "sub": "Mistral 額度監控", "title": "Mistral 額度", "prov": "mistral", "char": "claude"},
-    "grok": {"name": "科技狂想 xAI/Grok", "sub": "xAI / Grok 額度監控", "title": "xAI/Grok 額度", "prov": "grok", "char": "gpt"},
-    "together": {"name": "協同雲端 Together", "sub": "Together AI 額度監控", "title": "Together 額度", "prov": "together", "char": "gemini"},
-    "glm": {"name": "智譜智子 GLM", "sub": "智譜 GLM 額度監控", "title": "智譜 GLM 額度", "prov": "glm", "char": "deepseek"},
-    "custom_openai": {"name": "自訂端點 OneAPI", "sub": "OneAPI / 轉發站餘額監控", "title": "自訂 API 餘額", "prov": "custom_openai", "char": "gpt"},
-    "ollama": {"name": "本地小羊駝 Ollama", "sub": "Ollama 本地運行狀態", "title": "Ollama 狀態", "prov": "ollama", "char": "deepseek"},
 }
 
 
@@ -139,7 +128,10 @@ class App(QObject):
         from .font_manager import init_app_font
         init_app_font(self.cfg)
         self.sounds = Sounds(self.cfg)
-        self.ledger = Ledger(self.cfg)
+        main_monitor = (self.cfg.get("pet_monitors") or {}).get("main", {})
+        main_prov = main_monitor.get("provider") or None
+        main_kidx = main_monitor.get("key_index", None)
+        self.ledger = Ledger(self.cfg, provider_override=main_prov, key_index=main_kidx)
         self.pet = PetWindow(self.cfg, self.ledger, self.sounds)
 
         # Multi-pet balance summons (up to 4 balance pets)
@@ -215,7 +207,7 @@ class App(QObject):
             if cid in BALANCE_PET_SPECS and cid != self.pet.character:
                 self.summon_balance_pet(cid, save=False)
 
-    def summon_balance_pet(self, cid: str, save: bool = True) -> PetWindow | None:
+    def summon_balance_pet(self, cid: str, save: bool = True, force: bool = False) -> PetWindow | None:
         if cid in self.extra_pets:
             win = self.extra_pets[cid]
             win.show()
@@ -226,9 +218,32 @@ class App(QObject):
         if cid not in BALANCE_PET_SPECS:
             return None
 
+        # 檢查大寵物在場數量上限 (5, 10, 15, 20, 25, 30 隻)
+        from .config import get_effective_pet_max_count
+        cur_count = 1 + len(self.extra_pets)
+        max_limit = get_effective_pet_max_count(self.cfg)
+        if cur_count >= max_limit and not force:
+            msg = f"目前在場大寵物已達數量上限 ({cur_count}/{max_limit} 隻)，建議收回部分寵物以維持最佳系統效能，或至設定中調高上限檔位！是否仍要繼續召喚？"
+            log(f"[App] {msg}")
+            if "--selftest" not in sys.argv:
+                try:
+                    from .dialogs import ModernMessageBox
+                    ans = ModernMessageBox.question(self.pet, "大寵物數量上限提醒", msg)
+                    if ans != ModernMessageBox.Yes:
+                        return None
+                except Exception:
+                    pass
+
         spec = BALANCE_PET_SPECS[cid]
         char_id = spec.get("char", cid)
-        ledger = Ledger(self.cfg, provider_override=spec["prov"])
+
+        # 外觀與監控目標解耦：讀取此寵物獨立配置之廠商與 Key
+        monitors = self.cfg.get("pet_monitors") or {}
+        p_cfg = monitors.get(cid, {})
+        target_prov = p_cfg.get("provider") or spec["prov"]
+        target_kidx = p_cfg.get("key_index", None)
+
+        ledger = Ledger(self.cfg, provider_override=target_prov, key_index=target_kidx)
         pet = PetWindow(self.cfg, ledger, self.sounds, character_override=char_id, is_extra=True, pet_id=cid)
         pet.props._menu_cb = self.prop_menu
         pet.context_requested.connect(lambda gpos, p=pet: self.pet_menu(gpos, pet=p))
@@ -255,6 +270,58 @@ class App(QObject):
 
         self._changed()
         return pet
+
+    def set_pet_monitor(self, pet_id: str, provider: str, key_index: int | None = None):
+        """將指定大寵物或主寵物之監視目標與 API Key 綁定解耦設定。"""
+        monitors = dict(self.cfg.get("pet_monitors") or {})
+        monitors[pet_id] = {"provider": provider, "key_index": key_index}
+        self.cfg.set("pet_monitors", monitors, save=True)
+
+        target_pet = None
+        if pet_id == "main" or pet_id == getattr(self.pet, "character", ""):
+            target_pet = self.pet
+        elif pet_id in self.extra_pets:
+            target_pet = self.extra_pets[pet_id]
+
+        if target_pet and hasattr(target_pet, "ledger") and target_pet.ledger:
+            target_pet.ledger.set_provider(provider)
+            target_pet.ledger.set_key_index(key_index)
+            log(f"[App] 寵物「{pet_id}」監視目標已更新為：{provider} (Key #{key_index + 1 if key_index is not None else '全部/輪替'})")
+        self._changed()
+
+    def set_pet_max_count(self, count: int):
+        from .config import PET_MAX_COUNT_OPTIONS
+        if count in PET_MAX_COUNT_OPTIONS:
+            self.cfg.set("pet_max_count", int(count), save=True)
+            log(f"[App] 大寵物在場數量上限已調整為：{count} 隻")
+            self._changed()
+
+    def set_aggregate_same_provider_keys(self, enabled: bool):
+        self.cfg.set("aggregate_same_provider_keys", bool(enabled), save=True)
+        log(f"[App] 同廠商多 API Key 額度整合計算已切換為：{'開啟' if enabled else '關閉'}")
+        if hasattr(self, "ledger") and self.ledger:
+            self.ledger.refresh()
+        for ep_ledger in self.extra_ledgers.values():
+            ep_ledger.refresh()
+        self._changed()
+
+    def summon_api_chibi(self, prov: str, key_index: int | None = None):
+        """召喚指定 API 額度監控 Q 版小人（在桌面上巡邏、在想法框中顯示該 API 的額度/餘額）。"""
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            cur = self.chibi_manager.active_count
+            limit = self.chibi_manager.max_count
+            force = False
+            if cur >= limit:
+                msg = f"目前在場 Q 版小人已達數量上限 ({cur}/{limit} 隻)，建議收回部分小人以維持最佳系統效能，或至設定中調高上限檔位！是否仍要繼續召喚？"
+                log(f"[App] {msg}")
+                if "--selftest" not in sys.argv:
+                    from .dialogs import ModernMessageBox
+                    ans = ModernMessageBox.question(None, "數量上限提醒", msg)
+                    if ans != ModernMessageBox.Yes:
+                        return None
+                force = True
+            return self.chibi_manager.summon_api_monitor(prov, key_index=key_index, force=force)
+        return None
 
     def dismiss_balance_pet(self, cid: str):
         if cid in self.extra_pets:
@@ -541,14 +608,14 @@ class App(QObject):
         act("開啟網頁儀表板", self.open_web_ui)
         m.addSeparator()
 
-        # Multi-pet balance summons
+        # Multi-pet balance summons (嚴格限制只有 4 位核心官方角色)
         total_balance_pets = len(self.extra_pets) + (1 if self.pet.character in BALANCE_PET_SPECS else 0)
         sub_balance = m.addMenu(f"召喚餘額寵物（在場 {total_balance_pets}/{len(BALANCE_PET_SPECS)}）")
         sub_balance.setStyleSheet(m.styleSheet())
         sub_balance.setAttribute(Qt.WA_TranslucentBackground, True)
         sub_balance.setWindowFlags(sub_balance.windowFlags() | Qt.FramelessWindowHint)
 
-        # 1. 核心四大 AI 形象
+        # 核心四大 AI 官方形象
         for cid in ["deepseek", "gpt", "claude", "gemini"]:
             spec = BALANCE_PET_SPECS[cid]
             is_main = (cid == self.pet.character)
@@ -565,27 +632,71 @@ class App(QObject):
                 )
 
         sub_balance.addSeparator()
-
-        # 2. 更多雲端與轉發 API 餘額寵物
-        m_more = sub_balance.addMenu("更多 API 額度監控寵物")
-        m_more.setStyleSheet(m.styleSheet())
-        m_more.setAttribute(Qt.WA_TranslucentBackground, True)
-        m_more.setWindowFlags(m_more.windowFlags() | Qt.FramelessWindowHint)
-        for cid in ["openrouter", "siliconflow", "moonshot", "groq", "mistral", "grok", "together", "glm", "custom_openai", "ollama"]:
-            if cid in BALANCE_PET_SPECS:
-                spec = BALANCE_PET_SPECS[cid]
-                is_active = (cid in self.extra_pets)
-                label = f"召喚 {spec['name']} ({spec['title']})"
-                a = m_more.addAction(label)
-                a.setCheckable(True)
-                a.setChecked(is_active)
-                a.triggered.connect(
-                    lambda chk=False, c_id=cid: self.summon_balance_pet(c_id) if chk else self.dismiss_balance_pet(c_id)
-                )
-
-        sub_balance.addSeparator()
         sub_balance.addAction("召喚全部 4 隻核心餘額寵物").triggered.connect(self.summon_all_balance_pets)
         sub_balance.addAction("移除全部額外餘額寵物").triggered.connect(self.dismiss_all_balance_pets)
+
+        # 大寵物在場數量上限檔位 (5, 10, 15, 20, 25, 30 隻)
+        from .config import get_effective_pet_max_count, PET_MAX_COUNT_OPTIONS
+        pet_limit = get_effective_pet_max_count(self.cfg)
+        sub_pet_limit = m.addMenu(f"大寵物數量上限（目前：{pet_limit} 隻）")
+        sub_pet_limit.setStyleSheet(m.styleSheet())
+        sub_pet_limit.setAttribute(Qt.WA_TranslucentBackground, True)
+        sub_pet_limit.setWindowFlags(sub_pet_limit.windowFlags() | Qt.FramelessWindowHint)
+        perf_mode = bool(self.cfg.get("performance_mode", False))
+        for opt in PET_MAX_COUNT_OPTIONS:
+            is_active = (pet_limit == opt)
+            label = f"{opt} 隻" + ("（目前生效）" if is_active else "")
+            if perf_mode and opt > 10:
+                label += "（效能模式開啟時最高限制 10 隻）"
+            a = sub_pet_limit.addAction(label)
+            a.setCheckable(True)
+            a.setChecked(is_active)
+            if perf_mode and opt > 10:
+                a.setEnabled(False)
+            else:
+                a.triggered.connect(lambda _=False, count=opt: self.set_pet_max_count(count))
+
+        # 當前寵物監視目標與 API Key 設定（外觀與監控完全解耦）
+        from .balance import SUPPORTED_BALANCE_PROVIDERS
+        pet_target_prov = cur_pet.ledger.provider_display_name if (cur_pet and cur_pet.ledger) else "DeepSeek"
+        sub_target = m.addMenu(f"當前寵物監視目標與金鑰（{pet_target_prov}）")
+        sub_target.setStyleSheet(m.styleSheet())
+        sub_target.setAttribute(Qt.WA_TranslucentBackground, True)
+        sub_target.setWindowFlags(sub_target.windowFlags() | Qt.FramelessWindowHint)
+
+        cur_p_id = cur_pet.pet_id if (cur_pet and cur_pet.is_extra) else "main"
+        m_prov_pick = sub_target.addMenu(f"切換監視廠商（目前：{pet_target_prov}）")
+        m_prov_pick.setStyleSheet(m.styleSheet())
+        m_prov_pick.setAttribute(Qt.WA_TranslucentBackground, True)
+        m_prov_pick.setWindowFlags(m_prov_pick.windowFlags() | Qt.FramelessWindowHint)
+        for prov in SUPPORTED_BALANCE_PROVIDERS:
+            pname = id_to_provider_name(prov)
+            a = m_prov_pick.addAction(pname)
+            a.setCheckable(True)
+            a.setChecked(provider_to_id(cur_pet.ledger.provider) == provider_to_id(prov))
+            a.triggered.connect(lambda _=False, p=prov: self.set_pet_monitor(cur_p_id, p, cur_pet.ledger.key_index))
+
+        cur_prov_keys = self.cfg.get_api_keys(cur_pet.ledger.provider) if hasattr(self.cfg, "get_api_keys") else []
+        m_key_pick = sub_target.addMenu(f"切換監視 API Key（配置 {len(cur_prov_keys)} 組）")
+        m_key_pick.setStyleSheet(m.styleSheet())
+        m_key_pick.setAttribute(Qt.WA_TranslucentBackground, True)
+        m_key_pick.setWindowFlags(m_key_pick.windowFlags() | Qt.FramelessWindowHint)
+        a_kall = m_key_pick.addAction("預設 / 全部 Key 輪替")
+        a_kall.setCheckable(True)
+        a_kall.setChecked(cur_pet.ledger.key_index is None)
+        a_kall.triggered.connect(lambda: self.set_pet_monitor(cur_p_id, cur_pet.ledger.provider, None))
+        for kidx, k in enumerate(cur_prov_keys):
+            masked = k[:6] + "..." + k[-4:] if len(k) > 12 else k
+            label = f"Key #{kidx + 1} ({masked})"
+            a_k = m_key_pick.addAction(label)
+            a_k.setCheckable(True)
+            a_k.setChecked(cur_pet.ledger.key_index == kidx)
+            a_k.triggered.connect(lambda _=False, idx=kidx: self.set_pet_monitor(cur_p_id, cur_pet.ledger.provider, idx))
+
+        act_agg = sub_target.addAction("同廠商多 Key 額度整合計算")
+        act_agg.setCheckable(True)
+        act_agg.setChecked(bool(self.cfg.get("aggregate_same_provider_keys", False)))
+        act_agg.triggered.connect(lambda chk: self.set_aggregate_same_provider_keys(chk))
 
         if cur_pet.is_extra:
             m.addAction(f"移除此額外寵物 ({cur_pet.character})").triggered.connect(
@@ -597,7 +708,6 @@ class App(QObject):
         if hasattr(self, "chibi_manager") and self.chibi_manager:
             cur_chibi_count = self.chibi_manager.active_count
             max_chibi_limit = self.chibi_manager.max_count
-            can_summon = self.chibi_manager.can_summon
             sub_chibi = m.addMenu(f"Q 版小人巡邏隊（在場 {cur_chibi_count}/{max_chibi_limit}）")
             sub_chibi.setStyleSheet(m.styleSheet())
             sub_chibi.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -605,7 +715,6 @@ class App(QObject):
 
             # 1. 隨機召喚一隻 Q 版人物
             act_rand = sub_chibi.addAction("隨機召喚一隻 Q 版人物")
-            act_rand.setEnabled(can_summon)
             act_rand.triggered.connect(self.summon_random_chibi)
 
             # 2. 指定召喚子選單
@@ -620,7 +729,6 @@ class App(QObject):
                 if info.get("subtitle"):
                     label += f" ({info['subtitle']})"
                 a = sub_specific.addAction(label)
-                a.setEnabled(can_summon)
                 a.triggered.connect(lambda _=False, c=cid: self.summon_chibi(c))
 
             custom_chars = PixelChibiRegistry.list_custom_characters()
@@ -632,20 +740,29 @@ class App(QObject):
                     size_tag = f" [{w}x{h}]" if (w != 16 or h != 24) else ""
                     label = f"{info.get('name', cid)}{size_tag}"
                     a = sub_specific.addAction(label)
-                    a.setEnabled(can_summon)
                     a.triggered.connect(lambda _=False, c=cid: self.summon_chibi(c))
+
+            # 3. 召喚特定 API 額度監控 Q 版小人
+            sub_api_chibi = sub_chibi.addMenu("召喚特定 API 額度監控 Q 版小人")
+            sub_api_chibi.setStyleSheet(m.styleSheet())
+            sub_api_chibi.setAttribute(Qt.WA_TranslucentBackground, True)
+            sub_api_chibi.setWindowFlags(sub_api_chibi.windowFlags() | Qt.FramelessWindowHint)
+            for prov in SUPPORTED_BALANCE_PROVIDERS:
+                pname = id_to_provider_name(prov)
+                a_api = sub_api_chibi.addAction(f"召喚【{pname}】額度小人")
+                a_api.triggered.connect(lambda _=False, p=prov: self.summon_api_chibi(p))
 
             sub_chibi.addSeparator()
 
-            # 3. 開啟 Q 版人物像素編輯器...
+            # 4. 開啟 Q 版人物像素編輯器...
             sub_chibi.addAction("開啟 Q 版人物像素編輯器...").triggered.connect(self.open_chibi_editor)
 
-            # 4. 清除場上所有額外 Q 版小人（只保留 1 隻）
+            # 5. 清除場上所有額外 Q 版小人（只保留 1 隻）
             act_clear_extra = sub_chibi.addAction("清除場上所有額外 Q 版小人（只保留 1 隻）")
             act_clear_extra.setEnabled(cur_chibi_count > 1)
             act_clear_extra.triggered.connect(self.clear_extra_chibis)
 
-            # 5. 上限檔位切換子選單 (5, 10, 15, 20, 25, 30)
+            # 6. 上限檔位切換子選單 (5, 10, 15, 20, 25, 30)
             sub_limit = sub_chibi.addMenu(f"在場數量上限（目前：{max_chibi_limit} 隻）")
             sub_limit.setStyleSheet(m.styleSheet())
             sub_limit.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -940,25 +1057,35 @@ class App(QObject):
 
     def summon_random_chibi(self):
         if hasattr(self, "chibi_manager") and self.chibi_manager:
-            w = self.chibi_manager.summon_random()
-            if not w and not self.chibi_manager.can_summon:
-                from .dialogs import ModernMessageBox
-                ModernMessageBox.warning(
-                    None,
-                    "已達數量上限",
-                    f"在場 Q 版小人已達數量上限（{self.chibi_manager.max_count} 隻），無法繼續召喚！\n若欲召喚更多，可在選單調整上限或清除場上額外小人。"
-                )
+            cur = self.chibi_manager.active_count
+            limit = self.chibi_manager.max_count
+            force = False
+            if cur >= limit:
+                msg = f"目前在場 Q 版小人已達數量上限 ({cur}/{limit} 隻)，建議收回部分小人以維持最佳系統效能，或至設定中調高上限檔位！是否仍要繼續召喚？"
+                log(f"[App] {msg}")
+                if "--selftest" not in sys.argv:
+                    from .dialogs import ModernMessageBox
+                    ans = ModernMessageBox.question(None, "數量上限提醒", msg)
+                    if ans != ModernMessageBox.Yes:
+                        return None
+                force = True
+            return self.chibi_manager.summon_random(force=force)
 
     def summon_chibi(self, cid: str):
         if hasattr(self, "chibi_manager") and self.chibi_manager:
-            w = self.chibi_manager.summon(cid)
-            if not w and not self.chibi_manager.can_summon:
-                from .dialogs import ModernMessageBox
-                ModernMessageBox.warning(
-                    None,
-                    "已達數量上限",
-                    f"在場 Q 版小人已達數量上限（{self.chibi_manager.max_count} 隻），無法繼續召喚！\n若欲召喚更多，可在選單調整上限或清除場上額外小人。"
-                )
+            cur = self.chibi_manager.active_count
+            limit = self.chibi_manager.max_count
+            force = False
+            if cur >= limit:
+                msg = f"目前在場 Q 版小人已達數量上限 ({cur}/{limit} 隻)，建議收回部分小人以維持最佳系統效能，或至設定中調高上限檔位！是否仍要繼續召喚？"
+                log(f"[App] {msg}")
+                if "--selftest" not in sys.argv:
+                    from .dialogs import ModernMessageBox
+                    ans = ModernMessageBox.question(None, "數量上限提醒", msg)
+                    if ans != ModernMessageBox.Yes:
+                        return None
+                force = True
+            return self.chibi_manager.summon(cid, force=force)
 
     def clear_extra_chibis(self):
         if hasattr(self, "chibi_manager") and self.chibi_manager:

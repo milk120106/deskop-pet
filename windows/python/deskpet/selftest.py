@@ -770,23 +770,20 @@ def run(qapp) -> int:
     qml_win.hide()
 
     # ========================================================= 22. Pet Upgrades: Size Slider, 2D Papercraft Physics, Smart 4-Page Tablet, Alarms, Pixel Chibi Standalone System
-    # 1. 平滑尺寸滑桿測試 (80px - 1024px) 與快速預設標籤
-    app.set_size(80)
+    # 1. 平滑尺寸滑桿測試 (180px - 1024px) 與快速預設標籤
+    app.set_size(180)
     wait(100)
-    check("pet size slider supports 80px min", app.pet.size_px == 80, f"size={app.pet.size_px}")
+    check("pet size slider supports 180px min", app.pet.size_px == 180, f"size={app.pet.size_px}")
     app.set_size(1024)
     wait(100)
     check("pet size slider supports 1024px max", app.pet.size_px == 1024, f"size={app.pet.size_px}")
-    app.set_size(100)
+    app.set_size(260)
     wait(100)
-    check("quick size preset 100px applies cleanly", app.pet.size_px == 100, f"size={app.pet.size_px}")
+    check("quick size preset 260px applies cleanly", app.pet.size_px == 260, f"size={app.pet.size_px}")
 
-    # 2. 極小尺寸自動切換像素 Q 版測試
-    app.set_mini_pixel_mode(True)
-    wait(100)
-    sp_mini = app.pet._sprite("happy")
-    check("mini_pixel_mode switches sprite at <= 140px", sp_mini is not None)
-    app.set_mini_pixel_mode(False)
+    # 2. 大寵物保持純粹 2D 原畫立繪，嚴格獨立於 Q 版像素小人
+    sp_main = app.pet._sprite("happy")
+    check("main pet strictly maintains smooth 2D illustration", sp_main is not None and not sp_main[0].isNull())
     app.set_size(454)
     wait(100)
 
@@ -879,6 +876,85 @@ def run(qapp) -> int:
     check("pixel chibi props flight and fireworks launcher", len(app.pixel_chibi.particles) > 0)
     app.pixel_chibi.particles.clear()
     app.pixel_chibi.state = "idle"
+
+    # 16. 動態 FPS 調度與 Delta-Time 物理 (10-240 FPS / 無限制)
+    app.set_target_fps(10)
+    check("pixel chibi target_fps 10 sets interval to 100ms", app.pixel_chibi.timer.interval() == 100)
+    app.set_target_fps(60)
+    check("pixel chibi target_fps 60 sets interval to 16ms", app.pixel_chibi.timer.interval() == 16)
+    app.set_target_fps(120)
+    check("pixel chibi target_fps 120 sets interval to 8ms", app.pixel_chibi.timer.interval() == 8)
+    app.set_target_fps(144)
+    check("pixel chibi target_fps 144 sets interval to 7ms", app.pixel_chibi.timer.interval() == 7)
+    app.set_target_fps(240)
+    check("pixel chibi target_fps 240 sets interval to 4ms", app.pixel_chibi.timer.interval() == 4)
+    app.set_target_fps(0)
+    check("pixel chibi target_fps 0 (unlimited) sets interval to 1ms", app.pixel_chibi.timer.interval() == 1)
+    app.set_performance_mode(True)
+    check("pixel chibi performance_mode caps interval to 30fps (33ms)", app.pixel_chibi.timer.interval() == 33)
+    app.set_performance_mode(False)
+    app.set_target_fps(60)
+    check("pixel chibi restores 60fps (16ms)", app.pixel_chibi.timer.interval() == 16)
+
+    # 17. 全方向攀爬系列 (climb_up, climb_down, climb_side)
+    app.pixel_chibi.start_climb("up")
+    check("pixel chibi climb_up frame", app.pixel_chibi.state == "climb" and app.pixel_chibi.climb_subframe == "climb_up")
+    app.pixel_chibi.start_climb("down")
+    check("pixel chibi climb_down frame", app.pixel_chibi.climb_subframe == "climb_down")
+    app.pixel_chibi.start_climb("side")
+    check("pixel chibi climb_side frame", app.pixel_chibi.climb_subframe == "climb_side")
+
+    # 18. 軟趴趴系列 (Splat / Floppy) 與主寵後背趴伏
+    app.pixel_chibi.start_splat()
+    check("pixel chibi splat mochi floppy state", app.pixel_chibi.state == "splat")
+    app.pixel_chibi.mount_pet("back", pose="splat")
+    check("pixel chibi splat rests on pet back", app.pixel_chibi.climbing_pet is True and app.pixel_chibi.pet_mount_slot == "back" and app.pixel_chibi.state == "splat")
+    app.pixel_chibi.toggle_mount_pose()
+    check("pixel chibi toggles mount pose to sit", app.pixel_chibi.state == "sit")
+    app.pixel_chibi.dismount_pet()
+
+    # 19. 睡覺 / 打呼 / 驚醒系列 (sleep_sprawl, sleep_prone, sleep_side, wake_startle)
+    app.pixel_chibi.start_sleep("sleep_prone")
+    check("pixel chibi sleep prone with zZZ bubbles", app.pixel_chibi.state == "sleep" and app.pixel_chibi.sleep_subframe == "sleep_prone")
+    app.pixel_chibi.start_sleep("sleep_sprawl")
+    check("pixel chibi sleep sprawl all-fours up", app.pixel_chibi.sleep_subframe == "sleep_sprawl")
+    app.pixel_chibi.start_sleep("sleep_side")
+    check("pixel chibi sleep side curled like cat", app.pixel_chibi.sleep_subframe == "sleep_side")
+    app.pixel_chibi.start_wake()
+    check("pixel chibi startled awake with ahoge standing", app.pixel_chibi.state == "wake")
+
+    # 20. 跑步、跳躍與搗亂系列 (run, jump, mischief)
+    app.pixel_chibi.start_run()
+    check("pixel chibi forward sprint run state", app.pixel_chibi.state == "run")
+    app.pixel_chibi.start_jump()
+    check("pixel chibi vertical jump leap", app.pixel_chibi.state == "jump" and app.pixel_chibi.vel_y < 0)
+    app.pixel_chibi.start_mischief()
+    check("pixel chibi mischief funny faces and step dance", app.pixel_chibi.state == "mischief")
+
+    # 21. 飯盆砸飛物理 (Bowl Smash & Knock-back)
+    app.pixel_chibi.mount_pet("head")
+    app.pet.wear_iron()
+    check("pixel chibi bowl smash knock-back triggered", app.pixel_chibi.state == "bowl_smash" and app.pixel_chibi.vel_y == -220.0 and abs(app.pixel_chibi.vel_x) == 90.0)
+    app.pixel_chibi.pos_y = 10000.0
+    app.pixel_chibi._tick()
+    check("pixel chibi bowl smash lands into splat state", app.pixel_chibi.state == "splat" and app.pixel_chibi.post_smash_recover is True)
+    app.pixel_chibi.state_time = 1.6
+    app.pixel_chibi._tick()
+    check("pixel chibi recovers after 1.5s and climbs iron bowl", app.pixel_chibi.climbing_pet is True and app.pixel_chibi.pet_mount_slot == "iron")
+    app.pixel_chibi.dismount_pet()
+    app.pet.remove_iron(all_pots=True)
+
+    # 22. 全生動動作像素動畫幀驗證 (全 16x24 矩陣且含 LL 腿部)
+    all_extra_frames = (
+        "climb_up", "climb_down", "climb_side", "facing_front", "facing_back", "turn",
+        "splat", "sit_down", "sleep_sprawl", "sleep_prone", "sleep_side", "wake_startle",
+        "run1", "run2", "jump_up", "jump_down", "run_jump", "mischief"
+    )
+    all_frames_valid = all(
+        f in FRAMES and len(FRAMES[f]) == 24 and all(len(r) == 16 for r in FRAMES[f]) and ("LL" in "".join(FRAMES[f]))
+        for f in all_extra_frames
+    )
+    check("pixel chibi all 18 extra frames 16x24 with LL legs", all_frames_valid)
 
     chat_dlg.close()
 

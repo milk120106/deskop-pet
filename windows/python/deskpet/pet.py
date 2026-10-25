@@ -318,22 +318,14 @@ class PetWindow(QWidget):
         return self._src[key]
 
     def _sprite(self, expr: str):
-        mini_pixel = bool(self.cfg.get("mini_pixel_mode", False)) and (self.size_px <= 140)
-        key = (self.character, self.variant, expr, self.size_px, self.snap_right, mini_pixel)
+        key = (self.character, self.variant, expr, self.size_px, self.snap_right)
         if key not in self._scaled:
-            if mini_pixel:
-                from .pixel_chibi import PixelChibiRenderer
-                chibi_pm = PixelChibiRenderer.get_pixmap(self.character, "idle", facing_right=self.snap_right, scale=max(1, self.art_h // 24))
-                img = chibi_pm.toImage().scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.FastTransformation).convertToFormat(
-                    QImage.Format_ARGB32_Premultiplied
-                )
-            else:
-                src = self._load(expr)
-                img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
-                    QImage.Format_ARGB32_Premultiplied
-                )
-                if self.snap_right:
-                    img = img.mirrored(True, False)
+            src = self._load(expr)
+            img = src.scaled(self.art_w, self.art_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(
+                QImage.Format_ARGB32_Premultiplied
+            )
+            if self.snap_right:
+                img = img.mirrored(True, False)
             red = QImage(img)
             qp = QPainter(red)
             qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
@@ -400,7 +392,7 @@ class PetWindow(QWidget):
         self._heart_pix = None
 
     def set_size(self, px: int):
-        px = max(80, min(1024, int(px)))
+        px = max(180, min(1024, int(px)))
         if px == self.size_px:
             return
         old_bc = QPoint(self.x() + M_L + self.art_w // 2, self.y() + M_T + self.art_h)
@@ -1186,6 +1178,11 @@ class PetWindow(QWidget):
         self.wake()
 
     def wear_iron(self):
+        chibi = getattr(self, "pixel_chibi", None) or (getattr(self, "app", None) and getattr(self.app, "pixel_chibi", None))
+        if chibi and getattr(chibi, "climbing_pet", False) and getattr(chibi, "pet_mount_slot", None) == "head":
+            direction = -1 if getattr(self, "snap_right", False) else 1
+            chibi.trigger_bowl_smash(direction=direction)
+
         if self.iron_count < 5:
             self.iron_count += 1
         self.iron_alpha = 1.0

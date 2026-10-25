@@ -150,6 +150,7 @@ class App(QObject):
         self.pixel_chibi: PixelChibiWindow | None = None
         if self.cfg.get("q_chibi_enabled", True):
             self.pixel_chibi = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self)
+            self.pet.pixel_chibi = self.pixel_chibi
 
         self.pet.props._menu_cb = self.prop_menu
         self.pet.context_requested.connect(lambda gpos: self.pet_menu(gpos, pet=self.pet))
@@ -806,15 +807,6 @@ class App(QObject):
             ep.set_size(px)
         self._changed()
 
-    def set_mini_pixel_mode(self, on: bool):
-        self.cfg.set("mini_pixel_mode", bool(on), save=True)
-        self.pet._clear_cache()
-        self.pet.update()
-        for ep in self.extra_pets.values():
-            ep._clear_cache()
-            ep.update()
-        self._changed()
-
     def set_q_chibi_enabled(self, on: bool):
         self.cfg.set("q_chibi_enabled", bool(on), save=True)
         from .pixel_chibi import PixelChibiWindow
@@ -876,6 +868,8 @@ class App(QObject):
         self.pet.update_fps_timer()
         for ep in self.extra_pets.values():
             ep.update_fps_timer()
+        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            self.pixel_chibi.sync_fps()
         self._changed()
 
     def set_target_fps(self, fps: int):
@@ -883,6 +877,8 @@ class App(QObject):
         self.pet.update_fps_timer()
         for ep in self.extra_pets.values():
             ep.update_fps_timer()
+        if hasattr(self, "pixel_chibi") and self.pixel_chibi:
+            self.pixel_chibi.sync_fps()
         self._changed()
 
     def set_vsync_mode(self, mode: int):

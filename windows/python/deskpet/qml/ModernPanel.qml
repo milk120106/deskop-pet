@@ -640,7 +640,7 @@ Rectangle {
                                         color: themeColors.primary
                                         width: {
                                             var val = (typeof backend !== "undefined" && backend) ? backend.sizePx : 454
-                                            return Math.max(0, Math.min(parent.width, (val - 80) / (1024 - 80) * parent.width))
+                                            return Math.max(0, Math.min(parent.width, (val - 180) / (1024 - 180) * parent.width))
                                         }
                                     }
                                 }
@@ -656,7 +656,7 @@ Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: {
                                         var val = (typeof backend !== "undefined" && backend) ? backend.sizePx : 454
-                                        return Math.max(0, Math.min(sizeTrack.width - width, (val - 80) / (1024 - 80) * (sizeTrack.width - width)))
+                                        return Math.max(0, Math.min(sizeTrack.width - width, (val - 180) / (1024 - 180) * (sizeTrack.width - width)))
                                     }
                                     scale: sizeSliderMouse.pressed ? 1.25 : 1.0
                                     Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.28 } }
@@ -669,7 +669,7 @@ Rectangle {
                                     preventStealing: true
                                     function updatePos(mx) {
                                         var frac = Math.max(0.0, Math.min(1.0, mx / width))
-                                        var val = Math.round(80 + frac * (1024 - 80))
+                                        var val = Math.round(180 + frac * (1024 - 180))
                                         if (typeof backend !== "undefined" && backend) {
                                             backend.setSizePx(val)
                                         }
@@ -682,21 +682,22 @@ Rectangle {
                             }
                         }
 
-                        // 2. 快速尺寸標籤（迷你 100px、精巧 180px、標準 340px、大杯 454px、特大 640px）
+                        // 2. 快速尺寸標籤（精巧 180px、便攜 260px、標準 340px、大杯 454px、特大 640px、巨幕 800px）
                         Row {
                             width: parent.width
                             spacing: 8
 
                             Repeater {
                                 model: [
-                                    { size: 100, name: "迷你 100px" },
                                     { size: 180, name: "精巧 180px" },
+                                    { size: 260, name: "便攜 260px" },
                                     { size: 340, name: "標準 340px" },
                                     { size: 454, name: "大杯 454px" },
-                                    { size: 640, name: "特大 640px" }
+                                    { size: 640, name: "特大 640px" },
+                                    { size: 800, name: "巨幕 800px" }
                                 ]
                                 delegate: Rectangle {
-                                    width: 86
+                                    width: (parent.width - 40) / 6
                                     height: 30
                                     radius: 8
                                     color: (typeof backend !== "undefined" && backend && backend.sizePx === modelData.size) ? themeColors.primaryContainer : (presetMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant)
@@ -722,49 +723,6 @@ Rectangle {
                                             if (typeof backend !== "undefined" && backend) {
                                                 backend.setSizePx(modelData.size)
                                             }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 3. 極小尺寸自動切換像素 Q 版（mini_pixel_mode）
-                        Row {
-                            width: parent.width
-                            spacing: 12
-                            Text {
-                                text: "極小尺寸自動切換像素 Q 版 (<= 140px)"
-                                color: themeColors.text
-                                font.pixelSize: 13
-                                font.family: root.modernFontStack
-                                renderType: Text.NativeRendering
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 340
-                            }
-                            Item {
-                                width: 48
-                                height: 26
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 13
-                                    color: (typeof backend !== "undefined" && backend && backend.miniPixelMode) ? themeColors.primary : themeColors.surfaceVariant
-                                    Behavior on color { ColorAnimation { duration: 200 } }
-                                    Rectangle {
-                                        width: 20
-                                        height: 20
-                                        radius: 10
-                                        y: 3
-                                        color: "#FFFFFF"
-                                        x: (typeof backend !== "undefined" && backend && backend.miniPixelMode) ? 25 : 3
-                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
-                                    }
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (typeof backend !== "undefined" && backend) {
-                                            backend.setMiniPixelMode(!backend.miniPixelMode)
                                         }
                                     }
                                 }

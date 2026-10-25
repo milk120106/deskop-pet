@@ -218,8 +218,7 @@ DEFAULTS = {
     "font_mode": "default",          # default / system / custom_file
     "font_family": "",               # selected system font family
     "custom_font_path": "",          # path to custom .ttf or .otf
-    # mini pixel mode & alarms & notifications
-    "mini_pixel_mode": False,        # 極小尺寸自動切換像素 Q 版
+    # alarms & notifications
     "alarms": [],                    # 鬧鐘與倒數計時清單
     "notifications": [],             # 事件通知紀錄歷史
     "discord_webhook_url": "",       # Discord Webhook 轉發網址

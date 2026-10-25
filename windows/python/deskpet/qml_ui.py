@@ -115,7 +115,6 @@ class QMLBackend(QObject):
     updateStatusChanged = Signal(str)
     tabSwitched = Signal(int)
     noticeMessage = Signal(str, bool)  # text, is_error
-    miniPixelModeChanged = Signal(bool)
     qChibiChanged = Signal(bool)
     qClimbWindowsChanged = Signal(bool)
     qFlightPropChanged = Signal(bool)
@@ -258,9 +257,6 @@ class QMLBackend(QObject):
     def get_update_status(self) -> str:
         return self._update_status
 
-    def get_mini_pixel_mode(self) -> bool:
-        return bool(self.app.cfg.get("mini_pixel_mode", False))
-
     def get_q_chibi_enabled(self) -> bool:
         return bool(self.app.cfg.get("q_chibi_enabled", True))
 
@@ -317,7 +313,6 @@ class QMLBackend(QObject):
     remoteModels = Property(list, get_remote_models, notify=remoteModelsChanged)
     remoteModelStatus = Property(str, get_remote_model_status, notify=remoteModelStatusChanged)
     updateStatus = Property(str, get_update_status, notify=updateStatusChanged)
-    miniPixelMode = Property(bool, get_mini_pixel_mode, notify=miniPixelModeChanged)
     qChibiEnabled = Property(bool, get_q_chibi_enabled, notify=qChibiChanged)
     qClimbWindows = Property(bool, get_q_climb_windows, notify=qClimbWindowsChanged)
     qFlightProp = Property(bool, get_q_flight_prop, notify=qFlightPropChanged)
@@ -390,11 +385,6 @@ class QMLBackend(QObject):
     def setSizePx(self, size: int):
         self.app.set_size(size)
         self.sizeChanged.emit(size)
-
-    @Slot(bool)
-    def setMiniPixelMode(self, val: bool):
-        self.app.set_mini_pixel_mode(val)
-        self.miniPixelModeChanged.emit(val)
 
     @Slot(bool)
     def setQChibiEnabled(self, val: bool):

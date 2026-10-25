@@ -228,7 +228,7 @@ DEFAULTS = {
     # Q-Chibi standalone pixel system
     "q_chibi_enabled": True,         # 啟用全新 Q 版獨立像素小人巡邏
     "q_climb_windows": False,        # 視窗與按鈕攀爬辨識（預設關閉）
-    "q_flight_prop": False,          # 飛行小道具（小旋翼 / 氣球懸浮模式，預設關閉）
+    "q_flight_prop": False,          # 飛行小道具（小氣球空中漂浮模式，預設關閉）
     "q_fireworks_prop": False,       # 像素煙火發射小道具（預設關閉）
 }
 

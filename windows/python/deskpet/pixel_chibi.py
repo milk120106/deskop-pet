@@ -39,8 +39,8 @@ from .config import log
 # W = Socks (white)
 # F = Feet / Boots / Shoes
 # f = Soles / Shoe detail
-# P = Prop (copter stem / balloon string)
-# R = Rotor blade / Balloon body
+# P = Balloon string / thread
+# R = Balloon body / sphere
 
 CHAR_PALETTES = {
     "deepseek": {
@@ -52,7 +52,7 @@ CHAR_PALETTES = {
         "K": "#1e3a8a", "k": "#172554",  # Sailor pleated skirt
         "L": "#ffe4d0", "W": "#ffe4d0",  # Cute bare legs
         "F": "#1e3a8a", "f": "#0f172a",  # Sailor short boots
-        "P": "#ca8a04", "R": "#facc15",
+        "P": "#ffffff", "R": "#38bdf8",  # Sky blue balloon
     },
     "claude": {
         "H": "#ea580c", "h": "#c2410c",  # Warm orange short hair
@@ -63,7 +63,7 @@ CHAR_PALETTES = {
         "K": "#ea580c", "k": "#c2410c",
         "L": "#ffedd5", "W": "#ffedd5",  # Light bare legs
         "F": "#9a3412", "f": "#7c2d12",  # Cute warm boots
-        "P": "#ca8a04", "R": "#facc15",
+        "P": "#ffffff", "R": "#fb923c",  # Warm coral balloon
     },
     "gpt": {
         "H": "#10b981", "h": "#047857",  # Mint green bob hair
@@ -74,7 +74,7 @@ CHAR_PALETTES = {
         "K": "#4b5563", "k": "#1f2937",  # Pleated skirt
         "L": "#ffe4d0", "W": "#ffffff",  # Cute legs with white trim
         "F": "#f3f4f6", "f": "#10b981",  # Sporty athletic sneakers
-        "P": "#ca8a04", "R": "#facc15",
+        "P": "#ffffff", "R": "#34d399",  # Emerald green balloon
     },
     "gemini": {
         "H": "#312e81", "h": "#1e1b4b",  # Dark indigo hair
@@ -85,7 +85,7 @@ CHAR_PALETTES = {
         "K": "#7c3aed", "k": "#5b21b6",
         "L": "#ffe4e6", "W": "#ffffff",  # Slender legs with white socks
         "F": "#4338ca", "f": "#312e81",  # Mary Jane shoes
-        "P": "#ca8a04", "R": "#facc15",
+        "P": "#ffffff", "R": "#c084fc",  # Radiant purple balloon
     },
 }
 
@@ -255,16 +255,22 @@ FRAMES = {
     ],
 }
 
-# Bamboo copter propeller overlays (Row 0-2)
-COPTER_FRAMES = [
+# 小氣球飛行道具像素幀 (Balloon Overlays, Row 0-5)
+BALLOON_FRAMES = [
     [
+        ".....RRRRRR.....",
         "....RRRRRRRR....",
-        ".......PP.......",
+        "....RRRRRRRR....",
+        ".....RRRRRR.....",
+        ".......RR.......",
         ".......PP.......",
     ],
     [
-        "......RRRR......",
-        ".......PP.......",
+        "......RRRRRR....",
+        ".....RRRRRRRR...",
+        ".....RRRRRRRR...",
+        "......RRRRRR....",
+        "........RR......",
         ".......PP.......",
     ],
 ]
@@ -275,11 +281,11 @@ class PixelChibiRenderer:
     _cache: dict[tuple, QPixmap] = {}
 
     @classmethod
-    def get_pixmap(cls, character: str, frame_name: str, facing_right: bool = False, scale: int = 3, has_copter: bool = False, copter_idx: int = 0) -> QPixmap:
+    def get_pixmap(cls, character: str, frame_name: str, facing_right: bool = False, scale: int = 3, has_balloon: bool = False, balloon_idx: int = 0) -> QPixmap:
         char_key = character.lower()
         if char_key not in CHAR_PALETTES:
             char_key = "deepseek"
-        cache_key = (char_key, frame_name, facing_right, scale, has_copter, copter_idx)
+        cache_key = (char_key, frame_name, facing_right, scale, has_balloon, balloon_idx)
         if cache_key in cls._cache:
             return cls._cache[cache_key]
 
@@ -296,13 +302,13 @@ class PixelChibiRenderer:
                 color_hex = palette[ch]
                 img.setPixelColor(x, y, QColor(color_hex))
 
-        # 疊加飛行小旋翼道具
-        if has_copter:
-            c_rows = COPTER_FRAMES[copter_idx % len(COPTER_FRAMES)]
-            for cy, crow in enumerate(c_rows):
-                for cx, cch in enumerate(crow):
-                    if cch in palette:
-                        img.setPixelColor(cx, cy, QColor(palette[cch]))
+        # 疊加小氣球漂浮道具
+        if has_balloon:
+            b_rows = BALLOON_FRAMES[balloon_idx % len(BALLOON_FRAMES)]
+            for by, brow in enumerate(b_rows):
+                for bx, bch in enumerate(brow):
+                    if bch in palette:
+                        img.setPixelColor(bx, by, QColor(palette[bch]))
 
         if facing_right:
             img = img.mirrored(True, False)
@@ -372,8 +378,8 @@ class PixelChibiWindow(QWidget):
         self.on_ground = True
         self.state_time = 0.0
         self.walk_phase = 0.0
-        self.copter_idx = 0
-        self.copter_timer = 0.0
+        self.balloon_idx = 0
+        self.balloon_timer = 0.0
 
         # 主寵互動
         self.climbing_pet = False
@@ -424,14 +430,14 @@ class PixelChibiWindow(QWidget):
             self.particles = [p for p in self.particles if p.update(dt)]
             self.update()
 
-        # 3. 飛行道具模式 (飛行小旋翼)
+        # 3. 飛行道具模式 (小氣球)
         flight_on = bool(self.cfg.get("q_flight_prop", False))
         if flight_on:
             self.state = "flight"
-            self.copter_timer += dt
-            if self.copter_timer > 0.08:
-                self.copter_timer = 0.0
-                self.copter_idx = 1 - self.copter_idx
+            self.balloon_timer += dt
+            if self.balloon_timer > 0.12:
+                self.balloon_timer = 0.0
+                self.balloon_idx = 1 - self.balloon_idx
 
             # 自由飄蕩飛行
             self.pos_x += (28.0 if self.facing_right else -28.0) * dt
@@ -642,14 +648,14 @@ class PixelChibiWindow(QWidget):
             frame_name = "idle"
 
         # 2. 獲取像素幀並繪製
-        has_copter = (self.state == "flight") or bool(self.cfg.get("q_flight_prop", False))
+        has_balloon = (self.state == "flight") or bool(self.cfg.get("q_flight_prop", False))
         pm = PixelChibiRenderer.get_pixmap(
             self.character,
             frame_name,
             facing_right=self.facing_right,
             scale=self.scale_factor,
-            has_copter=has_copter,
-            copter_idx=self.copter_idx,
+            has_balloon=has_balloon,
+            balloon_idx=self.balloon_idx,
         )
         p.drawPixmap(0, 0, pm)
 

@@ -148,7 +148,7 @@ class PetWindow(QWidget):
         self._anim: QPropertyAnimation | None = None
         self._last_tick = time.monotonic()
 
-        # Paper Mario 2D 物理動態狀態
+        # 2D 剪紙風格動態物理狀態
         self.paper_flip_t = 0.0
         self.paper_flip_active = False
         self.paper_scale_x = 1.0
@@ -888,7 +888,7 @@ class PetWindow(QWidget):
             if self.bounce_t > 0:
                 sq_y -= 0.07 * math.sin(math.pi * (1 - self.bounce_t / 0.35))
 
-        # Paper Mario 2D 物理動態：著陸回彈 (scaleY 0.88 -> 1.0)
+        # 2D 剪紙風格動態物理：著陸回彈 (scaleY 0.88 -> 1.0)
         paper_squish_y = 1.0
         if self.paper_land_t > 0:
             progress = 1.0 - (self.paper_land_t / 0.20)

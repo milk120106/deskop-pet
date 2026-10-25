@@ -769,7 +769,7 @@ def run(qapp) -> int:
     qml_win.grab().save(str(OUT / "20_qml_modern_panel.png"))
     qml_win.hide()
 
-    # ========================================================= 22. Pet Upgrades: Size Slider, Paper Mario Dynamics, Smart 4-Page Tablet, Alarms, Pixel Chibi Standalone System
+    # ========================================================= 22. Pet Upgrades: Size Slider, 2D Papercraft Physics, Smart 4-Page Tablet, Alarms, Pixel Chibi Standalone System
     # 1. 平滑尺寸滑桿測試 (80px - 1024px) 與快速預設標籤
     app.set_size(80)
     wait(100)
@@ -872,7 +872,7 @@ def run(qapp) -> int:
     check("pixel chibi climbs pet head and dangles legs", app.pixel_chibi.climbing_pet is True and app.pixel_chibi.pet_mount_slot == "head")
     app.pixel_chibi.dismount_pet()
 
-    # 15. 趣味小道具（小旋翼飛行與像素煙火）
+    # 15. 趣味小道具（小氣球飛行與像素煙火）
     app.pixel_chibi.launch_fireworks()
     check("pixel chibi props flight and fireworks launcher", len(app.pixel_chibi.particles) > 0)
     app.pixel_chibi.particles.clear()

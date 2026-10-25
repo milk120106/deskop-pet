@@ -1113,12 +1113,12 @@ Rectangle {
                             }
                         }
 
-                        // 項目 3: 飛行小旋翼道具 (預設關閉)
+                        // 項目 3: 小氣球飛行道具 (預設關閉)
                         Row {
                             width: parent.width
                             spacing: 12
                             Text {
-                                text: "趣味飛行小道具（小旋翼空中懸浮巡航）"
+                                text: "趣味飛行小道具（小氣球空中漂浮模式）"
                                 color: themeColors.text
                                 font.pixelSize: 13
                                 font.family: root.modernFontStack

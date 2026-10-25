@@ -2121,7 +2121,7 @@ class ControlPanel(QWidget):
 
         thanks_desc = QLabel(
             "本專案的誕生與持續演進，離不開開源社群優秀創作者的無私貢獻與堅實生態基石：\n\n"
-            "• VK-1 (DSH Balance Pet)：感謝原創 DSH 餘額桌寵靈感與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。\n"
+            "• VK-1 (DSH Balance Pet)：感謝作為本專案原型之 DSH 餘額桌寵與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。\n"
             "• YuYue_Encryption (幽月加解密工具)：感謝 YuYue71 研發之奇特高強度 8 層複合加密混淆演算法，賦予資料備份強大隱私安全防護。\n"
             "• PySide6 / Qt 6：現代化跨平台 GUI 與 Qt Quick / QML 渲染引擎 (LGPLv3)。\n"
             "• Google Material Symbols：開源現代扁平化向量圖示系統 (Apache 2.0 License)。\n"

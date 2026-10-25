@@ -2939,7 +2939,7 @@ Rectangle {
                                         renderType: Text.NativeRendering
                                     }
                                     Text {
-                                        text: "感謝原創 DSH 餘額桌寵靈感與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。"
+                                        text: "感謝作為本專案原型之 DSH 餘額桌寵與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。"
                                         color: themeColors.textSub
                                         font.pixelSize: 10
                                         font.family: root.modernFontStack

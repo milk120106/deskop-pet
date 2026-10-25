@@ -790,7 +790,7 @@ def run(qapp) -> int:
     app.set_size(454)
     wait(100)
 
-    # 3. 紙片馬力歐 2D 物理動態：紙片轉向翻轉 (Paper Flip 120ms)
+    # 3. 2D 剪紙風格動態物理：紙片轉向翻轉 (Paper Flip 120ms)
     app.pet.set_snap_right(True)
     check("paper flip scaleX transitions smoothly", hasattr(app.pet, "paper_scale_x"))
     app.pet.set_snap_right(False)
@@ -872,7 +872,7 @@ def run(qapp) -> int:
     check("pixel chibi climbs pet head and dangles legs", app.pixel_chibi.climbing_pet is True and app.pixel_chibi.pet_mount_slot == "head")
     app.pixel_chibi.dismount_pet()
 
-    # 15. 趣味小道具（竹蜻蜓飛行與像素煙火）
+    # 15. 趣味小道具（小旋翼飛行與像素煙火）
     app.pixel_chibi.launch_fireworks()
     check("pixel chibi props flight and fireworks launcher", len(app.pixel_chibi.particles) > 0)
     app.pixel_chibi.particles.clear()

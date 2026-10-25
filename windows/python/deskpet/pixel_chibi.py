@@ -296,7 +296,7 @@ class PixelChibiRenderer:
                 color_hex = palette[ch]
                 img.setPixelColor(x, y, QColor(color_hex))
 
-        # 疊加竹蜻蜓飛行道具
+        # 疊加飛行小旋翼道具
         if has_copter:
             c_rows = COPTER_FRAMES[copter_idx % len(COPTER_FRAMES)]
             for cy, crow in enumerate(c_rows):
@@ -424,7 +424,7 @@ class PixelChibiWindow(QWidget):
             self.particles = [p for p in self.particles if p.update(dt)]
             self.update()
 
-        # 3. 飛行道具模式 (竹蜻蜓)
+        # 3. 飛行道具模式 (飛行小旋翼)
         flight_on = bool(self.cfg.get("q_flight_prop", False))
         if flight_on:
             self.state = "flight"

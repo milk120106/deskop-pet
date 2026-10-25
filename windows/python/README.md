@@ -1,6 +1,6 @@
 # Desktop Pet — Python / PySide6 重構版
 
-這是 Windows 平台的主力版本，基於 Python 3.10+ 與 PySide6 打造。
+這是 Windows 平台的主力版本，基於 Python 3.10+ 與 PySide6 打造。本專案為 [VK-1 (DSH Balance Pet)](https://github.com/VKmich16/VK-1) 開源倉庫之衍生分支（Fork），並在此基礎上持續進行現代化架構重構。
 
 純粹做來玩、圖個開心的小掛件，透明浮動在螢幕角落，停靠於工作列或螢幕邊緣陪你寫代碼。具備硬體繪圖加速與零閒置 CPU 負擔，平時安心常駐，無聊時隨手戳戳互動。
 

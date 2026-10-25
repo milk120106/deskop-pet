@@ -1981,7 +1981,8 @@ class ControlPanel(QWidget):
         c1_lay.addWidget(h1)
 
         intro = QLabel(
-            "桌面餘額監控與互動寵物。支援 DeepSeek、Claude、OpenAI、Gemini 餘額顯示與互動。"
+            "桌面餘額監控與互動寵物。支援 DeepSeek、Claude、OpenAI、Gemini 餘額顯示與互動。\n"
+            "本專案為 VK-1 (DSH Balance Pet) 原型倉庫之開源分支（Fork）。"
         )
         intro.setWordWrap(True)
         c1_lay.addWidget(intro)
@@ -2121,7 +2122,7 @@ class ControlPanel(QWidget):
 
         thanks_desc = QLabel(
             "本專案的誕生與持續演進，離不開開源社群優秀創作者的無私貢獻與堅實生態基石：\n\n"
-            "• VK-1 (DSH Balance Pet)：感謝作為本專案原型之 DSH 餘額桌寵與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。\n"
+            "• VK-1 (DSH Balance Pet)：本專案為 VK-1 原型倉庫之開源分支（Fork），感謝原創作者所打造之 DSH 餘額桌寵原型與四位官方角色立繪（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）。\n"
             "• YuYue_Encryption (幽月加解密工具)：感謝 YuYue71 研發之奇特高強度 8 層複合加密混淆演算法，賦予資料備份強大隱私安全防護。\n"
             "• PySide6 / Qt 6：現代化跨平台 GUI 與 Qt Quick / QML 渲染引擎 (LGPLv3)。\n"
             "• Google Material Symbols：開源現代扁平化向量圖示系統 (Apache 2.0 License)。\n"

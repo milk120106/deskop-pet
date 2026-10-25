@@ -21,10 +21,10 @@ from .web import WebServer
 MAX_CHARS = 8
 
 BALANCE_PET_SPECS = {
-    "deepseek": {"name": "DeepSeek", "title": "DeepSeek 餘額", "prov": "deepseek"},
-    "claude": {"name": "Claude", "title": "Claude 餘額", "prov": "anthropic"},
-    "gpt": {"name": "OpenAI", "title": "OpenAI 餘額", "prov": "openai"},
-    "gemini": {"name": "Gemini", "title": "Gemini 餘額", "prov": "gemini"},
+    "deepseek": {"name": "藍色大肥魚", "sub": "DeepSeek 鯨魚娘", "title": "DeepSeek 餘額", "prov": "deepseek"},
+    "gpt": {"name": "GPT龍娘", "sub": "OpenAI 龍娘", "title": "OpenAI 餘額", "prov": "openai"},
+    "claude": {"name": "大小姐Claude", "sub": "Anthropic 大小姐", "title": "Claude 餘額", "prov": "anthropic"},
+    "gemini": {"name": "北美貓娘Gemini", "sub": "Google 北美貓娘", "title": "Gemini 餘額", "prov": "gemini"},
 }
 
 

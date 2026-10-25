@@ -402,10 +402,10 @@ Rectangle {
 
                             Repeater {
                                 model: [
-                                    { id: "deepseek", name: "DeepSeek", badge: "預設主寵" },
-                                    { id: "claude", name: "Claude", badge: "Anthropic" },
-                                    { id: "gemini", name: "Gemini", badge: "Google" },
-                                    { id: "gpt", name: "ChatGPT", badge: "OpenAI" }
+                                    { id: "deepseek", name: "藍色大肥魚", badge: "DeepSeek 鯨魚娘" },
+                                    { id: "gpt", name: "GPT龍娘", badge: "OpenAI 龍娘" },
+                                    { id: "claude", name: "大小姐Claude", badge: "Anthropic 大小姐" },
+                                    { id: "gemini", name: "北美貓娘Gemini", badge: "Google 北美貓娘" }
                                 ]
                                 delegate: Rectangle {
                                     width: (colTab0.width - 32 - 36) / 4

@@ -44,48 +44,79 @@ from .config import log
 
 CHAR_PALETTES = {
     "deepseek": {
-        "H": "#1e3a8a", "h": "#172554",
-        "S": "#ffe4d0", "s": "#fbcfe8", "B": "#f472b6",
-        "E": "#0284c7", "e": "#e0f2fe",
-        "A": "#38bdf8", "a": "#bae6fd",  # Whale fin hairpin & tail
-        "T": "#ffffff", "D": "#1d4ed8", "d": "#1e40af",
+        # 藍色大肥魚 (DeepSeek 鯨魚娘)：深藍長髮、小鯨魚鰭髮飾、鯨魚大尾巴、水手裙、海藍短靴
+        "H": "#1e3a8a", "h": "#172554",  # Deep royal blue long hair
+        "S": "#ffe4d0", "s": "#fbcfe8", "B": "#f472b6",  # Fair skin & pink blush
+        "E": "#0284c7", "e": "#e0f2fe",  # Sky blue eyes
+        "A": "#38bdf8", "a": "#bae6fd",  # Whale fin hairpin & blue whale tail
+        "T": "#ffffff", "D": "#1d4ed8", "d": "#1e40af",  # Navy sailor maid top
         "K": "#1e3a8a", "k": "#172554",  # Sailor pleated skirt
         "L": "#ffe4d0", "W": "#ffe4d0",  # Cute bare legs
         "F": "#1e3a8a", "f": "#0f172a",  # Sailor short boots
         "P": "#ffffff", "R": "#38bdf8",  # Sky blue balloon
     },
+    "gpt": {
+        # GPT龍娘 (OpenAI 白龍娘)：銀白長髮微帶丁香紫、白龍角、仙氣白紫長裙、白龍尾巴
+        "H": "#f8fafc", "h": "#cbd5e1",  # Silvery white hair with soft violet shadow
+        "S": "#fff5f5", "s": "#fed7aa", "B": "#f472b6",  # Fair translucent skin & blush
+        "E": "#8b5cf6", "e": "#ede9fe",  # Lilac purple eyes
+        "A": "#f1f5f9", "a": "#c4b5fd",  # White dragon horns & violet cord tassel
+        "T": "#ffffff", "D": "#f8fafc", "d": "#e2e8f0",  # Ethereal white dragon gown with silver lace
+        "K": "#ede9fe", "k": "#ddd6fe",  # Flowing lilac pleated skirt & dragon tail
+        "L": "#fff5f5", "W": "#ffffff",  # Fair slender legs
+        "F": "#ede9fe", "f": "#8b5cf6",  # White & lilac dragon boots
+        "P": "#ffffff", "R": "#34d399",  # Dragon pearl emerald green balloon
+    },
     "claude": {
-        "H": "#ea580c", "h": "#c2410c",  # Warm orange short hair
-        "S": "#ffedd5", "s": "#fed7aa", "B": "#fb7185",
-        "E": "#b45309", "e": "#fef3c7",
-        "A": "#fbbf24", "a": "#fef08a",  # Golden spark hairpin
-        "T": "#fed7aa", "D": "#fb923c", "d": "#f97316",  # Warm dress
-        "K": "#ea580c", "k": "#c2410c",
-        "L": "#ffedd5", "W": "#ffedd5",  # Light bare legs
-        "F": "#9a3412", "f": "#7c2d12",  # Cute warm boots
+        # 大小姐Claude (Anthropic 大小姐)：暖橘波浪捲髮、黑緞帶金色花朵髮飾、維多利亞宮廷馬甲裙、典雅皮靴
+        "H": "#ea580c", "h": "#c2410c",  # Warm orange ojou-sama wavy hair
+        "S": "#ffedd5", "s": "#fed7aa", "B": "#fb7185",  # Warm fair skin & rose blush
+        "E": "#b45309", "e": "#fef3c7",  # Amber eyes
+        "A": "#1f2937", "a": "#fbbf24",  # Black ribbon & golden flower ornament
+        "T": "#fef3c7", "D": "#78350f", "d": "#451a03",  # Victorian cream blouse & brown corset
+        "K": "#78350f", "k": "#451a03",  # Victorian brown flared skirt
+        "L": "#ffedd5", "W": "#ffedd5",  # Elegant slender legs
+        "F": "#78350f", "f": "#451a03",  # Ojou-sama brown leather boots
         "P": "#ffffff", "R": "#fb923c",  # Warm coral balloon
     },
+    "gemini": {
+        # 北美貓娘Gemini (Google 北美貓娘)：紫藍雙色漸層長髮、毛茸茸貓耳與漸層貓尾巴、金黃星芒髮飾、星空魔法洋裝
+        "H": "#7c3aed", "h": "#38bdf8",  # Purple base with bright blue gradient hair
+        "S": "#ffe4e6", "s": "#fecdd3", "B": "#fb7185",  # Soft rosy skin & blush
+        "E": "#ec4899", "e": "#fce7f3",  # Vivid magenta starry eyes
+        "A": "#1e1b4b", "a": "#fbbf24",  # Midnight cat ears & radiant golden starburst
+        "T": "#fbbf24", "D": "#1e1b4b", "d": "#312e81",  # Midnight blue starry dress with gold trim
+        "K": "#1e1b4b", "k": "#0f172a",  # Midnight skirt & fluffy curved cat tail
+        "L": "#ffe4e6", "W": "#ffffff",  # White knee-high socks
+        "F": "#1e1b4b", "f": "#312e81",  # Dark Mary Jane shoes
+        "P": "#ffffff", "R": "#c084fc",  # Radiant purple balloon
+    },
+}
+
+CHARACTER_INFO = {
+    "deepseek": {
+        "id": "deepseek",
+        "name": "藍色大肥魚",
+        "subtitle": "DeepSeek 鯨魚娘",
+        "description": "深藍長髮、小鯨魚鰭髮飾、鯨魚大尾巴與水手裙",
+    },
     "gpt": {
-        "H": "#10b981", "h": "#047857",  # Mint green bob hair
-        "S": "#ffe4d0", "s": "#fbcfe8", "B": "#f472b6",
-        "E": "#059669", "e": "#d1fae5",
-        "A": "#374151", "a": "#34d399",  # Tech headphones with LED
-        "T": "#10b981", "D": "#374151", "d": "#1f2937",  # Tech workwear jacket
-        "K": "#4b5563", "k": "#1f2937",  # Pleated skirt
-        "L": "#ffe4d0", "W": "#ffffff",  # Cute legs with white trim
-        "F": "#f3f4f6", "f": "#10b981",  # Sporty athletic sneakers
-        "P": "#ffffff", "R": "#34d399",  # Emerald green balloon
+        "id": "gpt",
+        "name": "GPT龍娘",
+        "subtitle": "OpenAI 龍娘",
+        "description": "銀白長髮、白龍角、白龍尾巴與仙氣白紫長裙",
+    },
+    "claude": {
+        "id": "claude",
+        "name": "大小姐Claude",
+        "subtitle": "Anthropic 大小姐",
+        "description": "暖橘波浪捲髮、黑緞帶金色花朵髮飾、維多利亞古典洋裝與皮靴",
     },
     "gemini": {
-        "H": "#312e81", "h": "#1e1b4b",  # Dark indigo hair
-        "S": "#ffe4e6", "s": "#fecdd3", "B": "#fb7185",
-        "E": "#7c3aed", "e": "#ede9fe",
-        "A": "#4f46e5", "a": "#f472b6",  # Cat ears & starburst
-        "T": "#c084fc", "D": "#6366f1", "d": "#4338ca",  # Blue-violet dress
-        "K": "#7c3aed", "k": "#5b21b6",
-        "L": "#ffe4e6", "W": "#ffffff",  # Slender legs with white socks
-        "F": "#4338ca", "f": "#312e81",  # Mary Jane shoes
-        "P": "#ffffff", "R": "#c084fc",  # Radiant purple balloon
+        "id": "gemini",
+        "name": "北美貓娘Gemini",
+        "subtitle": "Google 北美貓娘",
+        "description": "紫藍雙色漸層長髮、毛茸茸漸層貓耳與貓尾、金黃星芒髮飾",
     },
 }
 

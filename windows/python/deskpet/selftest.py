@@ -842,10 +842,12 @@ def run(qapp) -> int:
 
     # 9. 全新 Q 版人物獨立像素系統 (Pixel Chibi Standalone System)
     check("pixel chibi module initialized and window visible", hasattr(app, "pixel_chibi") and app.pixel_chibi is not None and app.pixel_chibi.isVisible())
-    from deskpet.pixel_chibi import CHAR_PALETTES, FRAMES, PixelChibiRenderer
+    from deskpet.pixel_chibi import CHAR_PALETTES, CHARACTER_INFO, FRAMES, PixelChibiRenderer
     all_four = all(c in CHAR_PALETTES for c in ("deepseek", "claude", "gpt", "gemini"))
     has_legs = all("LL" in "".join(FRAMES[f]) for f in ("idle", "walk1", "walk2", "sit", "panic", "climb"))
     check("pixel chibi has cute legs in all 4 heroines", all_four and has_legs)
+    check("pixel chibi character info defines official four heroines", "藍色大肥魚" in CHARACTER_INFO["deepseek"]["name"] and "GPT龍娘" in CHARACTER_INFO["gpt"]["name"] and "大小姐Claude" in CHARACTER_INFO["claude"]["name"] and "北美貓娘Gemini" in CHARACTER_INFO["gemini"]["name"])
+    check("gpt heroine palette represents white dragon girl", CHAR_PALETTES["gpt"]["H"] == "#f8fafc" and CHAR_PALETTES["gpt"]["E"] == "#8b5cf6")
 
     # 10. 最近鄰取樣放大無模糊動畫幀繪製
     pm_idle = PixelChibiRenderer.get_pixmap("deepseek", "idle", scale=3)

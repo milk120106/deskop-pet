@@ -38,10 +38,10 @@ ARROW_DOWN_DARK = (ASSETS / "arrow_down_dark.svg").as_posix()
 ARROW_DOWN_LIGHT = (ASSETS / "arrow_down_light.svg").as_posix()
 
 BUILTIN_CHARS = [
-    ("deepseek", "藍色大肥魚 (DeepSeek)"),
-    ("claude", "大小姐 Claude"),
-    ("gemini", "祈願神龍 Gemini"),
-    ("gpt", "GPT 龍娘"),
+    ("deepseek", "藍色大肥魚 (DeepSeek 鯨魚娘)"),
+    ("gpt", "GPT龍娘 (OpenAI)"),
+    ("claude", "大小姐Claude (Anthropic)"),
+    ("gemini", "北美貓娘Gemini (Google)"),
 ]
 
 # ========================================================= Dialog MD3 Stylesheets

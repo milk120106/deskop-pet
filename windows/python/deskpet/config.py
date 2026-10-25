@@ -53,6 +53,8 @@ def _get_base_dirs() -> tuple[Path, Path]:
 APP_DIR, ASSETS = _get_base_dirs()
 CUSTOM_CHARS_DIR = APP_DIR / "custom_characters"
 SOUND_LIB_DIR = APP_DIR / "custom_sounds"
+CUSTOM_CHIBI_DIR = APP_DIR / "custom_chibi"
+CUSTOM_CHIBI_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = APP_DIR / "pet_config.json"
 PROVIDER_INI_PATH = APP_DIR / "provider.ini"
 USAGE_INI_PATH = APP_DIR / "usage.ini"
@@ -130,6 +132,7 @@ DEFAULTS = {
     # character & look
     "character": "deepseek",  # deepseek / claude / gemini / gpt / custom_<name>
     "variant": "square",      # square (1024x1024) / tail (1536x1024)
+    "strict_custom_image_ratio": True,  # 寵物自訂立繪尺寸嚴格限制（預設開啟）
     "theme": "light",         # control-panel theme: light / dark
     # performance & rendering
     "disable_transparency": False,
@@ -226,10 +229,26 @@ DEFAULTS = {
     "telegram_chat_id": "",          # Telegram Chat ID
     # Q-Chibi standalone pixel system
     "q_chibi_enabled": True,         # 啟用全新 Q 版獨立像素小人巡邏
+    "q_chibi_max_count": 10,         # Q 版小人在場數量上限（檔位 5, 10, 15, 20, 25, 30，預設 10）
     "q_climb_windows": False,        # 視窗與按鈕攀爬辨識（預設關閉）
     "q_flight_prop": False,          # 飛行小道具（小氣球空中漂浮模式，預設關閉）
     "q_fireworks_prop": False,       # 像素煙火發射小道具（預設關閉）
 }
+
+CHIBI_MAX_COUNT_OPTIONS = (5, 10, 15, 20, 25, 30)
+
+def get_effective_chibi_max_count(cfg) -> int:
+    """取得當前生效的 Q 版人物在場上限（若效能模式開啟則最高限制 10 隻）。"""
+    try:
+        raw = int(cfg.get("q_chibi_max_count", 10))
+    except Exception:
+        raw = 10
+    if raw not in CHIBI_MAX_COUNT_OPTIONS:
+        raw = 10
+    perf = bool(cfg.get("performance_mode", False))
+    if perf:
+        return min(raw, 10)
+    return raw
 
 _lock = threading.Lock()
 

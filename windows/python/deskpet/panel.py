@@ -2108,8 +2108,68 @@ class ControlPanel(QWidget):
         c3_lay.addLayout(r_btns)
         lay.addWidget(card3)
 
+        # Card 4: 全設定與資料安全備份
+        card_bak = QFrame()
+        card_bak.setObjectName("AboutCard")
+        cbak_lay = QVBoxLayout(card_bak)
+        cbak_lay.setContentsMargins(18, 16, 18, 16)
+        cbak_lay.setSpacing(10)
+
+        h_bak = QLabel("全設定與資料安全備份")
+        h_bak.setStyleSheet("font-size: 14px; font-weight: bold;")
+        cbak_lay.addWidget(h_bak)
+
+        bak_desc = QLabel("支援完整匯出寵物配置、鬧鐘與自訂立繪；整合 YuYue 8 層複合高強度加密及 API 金鑰 5 秒倒數安全防護。")
+        bak_desc.setWordWrap(True)
+        cbak_lay.addWidget(bak_desc)
+
+        r_bak_btns = QHBoxLayout()
+        b_export = QPushButton("匯出所有設定與資料...")
+        b_export.setObjectName("primary")
+        b_export.clicked.connect(self._open_export_dialog)
+        r_bak_btns.addWidget(b_export)
+
+        b_import = QPushButton("匯入設定...")
+        b_import.clicked.connect(self._open_import_dialog)
+        r_bak_btns.addWidget(b_import)
+
+        r_bak_btns.addStretch(1)
+        cbak_lay.addLayout(r_bak_btns)
+        lay.addWidget(card_bak)
+
         lay.addStretch(1)
         return w
+
+    def _open_export_dialog(self):
+        from .dialogs import ExportSettingsDialog
+        dlg = ExportSettingsDialog(self.app, self)
+        dlg.exec()
+
+    def _open_import_dialog(self):
+        from .dialogs import ImportPasswordDialog, ModernMessageBox
+        from .export_data import import_backup_data
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, "選擇設定備份檔案", "", "備份檔案 (*.json *.dpbak);;所有檔案 (*.*)"
+        )
+        if not path:
+            return
+
+        try:
+            try:
+                import_backup_data(self.app, path, password="")
+            except ValueError as ve:
+                if "NEED_PASSWORD" in str(ve):
+                    pwd_dlg = ImportPasswordDialog(self, theme=self.app.cfg.get("theme", "light"))
+                    if pwd_dlg.exec() != QDialog.Accepted:
+                        return
+                    import_backup_data(self.app, path, password=pwd_dlg.password)
+                else:
+                    raise
+
+            ModernMessageBox.information(self, "匯入成功", "設定與資料已成功還原！已套用最新配置。")
+        except Exception as e:
+            ModernMessageBox.warning(self, "匯入失敗", f"無法匯入備份設定：{e}")
 
     def _check_for_updates(self):
         self.lb_update_status.setText("正在連線至 GitHub 檢查最新版本...")

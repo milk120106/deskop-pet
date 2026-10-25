@@ -6,12 +6,14 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -20,6 +22,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
@@ -737,19 +740,35 @@ class CharPickerDialog(QDialog):
 
         try:
             img = QImage(path)
-            if img.isNull():
-                raise ValueError("無法解析圖片檔案")
-            # Fit into 1024x1024
-            canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
-            canvas.fill(Qt.transparent)
-            sc = min(1024.0 / img.width(), 1024.0 / img.height())
-            w, h = int(img.width() * sc), int(img.height() * sc)
-            from PySide6.QtGui import QPainter
-            p = QPainter(canvas)
-            p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-            p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-            p.end()
-            canvas.save(str(dest_dir / "sprite.png"), "PNG")
+            if img.isNull() or img.height() <= 0:
+                raise ValueError("無法解析圖片檔案格式")
+
+            strict = self.app.cfg.get("strict_custom_image_ratio", True)
+            ratio = img.width() / float(img.height())
+            if strict:
+                if ratio < 0.7 or ratio > 1.8:
+                    ModernMessageBox.warning(
+                        self,
+                        "圖片比例不符合",
+                        "圖片比例不符合官方立繪標準規格（1:1 或 1.5:1）。若欲強制使用特殊比例圖片，請至設定中關閉尺寸比例限制。",
+                    )
+                    return
+
+            if not strict:
+                # 關閉限制：保持原始寬高比直接儲存
+                img.save(str(dest_dir / "sprite.png"), "PNG")
+            else:
+                # Fit into 1024x1024
+                canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
+                canvas.fill(Qt.transparent)
+                sc = min(1024.0 / img.width(), 1024.0 / img.height())
+                w, h = int(img.width() * sc), int(img.height() * sc)
+                from PySide6.QtGui import QPainter
+                p = QPainter(canvas)
+                p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+                p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+                p.end()
+                canvas.save(str(dest_dir / "sprite.png"), "PNG")
             # Default tablet quad: centered at bottom
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
         except Exception as e:
@@ -1040,6 +1059,320 @@ class PrivacyPromptDialog(QDialog):
         lay.addLayout(btn_row)
 
         outer.addWidget(content, 1)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+
+class ApiKeyExportWarningDialog(QDialog):
+    """API Key 敏感憑證匯出高風險安全警告對話框。
+    強制執行 5 秒倒數鎖定，未倒數完畢前確認按鈕禁用。
+    """
+    def __init__(self, parent=None, theme: str | None = None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.setFixedSize(500, 240)
+        self.countdown = 5
+
+        if not theme:
+            if hasattr(parent, "cfg") and hasattr(parent.cfg, "get"):
+                theme = parent.cfg.get("theme", "light")
+            elif hasattr(parent, "app") and hasattr(parent.app, "cfg"):
+                theme = parent.app.cfg.get("theme", "light")
+            else:
+                theme = "light"
+        is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "高風險安全警告", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        content.setObjectName("ApiKeyWarningContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        border_col = "#ef4444" if is_dark else "#dc2626"
+        content.setStyleSheet(
+            f"QWidget#ApiKeyWarningContent {{ background-color: {bg_col}; border: 1.5px solid {border_col}; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(20, 16, 20, 16)
+        lay.setSpacing(14)
+
+        msg_lay = QHBoxLayout()
+        msg_lay.setSpacing(14)
+
+        lb_icon = QLabel()
+        lb_icon.setPixmap(get_icon("warning", "#ef4444" if is_dark else "#dc2626", 36).pixmap(36, 36))
+        lb_icon.setFixedSize(40, 40)
+        lb_icon.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        msg_lay.addWidget(lb_icon)
+
+        warn_text = (
+            "警告：此匯出檔案將包含未加密的 API 金鑰與機密憑證，若外洩將造成額度被盜用或資產損失！"
+            "請確認僅在安全且受信任的個人本機保存。"
+        )
+        lb_text = QLabel(warn_text)
+        lb_text.setWordWrap(True)
+        lb_text.setStyleSheet(
+            f"color: {'#fca5a5' if is_dark else '#991b1b'}; font-size: 13px; font-weight: bold; line-height: 1.5;"
+        )
+        msg_lay.addWidget(lb_text, 1)
+        lay.addLayout(msg_lay, 1)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+
+        b_cancel = QPushButton("取消")
+        b_cancel.setFixedWidth(90)
+        b_cancel.clicked.connect(self.reject)
+        btn_row.addWidget(b_cancel)
+
+        self.b_confirm = QPushButton("已知曉風險，確認匯出 (5s)...")
+        self.b_confirm.setObjectName("danger")
+        self.b_confirm.setMinimumWidth(210)
+        self.b_confirm.setEnabled(False)
+        self.b_confirm.clicked.connect(self.accept)
+        btn_row.addWidget(self.b_confirm)
+        lay.addLayout(btn_row)
+
+        outer.addWidget(content, 1)
+
+        self.timer = QTimer(self)
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self._on_tick)
+        self.timer.start()
+
+    def _on_tick(self):
+        self.countdown -= 1
+        if self.countdown > 0:
+            self.b_confirm.setText(f"已知曉風險，確認匯出 ({self.countdown}s)...")
+        else:
+            self.timer.stop()
+            self.b_confirm.setEnabled(True)
+            self.b_confirm.setText("確認包含金鑰匯出")
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+    def closeEvent(self, e):
+        self.timer.stop()
+        super().closeEvent(e)
+
+
+class ExportSettingsDialog(QDialog):
+    """全設定與資料安全匯出對話框。
+    支援 API Key 安全防護勾選、5秒倒數安全確認及 YuYue 8層複合高強度密碼加密。
+    """
+    def __init__(self, app, parent=None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.app = app
+        self.setWindowTitle("匯出所有設定與資料")
+        self.setFixedSize(520, 360)
+        self._keys_confirmed = False
+
+        theme = self.app.cfg.get("theme", "light")
+        self.theme = theme
+        is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "匯出所有設定與資料", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        content.setObjectName("ExportDialogContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        content.setStyleSheet(
+            f"QWidget#ExportDialogContent {{ background-color: {bg_col}; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(22, 18, 22, 18)
+        lay.setSpacing(14)
+
+        desc = QLabel(
+            "將完整的寵物配置（視窗位置、角色、音量、字體、鬧鐘、通知、自訂角色立繪與系統偏好）匯出為備份檔案。"
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet(f"color: {'#cbd5e1' if is_dark else '#334155'}; font-size: 12px; line-height: 1.4;")
+        lay.addWidget(desc)
+
+        # 敏感金鑰選項 (預設 False)
+        self.chk_keys = QCheckBox("包含 API 金鑰與敏感憑證")
+        self.chk_keys.setChecked(False)
+        self.chk_keys.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {'#f87171' if is_dark else '#b91c1c'};")
+        self.chk_keys.toggled.connect(self._on_keys_toggled)
+        lay.addWidget(self.chk_keys)
+
+        keys_hint = QLabel("未勾選時：自動剔除或脫敏所有金鑰，安全無虞。\n勾選時：將強制進行 5 秒倒數確認，請謹慎保存。")
+        keys_hint.setStyleSheet(f"color: {'#94a3b8' if is_dark else '#64748b'}; font-size: 11px;")
+        lay.addWidget(keys_hint)
+
+        # YuYue 加密選項
+        self.chk_encrypt = QCheckBox("設定自訂保護密碼（YuYue 複合高強度加密）")
+        self.chk_encrypt.setChecked(False)
+        self.chk_encrypt.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {'#93c5fd' if is_dark else '#1d4ed8'};")
+        self.chk_encrypt.toggled.connect(self._on_encrypt_toggled)
+        lay.addWidget(self.chk_encrypt)
+
+        self.ed_password = QLineEdit()
+        self.ed_password.setEchoMode(QLineEdit.Password)
+        self.ed_password.setPlaceholderText("請輸入備份保護密碼...")
+        self.ed_password.setEnabled(False)
+        lay.addWidget(self.ed_password)
+
+        lay.addStretch(1)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        b_cancel = QPushButton("取消")
+        b_cancel.clicked.connect(self.reject)
+        btn_row.addWidget(b_cancel)
+
+        b_export = QPushButton("匯出設定")
+        b_export.setObjectName("primary")
+        b_export.clicked.connect(self._do_export)
+        btn_row.addWidget(b_export)
+        lay.addLayout(btn_row)
+
+        outer.addWidget(content, 1)
+
+    def _on_keys_toggled(self, checked: bool):
+        if checked:
+            dlg = ApiKeyExportWarningDialog(self, theme=self.theme)
+            if dlg.exec() != QDialog.Accepted:
+                self.chk_keys.blockSignals(True)
+                self.chk_keys.setChecked(False)
+                self.chk_keys.blockSignals(False)
+                self._keys_confirmed = False
+            else:
+                self._keys_confirmed = True
+        else:
+            self._keys_confirmed = False
+
+    def _on_encrypt_toggled(self, checked: bool):
+        self.ed_password.setEnabled(checked)
+        if checked:
+            self.ed_password.setFocus()
+        else:
+            self.ed_password.clear()
+
+    def _do_export(self):
+        from .export_data import export_backup_data
+
+        if self.chk_keys.isChecked() and not self._keys_confirmed:
+            dlg = ApiKeyExportWarningDialog(self, theme=self.theme)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            self._keys_confirmed = True
+
+        pwd = ""
+        if self.chk_encrypt.isChecked():
+            pwd = self.ed_password.text().strip()
+            if not pwd:
+                ModernMessageBox.warning(self, "密碼未填寫", "已勾選保護密碼選項，請輸入加密密碼。")
+                return
+
+        date_str = datetime.now().strftime("%Y%m%d")
+        default_name = f"deskpet_backup_{date_str}.dpbak" if pwd else f"deskpet_backup_{date_str}.json"
+        filter_str = "YuYue 加密備份檔 (*.dpbak);;JSON 備份檔案 (*.json)" if pwd else "JSON 備份檔案 (*.json);;所有檔案 (*.*)"
+        dest, _ = QFileDialog.getSaveFileName(self, "儲存備份檔案", default_name, filter_str)
+        if not dest:
+            return
+
+        try:
+            export_backup_data(self.app.cfg, dest, include_keys=self.chk_keys.isChecked(), password=pwd)
+            ModernMessageBox.information(self, "匯出成功", f"全設定與資料已安全匯出至：\n{dest}")
+            self.accept()
+        except Exception as e:
+            ModernMessageBox.warning(self, "匯出失敗", f"匯出過程發生錯誤：{e}")
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        center_dialog(self)
+        self.raise_()
+        self.activateWindow()
+
+
+class ImportPasswordDialog(QDialog):
+    """YuYue 加密備份還原密碼輸入對話框。"""
+    def __init__(self, parent=None, theme: str | None = None):
+        super().__init__(parent, Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint)
+        self.setFixedSize(400, 210)
+        self.password = ""
+
+        if not theme:
+            if hasattr(parent, "cfg") and hasattr(parent.cfg, "get"):
+                theme = parent.cfg.get("theme", "light")
+            else:
+                theme = "light"
+        is_dark = (theme == "dark")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(DIALOG_DARK_QSS if is_dark else DIALOG_LIGHT_QSS)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, "輸入備份保護密碼", has_min=False, has_close=True, theme="dark" if is_dark else "light")
+        outer.addWidget(self.title_bar)
+
+        content = QWidget()
+        content.setObjectName("ImportPasswordContent")
+        content.setAttribute(Qt.WA_StyledBackground, True)
+        bg_col = "#16181d" if is_dark else "#f8f9fa"
+        content.setStyleSheet(
+            f"QWidget#ImportPasswordContent {{ background-color: {bg_col}; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}"
+        )
+        lay = QVBoxLayout(content)
+        lay.setContentsMargins(22, 16, 22, 16)
+        lay.setSpacing(12)
+
+        lbl = QLabel("此檔案已啟用 YuYue 複合高強度加密保護，請輸入解鎖密碼：")
+        lbl.setWordWrap(True)
+        lbl.setStyleSheet(f"font-size: 12px; color: {'#e2e8f0' if is_dark else '#1e293b'};")
+        lay.addWidget(lbl)
+
+        self.ed_pwd = QLineEdit()
+        self.ed_pwd.setEchoMode(QLineEdit.Password)
+        self.ed_pwd.setPlaceholderText("請輸入解密密碼...")
+        lay.addWidget(self.ed_pwd)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        b_cancel = QPushButton("取消")
+        b_cancel.clicked.connect(self.reject)
+        btn_row.addWidget(b_cancel)
+
+        b_ok = QPushButton("解密並匯入")
+        b_ok.setObjectName("primary")
+        b_ok.clicked.connect(self._on_confirm)
+        btn_row.addWidget(b_ok)
+        lay.addLayout(btn_row)
+
+        outer.addWidget(content, 1)
+
+    def _on_confirm(self):
+        self.password = self.ed_pwd.text().strip()
+        if not self.password:
+            ModernMessageBox.warning(self, "密碼為空", "請輸入解密密碼。")
+            return
+        self.accept()
 
     def showEvent(self, e):
         super().showEvent(e)

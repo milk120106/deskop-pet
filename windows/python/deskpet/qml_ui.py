@@ -18,7 +18,7 @@ from pathlib import Path
 from PySide6.QtCore import Property, QObject, QPoint, Qt, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QImage, QPainter, QPixmap
 from PySide6.QtQuickWidgets import QQuickWidget
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QVBoxLayout, QWidget
 
 from . import winapi
 from .config import (
@@ -121,6 +121,7 @@ class QMLBackend(QObject):
     qFireworksPropChanged = Signal(bool)
     alarmsChanged = Signal()
     notificationsChanged = Signal()
+    strictCustomImageRatioChanged = Signal(bool)
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -152,6 +153,9 @@ class QMLBackend(QObject):
 
     def get_variant(self) -> str:
         return str(self.app.cfg.get("variant", "square"))
+
+    def get_strict_custom_image_ratio(self) -> bool:
+        return bool(self.app.cfg.get("strict_custom_image_ratio", True))
 
     def get_size_px(self) -> int:
         return int(self.app.pet.size_px)
@@ -317,6 +321,7 @@ class QMLBackend(QObject):
     qClimbWindows = Property(bool, get_q_climb_windows, notify=qClimbWindowsChanged)
     qFlightProp = Property(bool, get_q_flight_prop, notify=qFlightPropChanged)
     qFireworksProp = Property(bool, get_q_fireworks_prop, notify=qFireworksPropChanged)
+    strictCustomImageRatio = Property(bool, get_strict_custom_image_ratio, notify=strictCustomImageRatioChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -341,6 +346,64 @@ class QMLBackend(QObject):
             self.app.set_variant(var)
             self.variantChanged.emit(var)
 
+    @Slot(bool)
+    def setStrictCustomImageRatio(self, val: bool):
+        self.app.set_strict_custom_image_ratio(val)
+        self.strictCustomImageRatioChanged.emit(val)
+
+    @Slot()
+    def exportSettingsData(self):
+        """開啟全設定與資料安全匯出視窗。"""
+        from .dialogs import ExportSettingsDialog
+        dlg = ExportSettingsDialog(self.app, self.win)
+        dlg.exec()
+
+    @Slot()
+    def importSettingsData(self):
+        """開啟檔案選擇器匯入設定備份，支援 YuYue 加密密碼解鎖。"""
+        from .dialogs import ImportPasswordDialog, ModernMessageBox
+        from .export_data import import_backup_data
+
+        path, _ = QFileDialog.getOpenFileName(
+            self.win, "選擇設定備份檔案", "", "備份檔案 (*.json *.dpbak);;所有檔案 (*.*)"
+        )
+        if not path:
+            return
+
+        try:
+            try:
+                import_backup_data(self.app, path, password="")
+            except ValueError as ve:
+                if "NEED_PASSWORD" in str(ve):
+                    pwd_dlg = ImportPasswordDialog(self.win, theme=self.app.cfg.get("theme", "light"))
+                    if pwd_dlg.exec() != QDialog.Accepted:
+                        return
+                    import_backup_data(self.app, path, password=pwd_dlg.password)
+                else:
+                    raise
+
+            # 重新整理 QML 介面所有狀態
+            theme = self.app.cfg.get("theme", "light")
+            self.themeChanged.emit(theme)
+            self.characterChanged.emit(self.app.cfg.get("character", "deepseek"))
+            self.variantChanged.emit(self.app.cfg.get("variant", "square"))
+            self.strictCustomImageRatioChanged.emit(self.app.cfg.get("strict_custom_image_ratio", True))
+            self.sizeChanged.emit(self.app.cfg.get("size", 454))
+            self.opacityChanged.emit(self.app.cfg.get("opacity", 100))
+            self.soundChanged.emit(self.app.cfg.get("sound", True))
+            self.volumeChanged.emit(self.app.cfg.get("volume", 80))
+            self.clickThroughChanged.emit(self.app.cfg.get("click_through", False))
+            self.autoSnapChanged.emit(self.app.cfg.get("auto_snap", True))
+            self.alwaysOnTopChanged.emit(self.app.cfg.get("always_on_top", True))
+            self.qChibiChanged.emit(self.app.cfg.get("q_chibi_enabled", True))
+            self.alarmsChanged.emit()
+            self.notificationsChanged.emit()
+            self.noticeMessage.emit("設定與資料已成功匯入並套用！", False)
+            ModernMessageBox.information(self.win, "匯入成功", "設定與資料已成功還原！已套用最新配置。")
+        except Exception as e:
+            self.noticeMessage.emit(f"匯入失敗：{e}", True)
+            ModernMessageBox.warning(self.win, "匯入失敗", f"無法匯入備份設定：{e}")
+
     @Slot()
     def importCustomCharacter(self):
         """呼叫檔案對話框選擇立繪，並新增自訂角色。"""
@@ -364,17 +427,33 @@ class QMLBackend(QObject):
 
         try:
             img = QImage(path)
-            if img.isNull():
+            if img.isNull() or img.height() <= 0:
                 raise ValueError("無法解析圖片檔案格式")
-            canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
-            canvas.fill(Qt.transparent)
-            sc = min(1024.0 / img.width(), 1024.0 / img.height())
-            w, h = int(img.width() * sc), int(img.height() * sc)
-            p = QPainter(canvas)
-            p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-            p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-            p.end()
-            canvas.save(str(dest_dir / "sprite.png"), "PNG")
+
+            strict = self.app.cfg.get("strict_custom_image_ratio", True)
+            ratio = img.width() / float(img.height())
+            if strict:
+                if ratio < 0.7 or ratio > 1.8:
+                    warn_msg = "圖片比例不符合官方立繪標準規格（1:1 或 1.5:1）。若欲強制使用特殊比例圖片，請至設定中關閉尺寸比例限制。"
+                    self.noticeMessage.emit(warn_msg, True)
+                    from .dialogs import ModernMessageBox
+                    ModernMessageBox.warning(self.win, "圖片比例不符合", warn_msg)
+                    return
+
+            if not strict:
+                # 關閉限制：保持原始寬高比
+                img.save(str(dest_dir / "sprite.png"), "PNG")
+            else:
+                canvas = QImage(1024, 1024, QImage.Format_ARGB32_Premultiplied)
+                canvas.fill(Qt.transparent)
+                sc = min(1024.0 / img.width(), 1024.0 / img.height())
+                w, h = int(img.width() * sc), int(img.height() * sc)
+                p = QPainter(canvas)
+                p.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+                p.drawImage((1024 - w) // 2, 1024 - h, img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+                p.end()
+                canvas.save(str(dest_dir / "sprite.png"), "PNG")
+
             (dest_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
             self.setCharacter(cid)
             self.noticeMessage.emit(f"自訂角色「{safe_name}」匯入成功並已套用！", False)

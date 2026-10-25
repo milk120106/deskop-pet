@@ -8,14 +8,16 @@ and bamboo copter / pixel fireworks props. Strictly zero emojis.
 """
 from __future__ import annotations
 
+import json
 import math
 import random
 import time
+from pathlib import Path
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import QWidget
 
-from .config import log
+from .config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, log
 
 
 # =====================================================================
@@ -795,37 +797,334 @@ BALLOON_FRAMES = [
 ]
 
 
+OFFICIAL_CHIBI_IDS = {"deepseek", "gpt", "claude", "gemini"}
+
+
+class PixelChibiRegistry:
+    """自訂 Q 版人物儲存庫與註冊表管理器。
+    支援讀寫 JSON、匯入 PNG/JSON、尺寸限制檢查（支援不顧限制）、官方預設保護。
+    """
+    _custom_cache: dict[str, dict] = {}
+    _cache_mtime: float = 0.0
+
+    @classmethod
+    def reload(cls):
+        """重新整理 custom_chibi 目錄並載入所有自訂人物。"""
+        CUSTOM_CHIBI_DIR.mkdir(parents=True, exist_ok=True)
+        cls._custom_cache.clear()
+        for f in CUSTOM_CHIBI_DIR.glob("*.json"):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+                cid = (data.get("id") or f.stem).strip().lower()
+                if cid in OFFICIAL_CHIBI_IDS:
+                    continue  # 官方角色受保護，禁止被自訂檔案覆寫
+                data["id"] = cid
+                data["is_custom"] = True
+                data["is_protected"] = False
+                data["mtime"] = f.stat().st_mtime
+                cls._custom_cache[cid] = data
+            except Exception as e:
+                log("PixelChibiRegistry", f"讀取自訂人物檔案 {f.name} 失敗：{e}")
+        cls._cache_mtime = time.time()
+
+    @classmethod
+    def get_character(cls, cid: str) -> dict | None:
+        """獲取指定角色的完整資料（官方或自訂）。"""
+        cid = (cid or "").lower().strip()
+        if cid in CHARACTER_INFO:
+            info = dict(CHARACTER_INFO[cid])
+            info["palette"] = CHAR_PALETTES.get(cid, {})
+            info["frames"] = FRAMES
+            info["width"] = 16
+            info["height"] = 24
+            info["ignore_limits"] = False
+            info["is_custom"] = False
+            info["is_protected"] = True
+            info["mtime"] = 0.0
+            return info
+
+        if not cls._custom_cache:
+            cls.reload()
+
+        if cid in cls._custom_cache:
+            return cls._custom_cache[cid]
+
+        # 嘗試從檔案讀取
+        f = CUSTOM_CHIBI_DIR / f"{cid}.json"
+        if f.exists():
+            cls.reload()
+            return cls._custom_cache.get(cid)
+
+        return None
+
+    @classmethod
+    def get_character_size(cls, cid: str) -> tuple[int, int]:
+        """取得指定角色的寬高尺寸 (width, height)。"""
+        info = cls.get_character(cid)
+        if info:
+            return int(info.get("width", 16)), int(info.get("height", 24))
+        return 16, 24
+
+    @classmethod
+    def list_official_characters(cls) -> dict[str, dict]:
+        """列出官方 4 位預設角色。"""
+        res = {}
+        for cid in ["deepseek", "gpt", "claude", "gemini"]:
+            res[cid] = cls.get_character(cid)
+        return res
+
+    @classmethod
+    def list_custom_characters(cls) -> dict[str, dict]:
+        """列出所有自訂角色。"""
+        cls.reload()
+        return dict(cls._custom_cache)
+
+    @classmethod
+    def list_all_characters(cls) -> dict[str, dict]:
+        """列出官方 + 自訂所有角色。"""
+        all_chars = cls.list_official_characters()
+        all_chars.update(cls.list_custom_characters())
+        return all_chars
+
+    @classmethod
+    def list_all_ids(cls) -> list[str]:
+        """列出所有角色識別碼清單（供隨機召喚抽選）。"""
+        return list(cls.list_all_characters().keys())
+
+    @classmethod
+    def character_exists(cls, cid: str) -> bool:
+        """檢查角色代號是否已存在（官方或自訂）。"""
+        cid = (cid or "").lower().strip()
+        if cid in OFFICIAL_CHIBI_IDS:
+            return True
+        f = CUSTOM_CHIBI_DIR / f"{cid}.json"
+        return f.exists() or (cid in cls._custom_cache)
+
+    @classmethod
+    def find_existing_by_name(cls, name: str) -> str | None:
+        """根據角色名稱尋找已存在的角色 ID。"""
+        name = (name or "").strip()
+        for cid, char in cls.list_all_characters().items():
+            if char.get("name", "").strip() == name:
+                return cid
+        return None
+
+    @classmethod
+    def save_custom_chibi(cls, data: dict) -> Path:
+        """儲存自訂 Q 版人物至 CUSTOM_CHIBI_DIR。
+        包含 id, name, palette, frames, width, height, ignore_limits 等。
+        """
+        CUSTOM_CHIBI_DIR.mkdir(parents=True, exist_ok=True)
+        raw_id = str(data.get("id", "")).strip().lower()
+        safe_id = "".join(c for c in raw_id if c.isalnum() or c in ("_", "-")).strip()
+        if not safe_id:
+            safe_id = f"chibi_{int(time.time())}"
+
+        if safe_id in OFFICIAL_CHIBI_IDS:
+            raise ValueError(f"角色代號「{safe_id}」為官方預設受保護角色，絕不允許覆蓋！")
+
+        name = str(data.get("name", safe_id)).strip() or safe_id
+        w = int(data.get("width", 16))
+        h = int(data.get("height", 24))
+        ignore_limits = bool(data.get("ignore_limits", False))
+
+        if not ignore_limits and (w != 16 or h != 24):
+            raise ValueError(f"角色尺寸為 {w}x{h}，超出預設 16x24 限制。請勾選「不顧限制」標記！")
+
+        save_dict = {
+            "id": safe_id,
+            "name": name,
+            "width": w,
+            "height": h,
+            "ignore_limits": ignore_limits,
+            "palette": dict(data.get("palette", {})),
+            "frames": dict(data.get("frames", {})),
+        }
+
+        target_file = CUSTOM_CHIBI_DIR / f"{safe_id}.json"
+        target_file.write_text(json.dumps(save_dict, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        PixelChibiRenderer.clear_cache(safe_id)
+        cls.reload()
+        log("PixelChibiRegistry", f"自訂 Q 版人物「{name}」({safe_id}) 儲存成功：{target_file}")
+        return target_file
+
+    @classmethod
+    def delete_custom_chibi(cls, cid: str) -> bool:
+        """刪除已有的自訂 Q 版人物。官方角色絕不允許刪除！"""
+        cid = (cid or "").lower().strip()
+        if cid in OFFICIAL_CHIBI_IDS:
+            raise ValueError("官方預設角色（藍色大肥魚、GPT龍娘、大小姐Claude、北美貓娘Gemini）受保護，絕不允許刪除！")
+
+        f = CUSTOM_CHIBI_DIR / f"{cid}.json"
+        if f.exists():
+            try:
+                f.unlink()
+                PixelChibiRenderer.clear_cache(cid)
+                cls.reload()
+                log("PixelChibiRegistry", f"已成功刪除自訂 Q 版人物：{cid}")
+                return True
+            except Exception as e:
+                log("PixelChibiRegistry", f"刪除自訂人物 {cid} 失敗：{e}")
+                raise
+        return False
+
+    @classmethod
+    def import_from_json(cls, file_or_data: str | Path | dict, ignore_limits_override: bool = False) -> dict:
+        """匯入外部 Q 版人物 JSON，支援不顧限制標記。"""
+        if isinstance(file_or_data, (str, Path)):
+            p = Path(file_or_data)
+            data = json.loads(p.read_text(encoding="utf-8"))
+        else:
+            data = dict(file_or_data)
+
+        if ignore_limits_override:
+            data["ignore_limits"] = True
+
+        cls.save_custom_chibi(data)
+        return data
+
+    @classmethod
+    def import_from_png(cls, png_path: str | Path, name: str, char_id: str = "", ignore_limits: bool = False) -> dict:
+        """匯入外部 PNG 精靈圖檔案轉換為自訂 Q 版人物，支援不顧限制匯入。"""
+        img = QImage(str(png_path))
+        if img.isNull():
+            raise ValueError("無法讀取或解析 PNG 圖片檔案！")
+
+        w = img.width()
+        h = img.height()
+        if not ignore_limits and (w != 16 or h != 24):
+            raise ValueError(f"PNG 尺寸為 {w}x{h}，超出預設 16x24 限制。若欲匯入請開啟「不顧限制」！")
+
+        palette: dict[str, str] = {}
+        symbol_pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_+=~"
+        color_to_sym: dict[str, str] = {}
+        rows: list[str] = []
+
+        for y in range(h):
+            row_chars = []
+            for x in range(w):
+                c = img.pixelColor(x, y)
+                if c.alpha() < 16:
+                    row_chars.append(".")
+                else:
+                    hex_code = c.name(QColor.HexRgb).lower()
+                    if hex_code not in color_to_sym:
+                        idx = len(color_to_sym)
+                        sym = symbol_pool[idx] if idx < len(symbol_pool) else f"C{idx}"
+                        color_to_sym[hex_code] = sym
+                        palette[sym] = hex_code
+                    row_chars.append(color_to_sym[hex_code])
+            rows.append("".join(row_chars))
+
+        safe_id = char_id or f"custom_{int(time.time())}"
+        data = {
+            "id": safe_id,
+            "name": name or safe_id,
+            "width": w,
+            "height": h,
+            "ignore_limits": ignore_limits or (w != 16 or h != 24),
+            "palette": palette,
+            "frames": {
+                "idle": rows,
+                "walk1": rows,
+                "walk2": rows,
+                "sit": rows,
+                "splat": rows,
+            },
+        }
+        cls.save_custom_chibi(data)
+        return data
+
+    @classmethod
+    def export_to_json(cls, cid: str, target_path: str | Path) -> Path:
+        """匯出自訂或官方 Q 版人物為 JSON 檔案。"""
+        info = cls.get_character(cid)
+        if not info:
+            raise ValueError(f"找不到角色：{cid}")
+
+        export_data = {
+            "id": info["id"],
+            "name": info["name"],
+            "width": info.get("width", 16),
+            "height": info.get("height", 24),
+            "ignore_limits": info.get("ignore_limits", False),
+            "palette": info.get("palette", {}),
+            "frames": info.get("frames", {}),
+        }
+        out_p = Path(target_path)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(json.dumps(export_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return out_p
+
+
 class PixelChibiRenderer:
-    """純代碼 2D 像素陣列與色盤精確繪製器，最近鄰無失真放大。"""
+    """純代碼 2D 像素陣列與色盤精確繪製器，最近鄰無失真放大。支援官方與自訂人物。"""
     _cache: dict[tuple, QPixmap] = {}
+
+    @classmethod
+    def clear_cache(cls, char_id: str | None = None):
+        if char_id is None:
+            cls._cache.clear()
+        else:
+            cid = char_id.lower()
+            cls._cache = {k: v for k, v in cls._cache.items() if k[0] != cid}
 
     @classmethod
     def get_pixmap(cls, character: str, frame_name: str, facing_right: bool = False, scale: int = 3, has_balloon: bool = False, balloon_idx: int = 0) -> QPixmap:
         char_key = character.lower()
-        if char_key not in CHAR_PALETTES:
+        info = PixelChibiRegistry.get_character(char_key)
+        if not info:
             char_key = "deepseek"
-        cache_key = (char_key, frame_name, facing_right, scale, has_balloon, balloon_idx)
+            info = PixelChibiRegistry.get_character("deepseek")
+
+        cache_key = (char_key, frame_name, facing_right, scale, has_balloon, balloon_idx, info.get("mtime", 0.0))
         if cache_key in cls._cache:
             return cls._cache[cache_key]
 
-        palette = CHAR_PALETTES[char_key]
-        raw_rows = FRAMES.get(frame_name, FRAMES["idle"])
-        w, h = 16, 24
+        w = int(info.get("width", 16))
+        h = int(info.get("height", 24))
+        palette = info.get("palette", {})
+        frames = info.get("frames", {})
+
+        raw_rows = frames.get(frame_name)
+        if not raw_rows:
+            raw_rows = frames.get("idle") or FRAMES.get(frame_name, FRAMES["idle"])
+
         img = QImage(w, h, QImage.Format_ARGB32_Premultiplied)
         img.fill(Qt.transparent)
 
         for y, row_str in enumerate(raw_rows):
-            for x, ch in enumerate(row_str):
-                if ch == "." or ch not in palette:
-                    continue
-                color_hex = palette[ch]
-                img.setPixelColor(x, y, QColor(color_hex))
+            if y >= h:
+                break
+            if isinstance(row_str, str):
+                for x, ch in enumerate(row_str):
+                    if x >= w:
+                        break
+                    if ch == "." or ch == " ":
+                        continue
+                    color_hex = palette.get(ch)
+                    if color_hex and color_hex != "transparent":
+                        img.setPixelColor(x, y, QColor(color_hex))
+            elif isinstance(row_str, (list, tuple)):
+                for x, val in enumerate(row_str):
+                    if x >= w:
+                        break
+                    if not val or val in (".", " ", "transparent"):
+                        continue
+                    col_str = palette.get(val, val)
+                    if col_str and col_str != "transparent":
+                        img.setPixelColor(x, y, QColor(col_str))
 
         # 疊加小氣球漂浮道具
         if has_balloon:
             b_rows = BALLOON_FRAMES[balloon_idx % len(BALLOON_FRAMES)]
             for by, brow in enumerate(b_rows):
+                if by >= h:
+                    break
                 for bx, bch in enumerate(brow):
+                    if bx >= w:
+                        break
                     if bch in palette:
                         img.setPixelColor(bx, by, QColor(palette[bch]))
 
@@ -833,8 +1132,8 @@ class PixelChibiRenderer:
             img = img.mirrored(True, False)
 
         # 最近鄰取樣放大 (Qt.FastTransformation) 確保 100% 俐落像素邊緣
-        target_w = w * scale
-        target_h = h * scale
+        target_w = max(1, w * scale)
+        target_h = max(1, h * scale)
         scaled_img = img.scaled(target_w, target_h, Qt.IgnoreAspectRatio, Qt.FastTransformation)
         pm = QPixmap.fromImage(scaled_img)
         cls._cache[cache_key] = pm
@@ -884,13 +1183,14 @@ class PixelChibiWindow(QWidget):
         self.setMouseTracking(True)
         self.setWindowTitle("Pixel Chibi Patrol")
 
-        self.scale_factor = 3  # 16x24 -> 48x72 px
-        self.char_w = 16 * self.scale_factor
-        self.char_h = 24 * self.scale_factor
+        self.scale_factor = 3  # 16x24 -> 48x72 px (或自訂尺寸 x 3)
+        self.character = cfg.get("character", "deepseek")
+        w, h = PixelChibiRegistry.get_character_size(self.character)
+        self.char_w = w * self.scale_factor
+        self.char_h = h * self.scale_factor
         self.setFixedSize(self.char_w, self.char_h)
 
         # 狀態機
-        self.character = cfg.get("character", "deepseek")
         self.state = "idle"  # idle, walk, run, jump, sit, splat, sleep, wake, panic, climb, flight, bowl_smash, bounce
         self.facing_right = True
         self.pos_x = 200.0
@@ -950,6 +1250,10 @@ class PixelChibiWindow(QWidget):
 
     def set_character(self, ch: str):
         self.character = ch
+        w, h = PixelChibiRegistry.get_character_size(ch)
+        self.char_w = w * self.scale_factor
+        self.char_h = h * self.scale_factor
+        self.setFixedSize(self.char_w, self.char_h)
         self.update()
 
     def _screen_rect(self) -> QRect:
@@ -1477,3 +1781,150 @@ class PixelChibiWindow(QWidget):
                     self.state = "walk"
                 self.state_time = 0.0
                 self.update()
+
+    def contextMenuEvent(self, e):
+        """右鍵點擊 Q 版小人時，呼叫桌面寵物右鍵巡邏隊選單。"""
+        if self.app and hasattr(self.app, "pet_menu"):
+            self.app.pet_menu(e.globalPos())
+
+
+class PixelChibiManager:
+    """管理桌面上多隻 Q 版小人獨立巡邏、跳躍、攀爬與召喚巡邏隊。
+    支援多小人數量限制檔位（5、10、15、20、25、30 隻），並根據效能模式自動調節上限。
+    """
+    def __init__(self, cfg, sounds, pet=None, app=None):
+        self.cfg = cfg
+        self.sounds = sounds
+        self.pet = pet
+        self.app = app
+        self.chibis: list[PixelChibiWindow] = []
+        if self.cfg.get("q_chibi_enabled", True):
+            self.init_primary()
+
+    @property
+    def primary_chibi(self) -> PixelChibiWindow | None:
+        """主要小人視窗（保持相容舊有 pixel_chibi 呼叫）。"""
+        return self.chibis[0] if self.chibis else None
+
+    @property
+    def active_count(self) -> int:
+        """當前在場巡邏的 Q 版小人數量。"""
+        return len(self.chibis)
+
+    @property
+    def max_count(self) -> int:
+        """當前生效之在場 Q 版小人上限（檔位 5, 10, 15, 20, 25, 30，效能模式最高限制 10）。"""
+        return get_effective_chibi_max_count(self.cfg)
+
+    @property
+    def can_summon(self) -> bool:
+        """在場數量是否未達上限，可繼續召喚。"""
+        return self.active_count < self.max_count
+
+    def init_primary(self) -> PixelChibiWindow:
+        """初始化首隻主巡邏小人。"""
+        if not self.chibis:
+            w = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self.app)
+            self.chibis.append(w)
+            if self.pet:
+                self.pet.pixel_chibi = w
+        return self.chibis[0]
+
+    def summon(self, character_id: str | None = None) -> PixelChibiWindow | None:
+        """召喚一隻 Q 版人物降落到桌面上（若達到上限則禁止召喚）。"""
+        if not self.can_summon:
+            log("PixelChibiManager", f"在場 Q 版小人已達上限 ({self.active_count}/{self.max_count} 隻)，禁止繼續召喚！")
+            return None
+
+        all_ids = PixelChibiRegistry.list_all_ids()
+        if not character_id or (character_id not in all_ids and character_id not in CHARACTER_INFO):
+            character_id = random.choice(all_ids) if all_ids else "deepseek"
+
+        w = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self.app)
+        w.set_character(character_id)
+
+        # 隨機橫向位置與高空跳躍降落物理
+        ag = w._screen_rect()
+        w.pos_x = float(random.randint(ag.left() + 40, max(ag.left() + 50, ag.right() - w.char_w - 40)))
+        w.pos_y = float(ag.top() + 30)
+        w.vel_y = 100.0
+        w.vel_x = random.choice([-30.0, 30.0, 0.0])
+        w.state = "jump"
+        w.facing_right = (random.random() > 0.5)
+        w.move(int(w.pos_x), int(w.pos_y))
+        w.show()
+        w.raise_()
+
+        self.chibis.append(w)
+        if self.sounds:
+            self.sounds.play("land")
+        char_info = PixelChibiRegistry.get_character(character_id)
+        name = char_info.get("name", character_id) if char_info else character_id
+        log("PixelChibiManager", f"成功召喚 Q 版人物「{name}」降落巡邏！目前在場：{self.active_count}/{self.max_count} 隻")
+        return w
+
+    def summon_random(self) -> PixelChibiWindow | None:
+        """從預設4隻 + 自訂角色庫隨機抽選一隻降落。"""
+        all_ids = PixelChibiRegistry.list_all_ids()
+        cid = random.choice(all_ids) if all_ids else "deepseek"
+        return self.summon(cid)
+
+    def dismiss(self, chibi: PixelChibiWindow):
+        """移除指定的一隻 Q 版小人。"""
+        if chibi in self.chibis:
+            self.chibis.remove(chibi)
+            chibi.hide()
+            chibi.close()
+            chibi.deleteLater()
+            log("PixelChibiManager", f"已移除 Q 版小人，目前在場剩餘 {self.active_count} 隻")
+
+    def clear_extra_chibis(self):
+        """清除場上所有額外 Q 版小人（只保留 1 隻）。"""
+        if len(self.chibis) <= 1:
+            return
+        main_chibi = self.chibis[0]
+        extras = self.chibis[1:]
+        self.chibis = [main_chibi]
+        for c in extras:
+            c.hide()
+            c.close()
+            c.deleteLater()
+        log("PixelChibiManager", "已清除場上所有額外 Q 版小人，僅保留主要小人 1 隻。")
+
+    def enforce_limit(self):
+        """根據當前生效上限強制修剪超額小人。"""
+        limit = self.max_count
+        while len(self.chibis) > limit and len(self.chibis) > 1:
+            extra = self.chibis.pop()
+            extra.hide()
+            extra.close()
+            extra.deleteLater()
+
+    def set_enabled(self, on: bool):
+        """啟用或隱藏巡邏隊。"""
+        if on:
+            if not self.chibis:
+                self.init_primary()
+            for c in self.chibis:
+                c.show()
+                c.raise_()
+        else:
+            for c in self.chibis:
+                c.hide()
+
+    def sync_fps(self):
+        """同步所有在場小人之 FPS 與定時器間隔。"""
+        for c in self.chibis:
+            c.sync_fps()
+
+    def set_character(self, ch: str):
+        """設定主要小人之角色形象。"""
+        if self.primary_chibi:
+            self.primary_chibi.set_character(ch)
+
+    def __getattr__(self, name: str):
+        """轉發主要小人屬性與方法以保持 100% 向後相容。"""
+        if self.primary_chibi and hasattr(self.primary_chibi, name):
+            return getattr(self.primary_chibi, name)
+        raise AttributeError(f"'PixelChibiManager' object has no attribute '{name}'")
+

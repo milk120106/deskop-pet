@@ -145,11 +145,11 @@ class App(QObject):
         from .alarm import AlarmDispatcher
         self.alarm_dispatcher = AlarmDispatcher(self.cfg, self.sounds, pet=self.pet, app=self)
 
-        # 全新 Q 版人物獨立像素系統 (Pixel Chibi Patrol)
-        from .pixel_chibi import PixelChibiWindow
-        self.pixel_chibi: PixelChibiWindow | None = None
-        if self.cfg.get("q_chibi_enabled", True):
-            self.pixel_chibi = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self)
+        # 全新 Q 版人物獨立像素系統與巡邏隊管理器 (Pixel Chibi Patrol)
+        from .pixel_chibi import PixelChibiManager, PixelChibiWindow
+        self.chibi_manager = PixelChibiManager(self.cfg, self.sounds, pet=self.pet, app=self)
+        self.pixel_chibi: PixelChibiWindow | None = self.chibi_manager.primary_chibi
+        if self.pet:
             self.pet.pixel_chibi = self.pixel_chibi
 
         self.pet.props._menu_cb = self.prop_menu
@@ -557,6 +557,79 @@ class App(QObject):
             )
             m.addSeparator()
 
+        # Q 版小人巡邏隊（在場 X/上限）
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            cur_chibi_count = self.chibi_manager.active_count
+            max_chibi_limit = self.chibi_manager.max_count
+            can_summon = self.chibi_manager.can_summon
+            sub_chibi = m.addMenu(f"Q 版小人巡邏隊（在場 {cur_chibi_count}/{max_chibi_limit}）")
+            sub_chibi.setStyleSheet(m.styleSheet())
+            sub_chibi.setAttribute(Qt.WA_TranslucentBackground, True)
+            sub_chibi.setWindowFlags(sub_chibi.windowFlags() | Qt.FramelessWindowHint)
+
+            # 1. 隨機召喚一隻 Q 版人物
+            act_rand = sub_chibi.addAction("隨機召喚一隻 Q 版人物")
+            act_rand.setEnabled(can_summon)
+            act_rand.triggered.connect(self.summon_random_chibi)
+
+            # 2. 指定召喚子選單
+            sub_specific = sub_chibi.addMenu("指定召喚")
+            sub_specific.setStyleSheet(m.styleSheet())
+            sub_specific.setAttribute(Qt.WA_TranslucentBackground, True)
+            sub_specific.setWindowFlags(sub_specific.windowFlags() | Qt.FramelessWindowHint)
+
+            from .pixel_chibi import PixelChibiRegistry
+            for cid, info in PixelChibiRegistry.list_official_characters().items():
+                label = f"{info['name']}"
+                if info.get("subtitle"):
+                    label += f" ({info['subtitle']})"
+                a = sub_specific.addAction(label)
+                a.setEnabled(can_summon)
+                a.triggered.connect(lambda _=False, c=cid: self.summon_chibi(c))
+
+            custom_chars = PixelChibiRegistry.list_custom_characters()
+            if custom_chars:
+                sub_specific.addSeparator()
+                for cid, info in custom_chars.items():
+                    w = info.get("width", 16)
+                    h = info.get("height", 24)
+                    size_tag = f" [{w}x{h}]" if (w != 16 or h != 24) else ""
+                    label = f"{info.get('name', cid)}{size_tag}"
+                    a = sub_specific.addAction(label)
+                    a.setEnabled(can_summon)
+                    a.triggered.connect(lambda _=False, c=cid: self.summon_chibi(c))
+
+            sub_chibi.addSeparator()
+
+            # 3. 開啟 Q 版人物像素編輯器...
+            sub_chibi.addAction("開啟 Q 版人物像素編輯器...").triggered.connect(self.open_chibi_editor)
+
+            # 4. 清除場上所有額外 Q 版小人（只保留 1 隻）
+            act_clear_extra = sub_chibi.addAction("清除場上所有額外 Q 版小人（只保留 1 隻）")
+            act_clear_extra.setEnabled(cur_chibi_count > 1)
+            act_clear_extra.triggered.connect(self.clear_extra_chibis)
+
+            # 5. 上限檔位切換子選單 (5, 10, 15, 20, 25, 30)
+            sub_limit = sub_chibi.addMenu(f"在場數量上限（目前：{max_chibi_limit} 隻）")
+            sub_limit.setStyleSheet(m.styleSheet())
+            sub_limit.setAttribute(Qt.WA_TranslucentBackground, True)
+            sub_limit.setWindowFlags(sub_limit.windowFlags() | Qt.FramelessWindowHint)
+            perf_mode = bool(self.cfg.get("performance_mode", False))
+            for opt in (5, 10, 15, 20, 25, 30):
+                is_active = (max_chibi_limit == opt)
+                label = f"{opt} 隻" + ("（目前生效）" if is_active else "")
+                if perf_mode and opt > 10:
+                    label += "（效能模式開啟時最高限制 10 隻）"
+                a = sub_limit.addAction(label)
+                a.setCheckable(True)
+                a.setChecked(is_active)
+                if perf_mode and opt > 10:
+                    a.setEnabled(False)
+                else:
+                    a.triggered.connect(lambda _=False, count=opt: self.set_q_chibi_max_count(count))
+
+            m.addSeparator()
+
         act("滑鼠穿透", self.set_click_through, c["click_through"])
         act("自動貼邊", self.set_auto_snap, c["auto_snap"])
         act("回到角落", lambda: self.go_corner(c["snap_corner"]))
@@ -754,6 +827,15 @@ class App(QObject):
         self.pet.set_variant(var)
         self._changed()
 
+    def set_strict_custom_image_ratio(self, val: bool):
+        self.cfg.set("strict_custom_image_ratio", bool(val))
+        if hasattr(self.pet, "set_strict_custom_image_ratio"):
+            self.pet.set_strict_custom_image_ratio(bool(val))
+        for ep in self.extra_pets.values():
+            if hasattr(ep, "set_strict_custom_image_ratio"):
+                ep.set_strict_custom_image_ratio(bool(val))
+        self._changed()
+
     def set_click_through(self, on: bool):
         self.cfg.set("click_through", bool(on))
         self.pet.apply_click_through(bool(on))
@@ -809,16 +891,58 @@ class App(QObject):
 
     def set_q_chibi_enabled(self, on: bool):
         self.cfg.set("q_chibi_enabled", bool(on), save=True)
-        from .pixel_chibi import PixelChibiWindow
-        if on:
-            if not self.pixel_chibi:
-                self.pixel_chibi = PixelChibiWindow(self.cfg, self.sounds, pet=self.pet, app=self)
-            self.pixel_chibi.show()
-            self.pixel_chibi.raise_()
-        else:
-            if self.pixel_chibi:
-                self.pixel_chibi.hide()
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.set_enabled(on)
+            self.pixel_chibi = self.chibi_manager.primary_chibi
+        elif on:
+            from .pixel_chibi import PixelChibiManager
+            self.chibi_manager = PixelChibiManager(self.cfg, self.sounds, pet=self.pet, app=self)
+            self.pixel_chibi = self.chibi_manager.primary_chibi
+            if self.pet:
+                self.pet.pixel_chibi = self.pixel_chibi
         self._changed()
+
+    def summon_random_chibi(self):
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            w = self.chibi_manager.summon_random()
+            if not w and not self.chibi_manager.can_summon:
+                from .dialogs import ModernMessageBox
+                ModernMessageBox.warning(
+                    None,
+                    "已達數量上限",
+                    f"在場 Q 版小人已達數量上限（{self.chibi_manager.max_count} 隻），無法繼續召喚！\n若欲召喚更多，可在選單調整上限或清除場上額外小人。"
+                )
+
+    def summon_chibi(self, cid: str):
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            w = self.chibi_manager.summon(cid)
+            if not w and not self.chibi_manager.can_summon:
+                from .dialogs import ModernMessageBox
+                ModernMessageBox.warning(
+                    None,
+                    "已達數量上限",
+                    f"在場 Q 版小人已達數量上限（{self.chibi_manager.max_count} 隻），無法繼續召喚！\n若欲召喚更多，可在選單調整上限或清除場上額外小人。"
+                )
+
+    def clear_extra_chibis(self):
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.clear_extra_chibis()
+
+    def set_q_chibi_max_count(self, count: int):
+        self.cfg.set("q_chibi_max_count", int(count), save=True)
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.enforce_limit()
+        self._changed()
+
+    def open_chibi_editor(self):
+        from .chibi_editor import ChibiPixelEditorDialog
+        if not hasattr(self, "chibi_editor_dialog") or not self.chibi_editor_dialog or not self.chibi_editor_dialog.isVisible():
+            self.chibi_editor_dialog = ChibiPixelEditorDialog(parent=None, cfg=self.cfg, app=self)
+            self._center_and_raise(self.chibi_editor_dialog)
+        else:
+            self.chibi_editor_dialog.show()
+            self.chibi_editor_dialog.raise_()
+            self.chibi_editor_dialog.activateWindow()
 
     def set_q_climb_windows(self, on: bool):
         self.cfg.set("q_climb_windows", bool(on), save=True)
@@ -870,6 +994,9 @@ class App(QObject):
             ep.update_fps_timer()
         if hasattr(self, "pixel_chibi") and self.pixel_chibi:
             self.pixel_chibi.sync_fps()
+        if hasattr(self, "chibi_manager") and self.chibi_manager:
+            self.chibi_manager.sync_fps()
+            self.chibi_manager.enforce_limit()
         self._changed()
 
     def set_target_fps(self, fps: int):

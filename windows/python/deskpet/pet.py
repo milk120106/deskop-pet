@@ -226,15 +226,26 @@ class PetWindow(QWidget):
 
     @property
     def aspect_ratio(self) -> float:
+        if self.character.startswith("custom_") and not self.cfg.get("strict_custom_image_ratio", True):
+            src = self._load("happy")
+            if not src.isNull() and src.height() > 0:
+                return src.width() / float(src.height())
         return 1.5 if self.is_tail else 1.0
 
     @property
     def art_w(self) -> int:
-        return int(self.size_px * self.aspect_ratio)
+        return max(10, int(self.size_px * self.aspect_ratio))
 
     @property
     def art_h(self) -> int:
-        return self.size_px
+        return max(10, self.size_px)
+
+    def set_strict_custom_image_ratio(self, val: bool):
+        self.cfg.set("strict_custom_image_ratio", bool(val))
+        self._clear_cache()
+        self._resize_window()
+        self.keep_on_screen()
+        self.update()
 
     def set_character(self, char_id: str):
         if self.character == char_id:
@@ -358,6 +369,11 @@ class PetWindow(QWidget):
         corners = self._tablet_corners_source()
         src_w = 1536.0 if self.is_tail else 1024.0
         src_h = 1024.0
+        if self.character.startswith("custom_") and not self.cfg.get("strict_custom_image_ratio", True):
+            src = self._load("happy")
+            if not src.isNull() and src.height() > 0 and src.width() > 0:
+                src_w = float(src.width())
+                src_h = float(src.height())
         scale_x = self.art_w / src_w
         scale_y = self.art_h / src_h
 

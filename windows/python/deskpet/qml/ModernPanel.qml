@@ -579,6 +579,60 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // 項目: 嚴格限制自訂立繪比例（1:1 或 1.5:1）開關
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Text {
+                                text: "嚴格限制自訂立繪比例（1:1 或 1.5:1）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: "（關閉後可匯入任意超長或超扁圖片，照原始比例趣味呈現）"
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Item { width: Math.max(10, parent.width - 550); height: 1 }
+
+                            Rectangle {
+                                width: 48
+                                height: 26
+                                radius: 13
+                                color: (typeof backend !== "undefined" && backend && backend.strictCustomImageRatio) ? themeColors.primary : themeColors.border
+                                Behavior on color { ColorAnimation { duration: 180 } }
+
+                                Rectangle {
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    y: 3
+                                    color: "#FFFFFF"
+                                    x: (typeof backend !== "undefined" && backend && backend.strictCustomImageRatio) ? 25 : 3
+                                    Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setStrictCustomImageRatio(!backend.strictCustomImageRatio)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2817,6 +2871,107 @@ Rectangle {
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
                                             backend.openLogsDir()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 5: 全設定與資料安全備份管理
+                Rectangle {
+                    width: parent.width
+                    height: 140
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 10
+
+                        Text {
+                            text: "全設定與資料安全備份"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            text: "完整備份寵物配置、鬧鐘與自訂角色；整合 YuYue 8 層複合高強度加密防護與 API 金鑰脫敏防護。"
+                            color: themeColors.textSub
+                            font.pixelSize: 11
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Row {
+                            spacing: 12
+
+                            Rectangle {
+                                width: 175
+                                height: 34
+                                radius: 8
+                                color: themeColors.primary
+                                scale: mExportBtn.pressed ? 0.95 : (mExportBtn.containsMouse ? 1.02 : 1.0)
+                                Behavior on scale { SpringAnimation { spring: 3.8; damping: 0.28 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "匯出所有設定與資料..."
+                                    color: "#FFFFFF"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+
+                                MouseArea {
+                                    id: mExportBtn
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.exportSettingsData()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 130
+                                height: 34
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                scale: mImportBtn.pressed ? 0.95 : (mImportBtn.containsMouse ? 1.02 : 1.0)
+                                Behavior on scale { SpringAnimation { spring: 3.8; damping: 0.28 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "匯入設定..."
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+
+                                MouseArea {
+                                    id: mImportBtn
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.importSettingsData()
                                         }
                                     }
                                 }

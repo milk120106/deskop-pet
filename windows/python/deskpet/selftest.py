@@ -956,6 +956,228 @@ def run(qapp) -> int:
     )
     check("pixel chibi all 18 extra frames 16x24 with LL legs", all_frames_valid)
 
+    # 23. 自訂 Q 版人物庫、像素編輯器與多角色巡邏管理系統測試
+    from deskpet.config import CUSTOM_CHIBI_DIR, get_effective_chibi_max_count, CHIBI_MAX_COUNT_OPTIONS
+    from deskpet.pixel_chibi import PixelChibiRegistry, OFFICIAL_CHIBI_IDS, PixelChibiManager
+    from deskpet.chibi_editor import ChibiPixelEditorDialog
+
+    check("config defines CUSTOM_CHIBI_DIR and exists", CUSTOM_CHIBI_DIR.exists())
+    check("config defines q_chibi_max_count options (5, 10, 15, 20, 25, 30)", CHIBI_MAX_COUNT_OPTIONS == (5, 10, 15, 20, 25, 30))
+    check("effective chibi max count respects performance mode", get_effective_chibi_max_count({"q_chibi_max_count": 25, "performance_mode": True}) == 10)
+    check("effective chibi max count allows up to 30 when perf off", get_effective_chibi_max_count({"q_chibi_max_count": 30, "performance_mode": False}) == 30)
+
+    # 官方角色受保護測試
+    official_protected = all(
+        PixelChibiRegistry.get_character(cid)["is_protected"] is True and PixelChibiRegistry.get_character(cid)["is_custom"] is False
+        for cid in OFFICIAL_CHIBI_IDS
+    )
+    check("official four heroines are protected and not custom", official_protected)
+
+    official_delete_blocked = False
+    try:
+        PixelChibiRegistry.delete_custom_chibi("deepseek")
+    except ValueError:
+        official_delete_blocked = True
+    check("deleting official protected chibi is strictly forbidden", official_delete_blocked)
+
+    # 自訂角色儲存、尺寸限制與不顧限制測試
+    custom_saved = False
+    test_char_data = {
+        "id": "selftest_hero",
+        "name": "測試自訂英雄",
+        "width": 16,
+        "height": 24,
+        "ignore_limits": False,
+        "palette": {"H": "#1e3a8a", "S": "#ffe4d0"},
+        "frames": {"idle": ["....HHHH....HHHH"] * 24}
+    }
+    p_saved = PixelChibiRegistry.save_custom_chibi(test_char_data)
+    custom_saved = p_saved.exists() and PixelChibiRegistry.get_character("selftest_hero") is not None
+    check("custom chibi saved to JSON and loaded into registry", custom_saved)
+
+    # 不顧限制標記允許非 16x24 尺寸
+    non_standard_blocked = False
+    try:
+        PixelChibiRegistry.save_custom_chibi({
+            "id": "selftest_large",
+            "name": "大型角色",
+            "width": 32,
+            "height": 32,
+            "ignore_limits": False,
+            "palette": {"H": "#ff0000"},
+            "frames": {"idle": ["H" * 32] * 32}
+        })
+    except ValueError:
+        non_standard_blocked = True
+    check("non-standard size rejected when ignore_limits is False", non_standard_blocked)
+
+    p_large = PixelChibiRegistry.save_custom_chibi({
+        "id": "selftest_large",
+        "name": "大型角色",
+        "width": 32,
+        "height": 32,
+        "ignore_limits": True,
+        "palette": {"H": "#ff0000"},
+        "frames": {"idle": ["H" * 32] * 32}
+    })
+    check("non-standard size allowed when ignore_limits is True", p_large.exists() and PixelChibiRegistry.get_character_size("selftest_large") == (32, 32))
+
+    # 像素編輯器實例化與工具驗證
+    editor = ChibiPixelEditorDialog(parent=None, cfg=app.cfg, app=app)
+    check("chibi pixel editor dialog instantiated cleanly", editor.canvas.canvas_w == 16 and editor.canvas.canvas_h == 24)
+    editor.canvas.current_color = "#123456"
+    editor.canvas._apply_tool(0, 0)
+    check("pixel editor pencil tool applies pixel", editor.canvas.grid[0][0] == "#123456")
+    editor._set_tool("eraser")
+    editor.canvas._apply_tool(0, 0)
+    check("pixel editor eraser tool clears pixel", editor.canvas.grid[0][0] is None)
+    editor.close()
+
+    # 多角色巡邏管理器與召喚限制測試
+    check("app has chibi_manager initialized", hasattr(app, "chibi_manager") and app.chibi_manager is not None)
+    initial_count = app.chibi_manager.active_count
+    c2 = app.chibi_manager.summon("claude")
+    check("summoning creates additional independent chibi", c2 is not None and app.chibi_manager.active_count == initial_count + 1)
+    c_rand = app.chibi_manager.summon_random()
+    check("random summon drops another chibi", c_rand is not None and app.chibi_manager.active_count == initial_count + 2)
+
+    app.chibi_manager.clear_extra_chibis()
+    check("clear_extra_chibis retains strictly 1 primary chibi", app.chibi_manager.active_count == 1)
+
+    # 召喚數量上限檔位測試
+    app.set_q_chibi_max_count(5)
+    for _ in range(8):
+        app.chibi_manager.summon("deepseek")
+    check("chibi manager strictly enforces max_count limit", app.chibi_manager.active_count == 5 and app.chibi_manager.can_summon is False)
+    app.chibi_manager.clear_extra_chibis()
+
+    # 右鍵選單 Q 版小人巡邏隊子選單驗證
+    menu_test = QMenu()
+    app._fill_menu(menu_test)
+    chibi_menu_found = False
+    chibi_actions = []
+    for a in menu_test.actions():
+        if "Q 版小人巡邏隊" in a.text():
+            chibi_menu_found = True
+            chibi_actions = [act.text() for act in a.menu().actions()]
+            break
+    check("context menu includes Q 版小人巡邏隊 submenu", chibi_menu_found)
+    check("submenu contains random summon action", any("隨機召喚一隻 Q 版人物" in t for t in chibi_actions))
+    check("submenu contains specific summon submenu", any("指定召喚" in t for t in chibi_actions))
+    check("submenu contains open editor action", any("開啟 Q 版人物像素編輯器..." in t for t in chibi_actions))
+    check("submenu contains clear extra chibis action", any("清除場上所有額外 Q 版小人" in t for t in chibi_actions))
+
+    # 清理測試自訂角色
+    PixelChibiRegistry.delete_custom_chibi("selftest_hero")
+    PixelChibiRegistry.delete_custom_chibi("selftest_large")
+
+    # ========================================================= 23. YuYue 8-Layer Cipher & Safe Export/Import System
+    from .export_data import YuYueCipher, export_backup_data, import_backup_data
+    from .dialogs import ApiKeyExportWarningDialog, ExportSettingsDialog, ImportPasswordDialog
+
+    test_plain = "桌面寵物全設定備份測試資料 2026 !@#$ JSON {\"pet\": \"deepseek\", \"variant\": \"tail\"}"
+    test_pwd = "YuYueSecureKey2026"
+    c_cipher, c_salt, c_vhash = YuYueCipher.encrypt(test_plain, test_pwd)
+    check("YuYueCipher 8-layer encryption returns ciphertext and salt", bool(c_cipher and c_salt and c_vhash))
+    c_dec = YuYueCipher.decrypt(c_cipher, test_pwd, c_salt, c_vhash)
+    check("YuYueCipher 8-layer roundtrip decrypts original text", c_dec == test_plain)
+
+    pwd_err_caught = False
+    try:
+        YuYueCipher.decrypt(c_cipher, "IncorrectPassword", c_salt, c_vhash)
+    except ValueError as ve:
+        pwd_err_caught = "解密密碼錯誤" in str(ve)
+    check("YuYueCipher rejects incorrect password with friendly error", pwd_err_caught)
+
+    # 匯出安全驗證：預設不含金鑰時徹底脫敏
+    bak_no_keys_path = OUT / "selftest_backup_no_keys.json"
+    cfg.set_api_keys("deepseek", "sk-secret-test-key-12345")
+    exp_data = export_backup_data(cfg, bak_no_keys_path, include_keys=False)
+    check("export_backup_data writes file", bak_no_keys_path.exists())
+    check("export without keys strips deepseek key", exp_data["config"]["api_keys"]["deepseek"] == "")
+    check("export has_api_keys flag is False", exp_data.get("has_api_keys") is False)
+
+    # 匯出安全驗證：包含金鑰
+    bak_with_keys_path = OUT / "selftest_backup_with_keys.json"
+    exp_keys_data = export_backup_data(cfg, bak_with_keys_path, include_keys=True)
+    check("export with keys retains actual api key", exp_keys_data["config"]["api_keys"]["deepseek"] == "sk-secret-test-key-12345")
+    check("export has_api_keys flag is True", exp_keys_data.get("has_api_keys") is True)
+
+    # 匯出安全驗證：YuYue 加密封裝匯出與還原
+    bak_enc_path = OUT / "selftest_backup_encrypted.dpbak"
+    exp_enc_data = export_backup_data(cfg, bak_enc_path, include_keys=False, password=test_pwd)
+    check("encrypted export produces yuyue envelope", exp_enc_data.get("format") == "deskpet_backup_yuyue" and exp_enc_data.get("encrypted") is True)
+
+    # 還原驗證：加密檔案未給密碼時拋出 NEED_PASSWORD
+    need_pwd_caught = False
+    try:
+        import_backup_data(app, bak_enc_path, password="")
+    except ValueError as ve:
+        need_pwd_caught = "NEED_PASSWORD" in str(ve)
+    check("import encrypted backup requires password", need_pwd_caught)
+
+    # 還原驗證：正確密碼還原
+    cfg.set("size", 260)
+    imported = import_backup_data(app, bak_enc_path, password=test_pwd)
+    check("import encrypted backup with password succeeds", isinstance(imported, dict) and "config" in imported)
+
+    # API Key 5 秒倒數警告對話框邏輯測試
+    warn_dlg = ApiKeyExportWarningDialog(parent=None)
+    check("api key warning dialog starts countdown at 5s", warn_dlg.countdown == 5)
+    check("api key warning confirm button initially disabled", warn_dlg.b_confirm.isEnabled() is False)
+    check("api key warning confirm button text shows (5s)", "(5s)" in warn_dlg.b_confirm.text())
+    warn_dlg._on_tick()
+    check("countdown ticks to 4s and remains disabled", warn_dlg.countdown == 4 and warn_dlg.b_confirm.isEnabled() is False and "(4s)" in warn_dlg.b_confirm.text())
+    for _ in range(4):
+        warn_dlg._on_tick()
+    check("countdown finishes and button is enabled with text 確認包含金鑰匯出", warn_dlg.countdown == 0 and warn_dlg.b_confirm.isEnabled() is True and warn_dlg.b_confirm.text() == "確認包含金鑰匯出")
+    warn_dlg.close()
+
+    # ========================================================= 24. Custom Image Aspect Ratio & Free Ratio Mode
+    check("strict_custom_image_ratio config default is True", cfg.get("strict_custom_image_ratio", True) is True)
+
+    # 測試立繪比例限制開關與動態 art_w / art_h 呈現
+    custom_test_dir = config.CUSTOM_CHARS_DIR / "custom_selftest_wide"
+    custom_test_dir.mkdir(parents=True, exist_ok=True)
+    (custom_test_dir / "tablet.txt").write_text("330,790,694,790,694,960,330,960", encoding="utf-8")
+
+    # 製作 2000x500 超長扁立繪 (4:1 比例)
+    wide_img = QImage(2000, 500, QImage.Format_ARGB32_Premultiplied)
+    wide_img.fill(QColor(100, 150, 255))
+    wide_img.save(str(custom_test_dir / "sprite.png"), "PNG")
+
+    # 在嚴格模式下，比例檢查
+    ratio_wide = 2000.0 / 500.0  # 4.0
+    check("strict ratio check flags wide image out of 0.7~1.8 bounds", ratio_wide < 0.7 or ratio_wide > 1.8)
+
+    # 切換角色為 custom_selftest_wide
+    pet.set_character("custom_selftest_wide")
+    # 當 strict 為 True 時，維持正方形 1.0 (或 tail 1.5)
+    app.set_strict_custom_image_ratio(True)
+    check("strict mode maintains standard aspect ratio for custom pet", pet.aspect_ratio == 1.0)
+
+    # 當關閉限制 (strict_custom_image_ratio == False) 時，動態照圖片實際長寬比呈現
+    app.set_strict_custom_image_ratio(False)
+    check("free ratio mode adopts image original aspect ratio 4.0", abs(pet.aspect_ratio - 4.0) < 0.05)
+    check("free ratio art_w dynamically calculated from aspect_ratio", pet.art_w == int(pet.size_px * pet.aspect_ratio))
+
+    # QML Backend 綁定與屬性切換驗證
+    if not getattr(app, "qml_panel", None):
+        app.show_qml_panel()
+    qml_backend = app.qml_panel.backend
+    check("qml backend has strictCustomImageRatio property", hasattr(qml_backend, "strictCustomImageRatio"))
+    qml_backend.setStrictCustomImageRatio(True)
+    check("qml backend setStrictCustomImageRatio updates config to True", cfg.get("strict_custom_image_ratio") is True)
+    qml_backend.setStrictCustomImageRatio(False)
+    check("qml backend setStrictCustomImageRatio updates config to False", cfg.get("strict_custom_image_ratio") is False)
+    qml_backend.setStrictCustomImageRatio(True)
+    check("qml backend has exportSettingsData slot", hasattr(qml_backend, "exportSettingsData"))
+    check("qml backend has importSettingsData slot", hasattr(qml_backend, "importSettingsData"))
+
+    # 清理測試自訂立繪
+    pet.set_character("deepseek")
+    shutil.rmtree(custom_test_dir, ignore_errors=True)
+
     chat_dlg.close()
 
     bad = [r for r in results if not r[1]]

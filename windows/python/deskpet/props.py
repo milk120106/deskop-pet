@@ -163,6 +163,7 @@ class Prop(QWidget):
             self.locked_at = None
             self.radar_demo = False
             self.landed_at = None
+            self.setWindowOpacity(1.0)
             g = e.globalPosition()
             self.grab_off = QPointF(g.x() - self.x, g.y() - self.y)
             self.trail = [(time.monotonic(), g.x(), g.y())]
@@ -403,9 +404,10 @@ class PropManager:
                 self.remove(b)
 
     # ------------------------------------------------------------ physics & collision
-    def step(self):
+    def step(self, dt: float | None = None):
         now = time.monotonic()
-        dt = min(0.05, max(1e-3, now - self._t))
+        if dt is None:
+            dt = min(0.05, max(1e-3, now - self._t))
         self._t = now
         moving = False
 
@@ -422,6 +424,17 @@ class PropManager:
                 # auto-collected quietly (credits money without fanfare)
                 self.pet.ledger.apply_credit(b.amount)
                 self.remove(b)
+
+        # 2.5 Check 25s auto-clear for iron bowls landed on ground
+        for b in list(self.props):
+            if b.kind == "iron" and not b.held and b.landed_at is not None:
+                elapsed = now - b.landed_at
+                if elapsed >= 25.0:
+                    self.remove(b)
+                elif elapsed >= 23.0:
+                    fade = max(0.0, (25.0 - elapsed) / 2.0)
+                    b.setWindowOpacity(fade)
+                    moving = True
 
         # 3. Step individual physics
         for b in list(self.props):

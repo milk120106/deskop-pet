@@ -449,8 +449,8 @@ DEFAULTS = {
     ],
 
     # ========================================================= 模組五：鐵鍋動態物理與天降道具
-    "sky_pot_drop_enabled": True,           # 天降空鍋開關
-    "natural_pot_slip_enabled": True,       # 戴鍋自然滑落開關
+    "sky_pot_drop_enabled": False,          # 天降空鍋開關（預設關閉）
+    "natural_pot_slip_enabled": False,      # 戴鍋自然滑落開關（預設關閉）
 
     # ========================================================= 模組六：系統開機啟動、版面還原與重力配置
     "auto_start_on_boot": False,            # 開機自啟動（預設關閉）

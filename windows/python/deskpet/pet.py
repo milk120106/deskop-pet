@@ -258,12 +258,12 @@ class PetWindow(QWidget):
         """天降空鍋與自然滑落週期檢查。"""
         import random
         # 1. 戴鍋自然微幅滑落
-        if bool(self.cfg.get("natural_pot_slip_enabled", True)) and self.iron_count > 1:
+        if bool(self.cfg.get("natural_pot_slip_enabled", False)) and self.iron_count > 1:
             if random.random() < 0.25:
                 self.props.trigger_natural_slip()
 
         # 2. 天降空鐵鍋隨機掉落
-        if bool(self.cfg.get("sky_pot_drop_enabled", True)) and random.random() < 0.15:
+        if bool(self.cfg.get("sky_pot_drop_enabled", False)) and random.random() < 0.02:
             self.props.spawn_sky_pot()
 
     def update_fps_timer(self):
@@ -319,6 +319,25 @@ class PetWindow(QWidget):
     @property
     def is_tail(self) -> bool:
         return self.variant == "tail"
+
+    @property
+    def m_top(self) -> int:
+        """動態頂部邊界：疊戴鐵盆時動態延伸頂部空間，支援 10 盆無裁切。"""
+        if self.iron_count <= 1:
+            return M_T
+        return int(M_T + (self.iron_count - 1) * max(20.0, self.art_h * 0.12) + 20)
+
+    @property
+    def M_T(self) -> int:
+        return self.m_top
+
+    def show_floater(self, text: str, color=None, xo: float = 0.0):
+        if color is None:
+            color = QColor(255, 230, 110)
+        now = time.monotonic()
+        self.floaters.append([text, color, xo, now])
+        self.update()
+
 
     @property
     def aspect_ratio(self) -> float:
@@ -556,7 +575,7 @@ class PetWindow(QWidget):
     def _resize_window(self):
         w = self.art_w
         h = self.art_h
-        self.setFixedSize(w + M_L + M_R, h + M_T + M_B)
+        self.setFixedSize(w + M_L + M_R, h + self.m_top + M_B)
         self._update_tablet_transform()
         self._iron_pix = None
         self._hands.clear()
@@ -566,12 +585,27 @@ class PetWindow(QWidget):
         px = max(180, min(1024, int(px)))
         if px == self.size_px:
             return
-        old_bc = QPoint(self.x() + M_L + self.art_w // 2, self.y() + M_T + self.art_h)
+        is_right = self.snap_right or (self.cfg.get("snap_corner") == "right")
+        is_left = (self.cfg.get("snap_corner") == "left")
+        old_bottom = self.y() + self.m_top + self.art_h
+        if is_right:
+            old_anchor_x = self.x() + M_L + self.art_w
+        elif is_left:
+            old_anchor_x = self.x() + M_L
+        else:
+            old_anchor_x = self.x() + M_L + self.art_w // 2
+
         self.size_px = px
         self.cfg.set("size", px)
         self._clear_cache()
         self._resize_window()
-        self.move(old_bc.x() - M_L - self.art_w // 2, old_bc.y() - M_T - self.art_h)
+
+        if is_right:
+            self.move(old_anchor_x - M_L - self.art_w, old_bottom - self.m_top - self.art_h)
+        elif is_left:
+            self.move(old_anchor_x - M_L, old_bottom - self.m_top - self.art_h)
+        else:
+            self.move(old_anchor_x - M_L - self.art_w // 2, old_bottom - self.m_top - self.art_h)
         self.keep_on_screen()
         self.update()
 
@@ -610,7 +644,7 @@ class PetWindow(QWidget):
         self.set_rotation_angle(0.0)
 
     def sprite_origin(self) -> QPointF:
-        return QPointF(self.x() + M_L, self.y() + M_T)
+        return QPointF(self.x() + M_L, self.y() + self.m_top)
 
     def body_center_global(self) -> QPointF:
         o = self.sprite_origin()
@@ -676,14 +710,14 @@ class PetWindow(QWidget):
         px, py = float(pos.x()), float(pos.y())
         if rot != 0.0:
             cx = M_L + self.art_w / 2.0
-            cy = M_T + self.art_h / 2.0
+            cy = self.m_top + self.art_h / 2.0
             rad = math.radians(-rot)
             dx = px - cx
             dy = py - cy
             px = cx + dx * math.cos(rad) - dy * math.sin(rad)
             py = cy + dx * math.sin(rad) + dy * math.cos(rad)
 
-        x, y = int(px) - M_L, int(py) - M_T
+        x, y = int(px) - M_L, int(py) - self.m_top
         if not (0 <= x < self.art_w and 0 <= y < self.art_h):
             return False
         return (self._sprite(self.expr)[1].pixel(x, y) >> 24) > 20
@@ -733,8 +767,8 @@ class PetWindow(QWidget):
         ag = self.screen_ag()
         L = self.x() + M_L
         R = self.x() + M_L + self.art_w
-        T = self.y() + M_T
-        B = self.y() + M_T + self.art_h
+        T = self.y() + self.m_top
+        B = self.y() + self.m_top + self.art_h
         dx = dy = 0
         if L < ag.left():
             dx = ag.left() - L
@@ -786,8 +820,8 @@ class PetWindow(QWidget):
         ag = self.screen_ag()
         L = self.x() + M_L
         R = self.x() + M_L + self.art_w
-        T = self.y() + M_T
-        B = self.y() + M_T + self.art_h
+        T = self.y() + self.m_top
+        B = self.y() + self.m_top + self.art_h
         nx, ny = self.x(), self.y()
 
         if force_corner:
@@ -846,7 +880,7 @@ class PetWindow(QWidget):
             self.set_snap_right(corner == "right")
             L = M_L
             R = M_L + self.art_w
-            B = M_T + self.art_h
+            B = self.m_top + self.art_h
             nx = (ag.right() + 1 - R) if corner == "right" else (ag.left() - L)
             if self.is_extra and default_offset_x != 0:
                 nx = max(ag.left(), min(ag.right() - R, nx + default_offset_x))
@@ -1215,7 +1249,7 @@ class PetWindow(QWidget):
             progress = 1.0 - (self.paper_land_t / 0.20)
             paper_squish_y = 0.88 + 0.12 * math.sin(progress * math.pi / 2)
 
-        ox, oy = M_L + dx, M_T + dy
+        ox, oy = M_L + dx, self.m_top + dy
         p.save()
         rot = getattr(self, "rotation_angle", 0.0)
         if rot != 0.0:
@@ -1383,12 +1417,14 @@ class PetWindow(QWidget):
             y = oy + H * 0.12 - y_rise
             alpha = max(0.0, 1.0 - progress ** 1.8)
             p.setOpacity(alpha)
-            r = QRectF(ox + floater_x + xo, y, W * 0.6, 36)
+            floater_w = max(360.0, W * 1.4)
+            center_x = ox + floater_x + (W * 0.3) + xo
+            r = QRectF(center_x - floater_w / 2.0, y, floater_w, 36)
             p.setPen(QColor(10, 12, 18, int(220 * alpha)))
             for ddx, ddy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                p.drawText(r.translated(ddx, ddy), Qt.AlignHCenter, text)
+                p.drawText(r.translated(ddx, ddy), Qt.AlignHCenter | Qt.AlignVCenter, text)
             p.setPen(color)
-            p.drawText(r, Qt.AlignHCenter, text)
+            p.drawText(r, Qt.AlignHCenter | Qt.AlignVCenter, text)
         p.setOpacity(1.0)
 
         hp = self._heart()
@@ -1568,7 +1604,10 @@ class PetWindow(QWidget):
 
         max_pots = self.get_max_iron_pots()
         if self.iron_count < max_pots:
+            old_bottom = self.y() + self.m_top + self.art_h
             self.iron_count += 1
+            self._resize_window()
+            self.move(self.x(), old_bottom - self.m_top - self.art_h)
         self.iron_alpha = 1.0
         self.iron_fading = False
         self.bounce_t = 0.35
@@ -1591,9 +1630,20 @@ class PetWindow(QWidget):
     def remove_iron(self, all_pots: bool = False):
         if self.iron_count <= 0:
             return
+        now = time.monotonic()
+        # 單擊取下頂層鐵盆加入 0.35 秒防抖，避免連點同時觸發單擊與雙擊重複提示
+        if not all_pots:
+            last_t = getattr(self, "_last_remove_iron_single_t", 0.0)
+            if now - last_t < 0.35:
+                return
+            self._last_remove_iron_single_t = now
+
         self.bounce_t = 0.35
         self.sounds.play("off")
-        now = time.monotonic()
+        # 清除任何現有鐵盆相關 floater，杜絕提示重複堆疊
+        self.floaters = [f for f in self.floaters if "鐵盆" not in f[0] and "頂層" not in f[0]]
+
+        old_bottom = self.y() + self.m_top + self.art_h
         if all_pots or self.iron_count == 1:
             self.iron_count = 0
             self.floaters.append(["鐵盆已取下", QColor(140, 220, 255), 0, now])
@@ -1602,6 +1652,8 @@ class PetWindow(QWidget):
             self.iron_count -= 1
             self.floaters.append([f"取下頂層鐵盆（剩餘 {self.iron_count} 個）", QColor(140, 220, 255), 0, now])
             self.setToolTip("點擊頭頂取下鐵盆")
+        self._resize_window()
+        self.move(self.x(), old_bottom - self.m_top - self.art_h)
         self.refresh_expr()
         self.wake()
 

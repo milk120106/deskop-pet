@@ -790,6 +790,14 @@ class PixelChibiWindow(QWidget):
             target_lean = 10.0 if self.facing_right else -10.0
         self.paper_lean += (target_lean - self.paper_lean) * min(1.0, dt * 12.0)
 
+        if getattr(self, "_is_dragging", False):
+            # 滑鼠拖曳拎起中：小腿撲騰狀態，暫停重力物理
+            self.state = "panic"
+            self.state_time += dt
+            self.walk_phase = (self.walk_phase + dt * 8.0) % 2.0
+            self.update()
+            return
+
         # 1. 確保圖層永遠高於主寵物 (Z-Order Topmost)
         self.raise_()
 
@@ -1588,36 +1596,79 @@ class PixelChibiWindow(QWidget):
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
+            # 記錄拖曳起始點，開始拖曳，進入提在空中的小腿撲騰狀態（不再直接設為 splat）
+            self._drag_start_pos = e.globalPosition().toPoint()
+            self._drag_start_win = self.pos()
+            self._is_dragging = True
+            self._drag_moved = False
             if self.climbing_pet:
-                # 在主寵身上：點擊切換坐姿與軟趴趴，若已軟趴趴則跳下回到地面
-                if self.state == "sit":
-                    self.state = "splat"
+                self.dismount_pet()
+            self.state = "panic"
+            self.vel_x = 0.0
+            self.vel_y = 0.0
+            self.update()
+            e.accept()
+        else:
+            super().mousePressEvent(e)
+
+    def mouseMoveEvent(self, e):
+        if getattr(self, "_is_dragging", False):
+            delta = e.globalPosition().toPoint() - self._drag_start_pos
+            if delta.manhattanLength() >= 5:
+                self._drag_moved = True
+            new_pos = self._drag_start_win + delta
+            self.pos_x = float(new_pos.x())
+            self.pos_y = float(new_pos.y())
+            self.move(new_pos)
+            self.update()
+            e.accept()
+        else:
+            super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.LeftButton and getattr(self, "_is_dragging", False):
+            self._is_dragging = False
+            if not getattr(self, "_drag_moved", False):
+                # 若位移小於 5 像素視為點擊（切換姿態/眨眼）
+                if self.climbing_pet:
+                    if self.state == "sit":
+                        self.state = "splat"
+                        self.state_time = 0.0
+                        self.update()
+                    else:
+                        self.dismount_pet()
+                elif self.cfg.get("q_fireworks_prop", False):
+                    self.launch_fireworks()
+                else:
+                    allow_walk = bool(self.cfg.get("q_chibi_ceiling_mode", False)) or bool(self.cfg.get("q_chibi_four_edges_floor_mode", False)) or bool(self.cfg.get("q_chibi_allow_walk", True))
+                    if not allow_walk:
+                        if self.state == "idle":
+                            self.state = "sit"
+                        elif self.state == "sit":
+                            self.state = "splat"
+                        else:
+                            self.state = "idle"
+                    else:
+                        if self.state == "walk":
+                            self.state = "sit"
+                        elif self.state == "sit":
+                            self.state = "splat"
+                        elif self.state == "splat":
+                            self.state = "walk"
+                        else:
+                            self.state = "walk"
                     self.state_time = 0.0
                     self.update()
-                else:
-                    self.dismount_pet()
-            elif self.cfg.get("q_fireworks_prop", False):
-                self.launch_fireworks()
             else:
-                allow_walk = bool(self.cfg.get("q_chibi_ceiling_mode", False)) or bool(self.cfg.get("q_chibi_four_edges_floor_mode", False)) or bool(self.cfg.get("q_chibi_allow_walk", True))
-                if not allow_walk:
-                    if self.state == "idle":
-                        self.state = "sit"
-                    elif self.state == "sit":
-                        self.state = "splat"
-                    else:
-                        self.state = "idle"
-                else:
-                    if self.state == "walk":
-                        self.state = "sit"
-                    elif self.state == "sit":
-                        self.state = "splat"
-                    elif self.state == "splat":
-                        self.state = "walk"
-                    else:
-                        self.state = "walk"
+                # 若位移大於等於 5 像素視為釋放，小人自空中掉落著陸
+                self.state = "panic"
+                self.vel_x = 0.0
+                self.vel_y = 60.0
                 self.state_time = 0.0
                 self.update()
+            e.accept()
+        else:
+            super().mouseReleaseEvent(e)
 
     def contextMenuEvent(self, e):
         """右鍵點擊 Q 版小人獨立選單與互動功能。"""
@@ -1628,7 +1679,8 @@ class PixelChibiWindow(QWidget):
 
         m = QMenu()
         theme = self.cfg.get("theme", "light") if self.cfg else "light"
-        m.setStyleSheet(get_menu_qss(theme))
+        fam = self.cfg.get("font_family", "") if self.cfg else None
+        m.setStyleSheet(get_menu_qss(theme, fam))
         m.setAttribute(Qt.WA_TranslucentBackground, True)
         m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
 

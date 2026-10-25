@@ -18,7 +18,7 @@ Rectangle {
     Connections {
         target: (typeof backend !== "undefined" && backend) ? backend : null
         function onTabSwitched(tab) {
-            root.currentTab = Math.max(0, Math.min(4, tab))
+            root.currentTab = Math.max(0, Math.min(5, tab))
         }
         function onNoticeMessage(msg, isErr) {
             toastNotice.show(msg, isErr)
@@ -271,9 +271,9 @@ Rectangle {
             anchors.fill: parent
 
             Repeater {
-                model: ["外觀與角色", "音效與自訂", "AI 與 API 金鑰", "字體設定", "關於與日誌"]
+                model: ["外觀與角色", "音效與自訂", "AI 與 API 金鑰", "字體設定", "關於專案", "日誌檢視"]
                 delegate: Rectangle {
-                    width: navBar.width / 5
+                    width: navBar.width / 6
                     height: navBar.height
                     color: "transparent"
 
@@ -373,81 +373,137 @@ Rectangle {
                 width: parent.width
                 spacing: 14
 
-                // 卡片 1: 角色形象選擇
+                // 卡片 1: 角色形象選擇 (現代膠囊分段滑塊導航欄 Segmented Slider Bar with Indicator)
                 Rectangle {
                     width: parent.width
-                    height: 146
+                    height: colCardChar.implicitHeight + 32
                     radius: 14
                     color: themeColors.surface
                     border.width: 1
                     border.color: themeColors.border
 
                     Column {
+                        id: colCardChar
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 12
 
-                        Text {
-                            text: "角色形象選擇"
-                            color: themeColors.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            font.family: root.modernFontStack
-                            renderType: Text.NativeRendering
-                        }
-
                         Row {
                             width: parent.width
-                            spacing: 12
+                            spacing: 8
+                            Text {
+                                text: "角色形象選擇"
+                                color: themeColors.text
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: "（現代膠囊分段滑桿，點擊平滑指示切換主寵物造型）"
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
 
-                            Repeater {
-                                model: [
-                                    { id: "deepseek", name: "藍色大肥魚", badge: "DeepSeek 鯨魚娘" },
-                                    { id: "gpt", name: "GPT龍娘", badge: "OpenAI 龍娘" },
-                                    { id: "claude", name: "大小姐Claude", badge: "Anthropic 大小姐" },
-                                    { id: "gemini", name: "北美貓娘Gemini", badge: "Google 北美貓娘" }
-                                ]
-                                delegate: Rectangle {
-                                    width: (colTab0.width - 32 - 36) / 4
-                                    height: 72
-                                    radius: 12
-                                    color: (typeof backend !== "undefined" && backend && backend.character === modelData.id) ? themeColors.primaryContainer : (charMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant)
-                                    border.width: (typeof backend !== "undefined" && backend && backend.character === modelData.id) ? 2 : 1
-                                    border.color: (typeof backend !== "undefined" && backend && backend.character === modelData.id) ? themeColors.primary : themeColors.border
+                        // 膠囊分段滑桿容器
+                        Rectangle {
+                            id: charSegmentedBar
+                            width: parent.width
+                            height: 54
+                            radius: 12
+                            color: themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+                            clip: true
 
-                                    scale: charMouse.pressed ? 0.94 : (charMouse.containsMouse ? 1.02 : 1.0)
-                                    Behavior on scale { SpringAnimation { spring: 3.8; damping: 0.28 } }
+                            property var charList: [
+                                { id: "deepseek", title: "DeepSeek", sub: "藍色大肥魚" },
+                                { id: "gpt", title: "GPT", sub: "龍娘" },
+                                { id: "claude", title: "Claude", sub: "大小姐" },
+                                { id: "gemini", title: "Gemini", sub: "北美貓娘" }
+                            ]
 
-                                    Column {
-                                        anchors.centerIn: parent
-                                        spacing: 4
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            text: modelData.name
-                                            color: (typeof backend !== "undefined" && backend && backend.character === modelData.id) ? themeColors.primary : themeColors.text
-                                            font.pixelSize: 13
-                                            font.bold: true
-                                            font.family: root.modernFontStack
-                                            renderType: Text.NativeRendering
+                            property int activeIndex: {
+                                var c = (typeof backend !== "undefined" && backend) ? backend.character : "deepseek";
+                                if (c === "gpt") return 1;
+                                if (c === "claude") return 2;
+                                if (c === "gemini") return 3;
+                                return 0;
+                            }
+
+                            // 平滑滑動指示器膠囊
+                            Rectangle {
+                                id: charIndicator
+                                y: 4
+                                height: parent.height - 8
+                                width: (charSegmentedBar.width - 8) / 4
+                                x: 4 + charSegmentedBar.activeIndex * width
+                                radius: 10
+                                color: themeColors.surface
+                                border.width: 1.5
+                                border.color: themeColors.primary
+                                Behavior on x {
+                                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                                }
+                                Behavior on width {
+                                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                                }
+                            }
+
+                            // 分段按鈕列
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                spacing: 0
+
+                                Repeater {
+                                    model: charSegmentedBar.charList
+                                    delegate: Item {
+                                        width: (charSegmentedBar.width - 8) / 4
+                                        height: parent.height
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: 10
+                                            color: segMouse.containsMouse && charSegmentedBar.activeIndex !== index ? themeColors.surfaceHover : "transparent"
                                         }
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            text: modelData.badge
-                                            color: themeColors.textSub
-                                            font.pixelSize: 11
-                                            font.family: root.modernFontStack
-                                            renderType: Text.NativeRendering
-                                        }
-                                    }
 
-                                    MouseArea {
-                                        id: charMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            if (typeof backend !== "undefined" && backend) {
-                                                backend.setCharacter(modelData.id)
+                                        Column {
+                                            anchors.centerIn: parent
+                                            spacing: 2
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: modelData.title
+                                                color: charSegmentedBar.activeIndex === index ? themeColors.primary : themeColors.text
+                                                font.pixelSize: 13
+                                                font.bold: charSegmentedBar.activeIndex === index
+                                                font.family: root.modernFontStack
+                                                renderType: Text.NativeRendering
+                                            }
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: modelData.sub
+                                                color: charSegmentedBar.activeIndex === index ? themeColors.primary : themeColors.textSub
+                                                font.pixelSize: 10
+                                                font.family: root.modernFontStack
+                                                renderType: Text.NativeRendering
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            id: segMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.setCharacter(modelData.id)
+                                                }
                                             }
                                         }
                                     }
@@ -1621,7 +1677,7 @@ Rectangle {
                     }
                 }
 
-                // 卡片 5: 全新 Q 版人物獨立像素系統 (帶雙腿、風格嚴格對齊四位娘化主角)
+                // 卡片 5: 全新 Q 版人物獨立像素系統與行為控制
                 Rectangle {
                     width: parent.width
                     height: colCard5.implicitHeight + 32
@@ -1637,12 +1693,41 @@ Rectangle {
                         spacing: 12
 
                         Text {
-                            text: "全新 Q 版人物獨立像素系統"
+                            text: "全新 Q 版人物獨立像素系統與行為控制"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
                             font.family: root.modernFontStack
                             renderType: Text.NativeRendering
+                        }
+
+                        // 項目 0: 上限數量選擇 (5..30)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "在場小人上限數量：" + ((typeof backend !== "undefined" && backend) ? backend.qChibiMaxCount : 5) + " 隻"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 220
+                            }
+                            Slider {
+                                width: parent.width - 240
+                                height: 24
+                                from: 5
+                                to: 30
+                                stepSize: 1
+                                value: (typeof backend !== "undefined" && backend) ? backend.qChibiMaxCount : 5
+                                anchors.verticalCenter: parent.verticalCenter
+                                onMoved: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.setQChibiMaxCount(Math.round(value))
+                                    }
+                                }
+                            }
                         }
 
                         // 項目 1: 啟用 Q 版小人桌面巡邏
@@ -1688,12 +1773,12 @@ Rectangle {
                             }
                         }
 
-                        // 項目 2: 視窗與按鈕攀爬辨識 (預設關閉)
+                        // 項目 1.5: 允許地面自由走動開關
                         Row {
                             width: parent.width
                             spacing: 12
                             Text {
-                                text: "視窗與按鈕攀爬辨識（視窗消失失足慌張掉落）"
+                                text: "允許地面自由走動（開啟走動巡邏，關閉則保持定點姿態）"
                                 color: themeColors.text
                                 font.pixelSize: 13
                                 font.family: root.modernFontStack
@@ -1707,7 +1792,7 @@ Rectangle {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 13
-                                    color: (typeof backend !== "undefined" && backend && backend.qClimbWindows) ? themeColors.primary : themeColors.surfaceVariant
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowWalk) ? themeColors.primary : themeColors.surfaceVariant
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     Rectangle {
                                         width: 20
@@ -1715,7 +1800,7 @@ Rectangle {
                                         radius: 10
                                         y: 3
                                         color: "#FFFFFF"
-                                        x: (typeof backend !== "undefined" && backend && backend.qClimbWindows) ? 25 : 3
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowWalk) ? 25 : 3
                                         Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
                                     }
                                 }
@@ -1724,14 +1809,272 @@ Rectangle {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
-                                            backend.setQClimbWindows(!backend.qClimbWindows)
+                                            backend.setQChibiAllowWalk(!backend.qChibiAllowWalk)
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // 項目 3: 小氣球飛行道具 (預設關閉)
+                        // 項目 2: 視窗與按鈕攀爬辨識
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "視窗與桌面攀爬辨識（攀爬活躍視窗頂部與邊界）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowClimbWindow) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowClimbWindow) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiAllowClimbWindow(!backend.qChibiAllowClimbWindow)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2.5: 按鈕玩耍
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "按鈕互動玩耍（小人靠近螢幕按鈕時拍打或玩耍）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowPlayButtons) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowPlayButtons) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiAllowPlayButtons(!backend.qChibiAllowPlayButtons)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2.6: 搗亂行為
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "小人趣味搗亂（偶然推動小物件或扮鬼臉）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowMischief) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowMischief) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiAllowMischief(!backend.qChibiAllowMischief)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2.7: 軟趴趴姿態
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "允許軟趴趴姿態（累了軟趴在地面或主寵身上）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowSplat) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowSplat) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiAllowSplat(!backend.qChibiAllowSplat)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2.8: 睡覺休憩
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "允許睡覺休憩（閒置時沉睡打呼嚕）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowSleep) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowSleep) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiAllowSleep(!backend.qChibiAllowSleep)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 2.9: 情緒粒子表現
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "情緒粒子表現（愛心、音符、生氣符號等頭頂粒子動效）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiParticlesEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiParticlesEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setQChibiParticlesEnabled(!backend.qChibiParticlesEnabled)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 項目 3: 小氣球飛行道具
                         Row {
                             width: parent.width
                             spacing: 12
@@ -1774,7 +2117,7 @@ Rectangle {
                             }
                         }
 
-                        // 項目 4: 像素煙火發射小道具 (預設關閉)
+                        // 項目 4: 像素煙火發射小道具
                         Row {
                             width: parent.width
                             spacing: 12
@@ -2131,7 +2474,7 @@ Rectangle {
                     }
                 }
 
-                // 卡片 6: 鬧鐘與多管道通知轉發系統 (Windows Toast / Discord / Telegram)
+                // 卡片 6: 鬧鐘設定卡片（列表檢視與新增定時鬧鐘）
                 Rectangle {
                     width: parent.width
                     height: colCard6.implicitHeight + 32
@@ -2147,7 +2490,7 @@ Rectangle {
                         spacing: 12
 
                         Text {
-                            text: "鬧鐘與事件通知系統"
+                            text: "鬧鐘與定時排程系統"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
@@ -2156,7 +2499,7 @@ Rectangle {
                         }
 
                         Text {
-                            text: "支援定時鬧鐘、倒數計時、平板呼吸閃爍與 Windows Toast / Discord / Telegram Webhook 同步轉發"
+                            text: "支援定時鬧鐘、倒數計時與平板呼吸動效，時間到達時將發出提醒並可同步推送至 Webhook"
                             color: themeColors.textSub
                             font.pixelSize: 12
                             font.family: root.modernFontStack
@@ -2165,6 +2508,7 @@ Rectangle {
                             width: parent.width
                         }
 
+                        // 快速計時按鈕列
                         Row {
                             spacing: 10
 
@@ -2191,7 +2535,7 @@ Rectangle {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
-                                            backend.addAlarm("5分鐘提醒", "", "timer", 300)
+                                            backend.addTimerAlarm("5分鐘提醒", 300)
                                         }
                                     }
                                 }
@@ -2220,7 +2564,429 @@ Rectangle {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         if (typeof backend !== "undefined" && backend) {
-                                            backend.addAlarm("番茄工作鐘", "", "timer", 1500)
+                                            backend.addTimerAlarm("番茄工作鐘", 1500)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 130
+                                height: 32
+                                radius: 8
+                                color: timerBtn60Mouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "+60 分鐘休息"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: timerBtn60Mouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.addTimerAlarm("60分鐘休息提醒", 3600)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 新增定時鬧鐘列
+                        Row {
+                            width: parent.width
+                            spacing: 8
+
+                            Rectangle {
+                                width: 140
+                                height: 32
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: txtNewAlarmName
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    clip: true
+                                }
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "鬧鐘名稱 (如：喝水)"
+                                    color: themeColors.textSub
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    visible: !txtNewAlarmName.text
+                                }
+                            }
+
+                            Rectangle {
+                                width: 110
+                                height: 32
+                                radius: 6
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: txtNewAlarmTime
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    color: themeColors.text
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    clip: true
+                                }
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "時間 (如 08:30)"
+                                    color: themeColors.textSub
+                                    font.pixelSize: 11
+                                    font.family: root.modernFontStack
+                                    visible: !txtNewAlarmTime.text
+                                }
+                            }
+
+                            Rectangle {
+                                width: 120
+                                height: 32
+                                radius: 8
+                                color: btnAddAlarmMouse.containsMouse ? themeColors.primaryDark : themeColors.primary
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "新增定時鬧鐘"
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: btnAddAlarmMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        var aName = txtNewAlarmName.text.trim() || "定時鬧鐘";
+                                        var aTime = txtNewAlarmTime.text.trim();
+                                        if (aTime && typeof backend !== "undefined" && backend) {
+                                            backend.addClockAlarm(aName, aTime);
+                                            txtNewAlarmName.text = "";
+                                            txtNewAlarmTime.text = "";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 鬧鐘清單檢視
+                        Text {
+                            text: "現有鬧鐘與定時排程清單："
+                            color: themeColors.text
+                            font.pixelSize: 12
+                            font.bold: true
+                            font.family: root.modernFontStack
+                        }
+
+                        Column {
+                            width: parent.width
+                            spacing: 6
+
+                            Repeater {
+                                model: (typeof backend !== "undefined" && backend && backend.alarmsList) ? backend.alarmsList : []
+                                delegate: Rectangle {
+                                    width: parent.width
+                                    height: 40
+                                    radius: 8
+                                    color: themeColors.surfaceVariant
+                                    border.width: 1
+                                    border.color: themeColors.border
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        spacing: 12
+
+                                        Text {
+                                            text: modelData.name + (modelData.type === "clock" ? " [" + modelData.time + "]" : " (倒數定時器)")
+                                            color: themeColors.text
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            font.family: root.modernFontStack
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 260
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Item { width: 1; height: 1; }
+
+                                        // 開關切換按鈕
+                                        Rectangle {
+                                            width: 50
+                                            height: 24
+                                            radius: 6
+                                            color: modelData.enabled ? "#10b981" : "#64748b"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: modelData.enabled ? "啟用" : "關閉"
+                                                color: "#ffffff"
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                font.family: root.modernFontStack
+                                            }
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (typeof backend !== "undefined" && backend) {
+                                                        backend.toggleAlarm(modelData.id, !modelData.enabled)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // 刪除按鈕
+                                        Rectangle {
+                                            width: 44
+                                            height: 24
+                                            radius: 6
+                                            color: "#ef4444"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "刪除"
+                                                color: "#ffffff"
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                font.family: root.modernFontStack
+                                            }
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (typeof backend !== "undefined" && backend) {
+                                                        backend.removeAlarm(modelData.id)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "目前尚未設定任何鬧鐘。"
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                visible: !(typeof backend !== "undefined" && backend && backend.alarmsList && backend.alarmsList.length > 0)
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 6.5: Webhook 通知設定卡片 (Discord / Telegram)
+                Rectangle {
+                    width: parent.width
+                    height: colCardWebhook.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCardWebhook
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "Webhook 多管道通知設定"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            text: "支援將鬧鐘提醒、額度變動與桌面寵物事件非同步推送至 Discord 頻道或 Telegram Bot"
+                            color: themeColors.textSub
+                            font.pixelSize: 12
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                        }
+
+                        // Discord Webhook URL
+                        Column {
+                            width: parent.width
+                            spacing: 4
+                            Text {
+                                text: "Discord Webhook URL 網址："
+                                color: themeColors.text
+                                font.pixelSize: 12
+                                font.bold: true
+                                font.family: root.modernFontStack
+                            }
+                            Rectangle {
+                                width: parent.width
+                                height: 34
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: txtDiscordWebhook
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    text: (typeof backend !== "undefined" && backend) ? backend.discordWebhookUrl : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    clip: true
+                                }
+                            }
+                        }
+
+                        // Telegram Bot Token
+                        Column {
+                            width: parent.width
+                            spacing: 4
+                            Text {
+                                text: "Telegram Bot Token："
+                                color: themeColors.text
+                                font.pixelSize: 12
+                                font.bold: true
+                                font.family: root.modernFontStack
+                            }
+                            Rectangle {
+                                width: parent.width
+                                height: 34
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: txtTgToken
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    text: (typeof backend !== "undefined" && backend) ? backend.telegramBotToken : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    clip: true
+                                }
+                            }
+                        }
+
+                        // Telegram Chat ID
+                        Column {
+                            width: parent.width
+                            spacing: 4
+                            Text {
+                                text: "Telegram Chat ID (群組或個人對話 ID)："
+                                color: themeColors.text
+                                font.pixelSize: 12
+                                font.bold: true
+                                font.family: root.modernFontStack
+                            }
+                            Rectangle {
+                                width: parent.width
+                                height: 34
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                TextInput {
+                                    id: txtTgChatId
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    text: (typeof backend !== "undefined" && backend) ? backend.telegramChatId : ""
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    clip: true
+                                }
+                            }
+                        }
+
+                        // 操作按鈕列
+                        Row {
+                            spacing: 12
+
+                            Rectangle {
+                                width: 140
+                                height: 34
+                                radius: 8
+                                color: btnSaveWebhookMouse.containsMouse ? themeColors.primaryDark : themeColors.primary
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "儲存 Webhook 設定"
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: btnSaveWebhookMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.setWebhookConfig(txtDiscordWebhook.text, txtTgToken.text, txtTgChatId.text)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 140
+                                height: 34
+                                radius: 8
+                                color: btnTestWebhookMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "發送測試通知"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+
+                                MouseArea {
+                                    id: btnTestWebhookMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (typeof backend !== "undefined" && backend) {
+                                            backend.sendTestWebhookNotification()
                                         }
                                     }
                                 }
@@ -4885,7 +5651,7 @@ Rectangle {
             }
         }
 
-        // ===================================================== 分頁 5【關於與日誌】
+        // ===================================================== 分頁 5【關於專案】
         Flickable {
             id: viewTab4
             anchors.fill: parent
@@ -5043,114 +5809,7 @@ Rectangle {
                     }
                 }
 
-                // 卡片 2: 即時 Console 日誌檢視器
-                Rectangle {
-                    width: parent.width
-                    height: 260
-                    radius: 14
-                    color: themeColors.surface
-                    border.width: 1
-                    border.color: themeColors.border
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 10
-
-                        Row {
-                            width: parent.width
-                            spacing: 10
-
-                            Text {
-                                text: "日誌等級過濾:"
-                                color: themeColors.text
-                                font.pixelSize: 12
-                                font.bold: true
-                                font.family: root.modernFontStack
-                                renderType: Text.NativeRendering
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            ComboBox {
-                                id: logLevelCmb
-                                width: 110
-                                height: 30
-                                model: ["全部 (ALL)", "INFO", "WARNING", "ERROR"]
-                                font.pixelSize: 11
-                                onActivated: (idx) => {
-                                    if (typeof backend !== "undefined" && backend) {
-                                        backend.refreshLogs(currentText, edLogSearch.text)
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                width: 220
-                                height: 30
-                                radius: 6
-                                color: themeColors.surfaceVariant
-                                border.width: 1
-                                border.color: themeColors.border
-
-                                TextInput {
-                                    id: edLogSearch
-                                    anchors.fill: parent
-                                    anchors.margins: 6
-                                    color: themeColors.text
-                                    font.pixelSize: 11
-                                    font.family: root.modernFontStack
-                                    selectByMouse: true
-                                    clip: true
-                                    onTextChanged: {
-                                        if (typeof backend !== "undefined" && backend) {
-                                            backend.refreshLogs(logLevelCmb.currentText, text)
-                                        }
-                                    }
-                                }
-                                Text {
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 8
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: "搜尋關鍵字..."
-                                    color: themeColors.textSub
-                                    font.pixelSize: 11
-                                    font.family: root.modernFontStack
-                                    visible: !edLogSearch.text
-                                }
-                            }
-                        }
-
-                        // 日誌終端視圖
-                        Rectangle {
-                            width: parent.width
-                            height: 170
-                            radius: 10
-                            color: themeColors.currentTheme === "dark" ? "#0A0D14" : "#1E293B"
-                            border.width: 1
-                            border.color: themeColors.border
-                            clip: true
-
-                            Flickable {
-                                id: flickLogs
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                contentWidth: textLogs.paintedWidth
-                                contentHeight: textLogs.paintedHeight
-                                clip: true
-
-                                TextEdit {
-                                    id: textLogs
-                                    text: (typeof backend !== "undefined" && backend) ? backend.logsSnippet : "尚無即時日誌紀錄。"
-                                    color: "#E2E8F0"
-                                    font.pixelSize: 11
-                                    font.family: "Consolas, 'Cascadia Code', monospace"
-                                    readOnly: true
-                                    selectByMouse: true
-                                }
-                            }
-                        }
-                    }
-                }
 
                 // 卡片 3: GitHub 更新與官方專案倉庫
                 Rectangle {
@@ -5575,6 +6234,187 @@ Rectangle {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+        // ===================================================== 分頁 6【日誌檢視】(獨立導航分頁，徹底消除滾動衝突與崩潰)
+        Item {
+            id: viewTab5
+            anchors.fill: parent
+            opacity: root.currentTab === 5 ? 1.0 : 0.0
+            visible: opacity > 0
+            y: root.currentTab === 5 ? 0 : 8
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+
+            Column {
+                anchors.fill: parent
+                spacing: 12
+
+                // 頂部日誌工具列
+                Rectangle {
+                    width: parent.width
+                    height: 52
+                    radius: 12
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 10
+
+                        Text {
+                            text: "系統即時日誌"
+                            color: themeColors.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        ComboBox {
+                            id: logTabLevelCmb
+                            width: 100
+                            height: 32
+                            anchors.verticalCenter: parent.verticalCenter
+                            model: ["全部", "資訊", "警告", "錯誤"]
+                            font.pixelSize: 11
+                            font.family: root.modernFontStack
+                            onActivated: (idx) => {
+                                if (typeof backend !== "undefined" && backend) {
+                                    backend.refreshLogs(currentText, logTabSearch.text)
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 220
+                            height: 32
+                            radius: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+
+                            TextInput {
+                                id: logTabSearch
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                color: themeColors.text
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                selectByMouse: true
+                                clip: true
+                                onTextChanged: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.refreshLogs(logTabLevelCmb.currentText, text)
+                                    }
+                                }
+                            }
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "搜尋日誌關鍵字..."
+                                color: themeColors.textSub
+                                font.pixelSize: 11
+                                font.family: root.modernFontStack
+                                visible: !logTabSearch.text
+                            }
+                        }
+
+                        Item { width: 1; height: 1; }
+
+                        Rectangle {
+                            width: 80
+                            height: 32
+                            radius: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: btnRefreshLogMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+                            Text {
+                                anchors.centerIn: parent
+                                text: "重新整理"
+                                color: themeColors.text
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: root.modernFontStack
+                            }
+                            MouseArea {
+                                id: btnRefreshLogMouse
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.refreshLogs(logTabLevelCmb.currentText, logTabSearch.text)
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 80
+                            height: 32
+                            radius: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: btnClearLogMouse.containsMouse ? "#ef4444" : themeColors.surfaceVariant
+                            border.width: 1
+                            border.color: themeColors.border
+                            Text {
+                                anchors.centerIn: parent
+                                text: "清空日誌"
+                                color: btnClearLogMouse.containsMouse ? "#ffffff" : themeColors.text
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: root.modernFontStack
+                            }
+                            MouseArea {
+                                id: btnClearLogMouse
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.clearLogs()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 終端黑底獨立日誌檢視區塊
+                Rectangle {
+                    width: parent.width
+                    height: viewTab5.height - 52 - 12
+                    radius: 12
+                    color: themeColors.currentTheme === "dark" ? "#0A0D14" : "#1E293B"
+                    border.width: 1
+                    border.color: themeColors.border
+                    clip: true
+
+                    Flickable {
+                        id: flickStandaloneLogs
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        contentWidth: standaloneLogText.paintedWidth
+                        contentHeight: standaloneLogText.paintedHeight
+                        clip: true
+
+                        TextEdit {
+                            id: standaloneLogText
+                            text: (typeof backend !== "undefined" && backend) ? backend.logsSnippet : "尚無即時日誌紀錄。"
+                            color: "#E2E8F0"
+                            font.pixelSize: 11
+                            font.family: "Consolas, 'Cascadia Code', monospace"
+                            readOnly: true
+                            selectByMouse: true
+                            wrapMode: TextEdit.NoWrap
                         }
                     }
                 }

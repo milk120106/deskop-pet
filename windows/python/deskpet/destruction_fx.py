@@ -27,6 +27,7 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
     QPolygonF,
+    QPixmap,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -64,6 +65,67 @@ class ScreenDecal:
                 self.rays.append((0.0, 0.0, rx1, ry1))
                 self.rays.append((rx1, ry1, rx2, ry2))
 
+
+
+
+class GlassShard:
+    """被擊碎位移的螢幕截圖碎片多邊形。"""
+
+    def __init__(self, polygon: QPolygonF, dx: float, dy: float, path: QPainterPath):
+        self.polygon = polygon
+        self.dx = dx
+        self.dy = dy
+        self.path = path
+
+
+class GlassShatterImpact:
+    """玻璃碎裂放射狀裂紋與位移碎片集。"""
+
+    def __init__(self, cx: float, cy: float, radius: float = 120.0):
+        self.cx = cx
+        self.cy = cy
+        self.radius = radius
+        self.shards: list[GlassShard] = []
+        self.crack_lines: list[tuple[float, float, float, float]] = []
+        self.shockwave_radii = [radius * 0.35, radius * 0.7, radius * 1.05]
+        self._generate_shards()
+
+    def _generate_shards(self):
+        num_sectors = random.randint(8, 12)
+        angles = sorted([random.uniform(0, 2 * math.pi) for _ in range(num_sectors)])
+        angles.append(angles[0] + 2 * math.pi)
+
+        for i in range(num_sectors):
+            a1 = angles[i]
+            a2 = angles[i + 1]
+            r1 = self.radius * random.uniform(0.75, 1.15)
+            r2 = self.radius * random.uniform(0.75, 1.15)
+            mid_a = (a1 + a2) / 2.0
+            mid_r = self.radius * random.uniform(0.85, 1.2)
+
+            p1 = QPointF(self.cx, self.cy)
+            p2 = QPointF(self.cx + math.cos(a1) * r1, self.cy + math.sin(a1) * r1)
+            p_mid = QPointF(self.cx + math.cos(mid_a) * mid_r, self.cy + math.sin(mid_a) * mid_r)
+            p3 = QPointF(self.cx + math.cos(a2) * r2, self.cy + math.sin(a2) * r2)
+
+            poly = QPolygonF([p1, p2, p_mid, p3])
+            path = QPainterPath()
+            path.addPolygon(poly)
+
+            shift_dist = random.uniform(3.0, 7.0)
+            dx = math.cos(mid_a) * shift_dist
+            dy = math.sin(mid_a) * shift_dist
+
+            self.shards.append(GlassShard(poly, dx, dy, path))
+            self.crack_lines.append((p1.x(), p1.y(), p2.x(), p2.y()))
+            self.crack_lines.append((p2.x(), p2.y(), p_mid.x(), p_mid.y()))
+            self.crack_lines.append((p_mid.x(), p_mid.y(), p3.x(), p3.y()))
+
+            if random.random() < 0.6:
+                ext_r = r1 * random.uniform(1.2, 1.6)
+                ext_a = a1 + random.uniform(-0.25, 0.25)
+                p_ext = QPointF(self.cx + math.cos(ext_a) * ext_r, self.cy + math.sin(ext_a) * ext_r)
+                self.crack_lines.append((p2.x(), p2.y(), p_ext.x(), p_ext.y()))
 
 class InteractiveBomb:
     """玩家放置的互動引線定時炸彈。"""
@@ -109,7 +171,7 @@ class DestructionToolbar(QWidget):
             Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow
         )
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setFixedSize(480, 56)
+        self.setFixedSize(680, 56)
         self.active_tool = "hammer"
 
         self._build_ui()
@@ -154,6 +216,10 @@ class DestructionToolbar(QWidget):
         lbl.setStyleSheet("color: #38bdf8; font-weight: 900; font-size: 13px; border: none; background: transparent;")
         lay.addWidget(lbl)
 
+        lbl_note = QLabel("（純視覺效果，不會造成任何系統破壞或資料遺失）", panel)
+        lbl_note.setStyleSheet("color: #94a3b8; font-size: 11px; border: none; background: transparent;")
+        lay.addWidget(lbl_note)
+
         self.btn_hammer = QPushButton("充氣大鐵錘", panel)
         self.btn_hammer.clicked.connect(lambda: self.select_tool("hammer"))
         lay.addWidget(self.btn_hammer)
@@ -162,11 +228,11 @@ class DestructionToolbar(QWidget):
         self.btn_bomb.clicked.connect(lambda: self.select_tool("bomb"))
         lay.addWidget(self.btn_bomb)
 
-        self.btn_launcher = QPushButton("彈弓小人", panel)
+        self.btn_launcher = QPushButton("小人彈弓", panel)
         self.btn_launcher.clicked.connect(lambda: self.select_tool("launcher"))
         lay.addWidget(self.btn_launcher)
 
-        self.btn_sponge = QPushButton("海綿修復 (Esc)", panel)
+        self.btn_sponge = QPushButton("修復還原 (Esc)", panel)
         self.btn_sponge.setStyleSheet("QPushButton { background-color: #10b981; border-color: #34d399; } QPushButton:hover { background-color: #059669; }")
         self.btn_sponge.clicked.connect(self.exit_requested.emit)
         lay.addWidget(self.btn_sponge)
@@ -206,6 +272,8 @@ class DestructionOverlay(QWidget):
 
         self.decals: list[ScreenDecal] = []
         self.bombs: list[InteractiveBomb] = []
+        self.shatter_impacts: list[GlassShatterImpact] = []
+        self.screen_pixmap: QPixmap | None = None
         self.slingshot = SlingshotState()
 
         # 滑鼠浮動游標位置
@@ -252,6 +320,14 @@ class DestructionOverlay(QWidget):
         self._sync_geometry()
         self.is_interactive_mode = True
 
+        # 使用 QGuiApplication.primaryScreen().grabWindow(0) 擷取當前全螢幕即時畫面，作為全螢幕覆蓋層背景
+        screen = QGuiApplication.primaryScreen()
+        if screen:
+            try:
+                self.screen_pixmap = screen.grabWindow(0)
+            except Exception:
+                self.screen_pixmap = None
+
         # 啟用滑鼠互動（移除 WindowTransparentForInput）
         self.setWindowFlags(
             Qt.FramelessWindowHint
@@ -285,6 +361,8 @@ class DestructionOverlay(QWidget):
         self.cleaning_active = False
         self.decals.clear()
         self.bombs.clear()
+        self.shatter_impacts.clear()
+        self.screen_pixmap = None
         self.slingshot.active = False
         self.toolbar.hide()
 
@@ -303,6 +381,7 @@ class DestructionOverlay(QWidget):
         """清除全部貼圖痕跡。"""
         self.decals.clear()
         self.bombs.clear()
+        self.shatter_impacts.clear()
         self.slingshot.active = False
         self.update()
 
@@ -426,8 +505,9 @@ class DestructionOverlay(QWidget):
             chibi.paper_lean = 720.0
             chibi.wake()
 
-        # 3. 在畫布上敲出漫畫玻璃裂痕貼圖
+        # 3. 於打擊位置對截圖產生玻璃碎裂放射狀裂紋與位移碎片
         scale = 1.4 if not (hit_pet or hit_chibi) else 0.8
+        self.shatter_impacts.append(GlassShatterImpact(px, py, radius=random.uniform(90.0, 130.0) * scale))
         self.decals.append(ScreenDecal("crack", px, py, scale=scale))
 
         try:
@@ -513,6 +593,7 @@ class DestructionOverlay(QWidget):
 
     def _detonate_bomb(self, bomb: InteractiveBomb):
         """定時炸彈引爆：焦痕、衝擊波與將周邊小人炸得飛上天開小氣球。"""
+        self.shatter_impacts.append(GlassShatterImpact(bomb.x, bomb.y, radius=random.uniform(170.0, 230.0)))
         self.decals.append(ScreenDecal("scorch", bomb.x, bomb.y, scale=1.3))
         self.shake_decay = 0.35
         self.shake_x = random.choice([-14.0, 14.0])
@@ -548,10 +629,50 @@ class DestructionOverlay(QWidget):
     def paintEvent(self, _):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)
+        p.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
         # 螢幕震動位移
         if self.shake_decay > 0.0:
             p.translate(self.shake_x, self.shake_y)
+
+        # 0. 繪製截圖與真實擊碎碎裂視覺效果（多邊形碎片位移錯開、露出裂痕邊緣暗色背景與放射裂紋）
+        if self.screen_pixmap and not self.screen_pixmap.isNull():
+            p.drawPixmap(0, 0, self.screen_pixmap)
+
+            for impact in self.shatter_impacts:
+                # 繪製碎片位移後露出的暗色縫隙與邊緣背景
+                p.save()
+                p.setBrush(QBrush(QColor(15, 23, 42, 220)))
+                p.setPen(Qt.NoPen)
+                for shard in impact.shards:
+                    p.drawPolygon(shard.polygon)
+                p.restore()
+
+                # 繪製放射狀輕微位移錯開的截圖碎片
+                for shard in impact.shards:
+                    p.save()
+                    p.translate(shard.dx, shard.dy)
+                    p.setClipPath(shard.path)
+                    p.drawPixmap(0, 0, self.screen_pixmap)
+                    p.setPen(QPen(QColor(255, 255, 255, 140), 1.2))
+                    p.drawPolygon(shard.polygon)
+                    p.restore()
+
+                # 繪製同心震波環、放射狀銳利裂紋與撞擊中心
+                p.save()
+                p.setPen(QPen(QColor(224, 242, 254, 90), 1.0, Qt.DashLine))
+                p.setBrush(Qt.NoBrush)
+                for r in impact.shockwave_radii:
+                    p.drawEllipse(QPointF(impact.cx, impact.cy), r, r)
+
+                p.setPen(QPen(QColor(255, 255, 255, 230), 2.0))
+                for x1, y1, x2, y2 in impact.crack_lines:
+                    p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+
+                p.setBrush(QBrush(QColor(255, 255, 255, 240)))
+                p.setPen(QPen(QColor(186, 230, 253, 180), 2.5))
+                p.drawEllipse(QPointF(impact.cx, impact.cy), 6, 6)
+                p.restore()
 
         # 1. 繪製所有玻璃碎裂與焦黑貼圖
         for decal in self.decals:

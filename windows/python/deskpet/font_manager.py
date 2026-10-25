@@ -106,3 +106,18 @@ def init_app_font(cfg) -> str:
     best = resolve_best_default_font()
     apply_global_font(best)
     return best
+
+
+def get_active_font_family(cfg=None) -> str:
+    """Return currently active font family from config or fallback to best system font."""
+    if cfg is not None:
+        fam = cfg.get("font_family", "")
+        if fam:
+            return fam
+    return resolve_best_default_font()
+
+
+def get_menu_qss(theme: str = "light", font_family: str | None = None, cfg=None) -> str:
+    """Helper wrapper for get_menu_qss in app module."""
+    from .app import get_menu_qss as _app_get_menu_qss
+    return _app_get_menu_qss(theme=theme, font_family=font_family, cfg=cfg)

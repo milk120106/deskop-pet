@@ -1855,6 +1855,131 @@ def run(qapp) -> int:
 
     chat_dlg.close()
 
+    # ==================== 第二階段核心改進與缺陷修復自我測試 ====================
+    # 1. 鐵盆堆疊邊界高度動態擴展 (支援 10 盆無裁切)
+    pet.remove_iron(all_pots=True)
+    check("base top margin is 130", pet.m_top == 130)
+    # 測試堆疊至 10 盆時視窗上邊界動態擴展且頂部無裁切
+    for _ in range(10):
+        old_b = pet.y() + pet.m_top + pet.art_h
+        pet.iron_count += 1
+        pet._resize_window()
+        pet.move(pet.x(), old_b - pet.m_top - pet.art_h)
+    check("10 stacked iron pots fit inside window without top clipping", pet.iron_count == 10 and pet.m_top >= 280)
+    pet.remove_iron(all_pots=True)
+
+    # 2. 懸浮文字括號邊界防截斷
+    pet.show_floater("（已移除頂層鐵盆）")
+    check("floater message contains full closing bracket", any("（已移除頂層鐵盆）" in f[0] for f in pet.floaters))
+
+    # 3. 字型動態切換支援右鍵選單與全域重新整理
+    from deskpet.app import get_menu_qss
+    qss_light = get_menu_qss(theme="light", font_family="Microsoft JhengHei")
+    check("get_menu_qss incorporates specified font family in light theme", "Microsoft JhengHei" in qss_light)
+    qss_dark = get_menu_qss(theme="dark", font_family="Consolas")
+    check("get_menu_qss incorporates specified font family in dark theme", "Consolas" in qss_dark)
+    app.apply_font_family("Microsoft JhengHei")
+    check("app.apply_font_family updates tray menu style", "Microsoft JhengHei" in app.tray.contextMenu().styleSheet())
+
+    # 4. 體型縮放貼齊錨點修復 (無飄移)
+    pet.snap_corner = "right"
+    pet.snap_right = True
+    orig_r = pet.x() + pet.width()
+    pet.set_size(400)
+    check("pet enlarged maintains right anchor", abs(pet.x() + pet.width() - orig_r) <= 1)
+    pet.set_size(340)
+    check("pet restored to original size does NOT drift from right edge", abs(pet.x() + pet.width() - orig_r) <= 1)
+
+    pet.snap_corner = "left"
+    pet.snap_right = False
+    orig_l = pet.x()
+    pet.set_size(400)
+    check("pet enlarged maintains left anchor", abs(pet.x() - orig_l) <= 1)
+    pet.set_size(340)
+    check("pet restored to original size does NOT drift from left edge", abs(pet.x() - orig_l) <= 1)
+
+    # 4.5. 鐵盆防抖連點取下與懸浮提示去重
+    pet.iron_count = 5
+    pet.remove_iron(all_pots=False)
+    pet.remove_iron(all_pots=False)
+    check("rapid click within 0.35s debounce is ignored", pet.iron_count == 4)
+    pet.remove_iron(all_pots=True)
+    check("remove all pots clears count to 0", pet.iron_count == 0)
+    iron_floaters = [f for f in pet.floaters if "鐵盆" in f[0]]
+    check("floater list has exactly one iron removal notification without duplication", len(iron_floaters) == 1 and iron_floaters[0][0] == "鐵盆已取下")
+
+    # 5. 隨機掉落鐵盆預設關閉與地面掉落 25s 自動超時消失
+    check("sky_pot_drop_enabled defaults to False", config.DEFAULTS.get("sky_pot_drop_enabled") is False)
+    check("natural_pot_slip_enabled defaults to False", config.DEFAULTS.get("natural_pot_slip_enabled") is False)
+    test_pot = pet.props.spawn_sky_pot()
+    check("sky pot spawned", test_pot in pet.props.props)
+    test_pot.landed_at = time.monotonic() - 26.0
+    test_pot.held = False
+    pet.props.step()
+    check("iron bowl landed on ground for over 25s automatically removed", test_pot not in pet.props.props and test_pot.dead is True)
+
+    # 6. Q 版小人滑鼠拖曳拎起互動 (不再直接壓扁)
+    test_chibi = app.chibi_manager.summon("deepseek", force=True)
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent
+    press_ev = QMouseEvent(QEvent.MouseButtonPress, QPointF(16, 24), QPointF(16, 24), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    test_chibi.mousePressEvent(press_ev)
+    check("chibi mouse press initiates dragging without splat", getattr(test_chibi, "_is_dragging", False) is True and test_chibi.state == "panic")
+    move_ev = QMouseEvent(QEvent.MouseMove, QPointF(100, 100), QPointF(test_chibi.x() + 100, test_chibi.y() + 100), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    test_chibi.mouseMoveEvent(move_ev)
+    check("chibi mouse move marks drag moved", getattr(test_chibi, "_drag_moved", False) is True)
+    release_ev = QMouseEvent(QEvent.MouseButtonRelease, QPointF(100, 100), QPointF(test_chibi.x() + 100, test_chibi.y() + 100), Qt.LeftButton, Qt.NoButton, Qt.NoModifier)
+    test_chibi.mouseReleaseEvent(release_ev)
+    check("chibi release with >5px enters panic fall", getattr(test_chibi, "_is_dragging", False) is False and test_chibi.state == "panic" and test_chibi.vel_y > 0)
+
+    # 測試點擊 (< 5px) 切換姿態
+    test_chibi.state = "idle"
+    press_click = QMouseEvent(QEvent.MouseButtonPress, QPointF(16, 24), QPointF(16, 24), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    test_chibi.mousePressEvent(press_click)
+    rel_click = QMouseEvent(QEvent.MouseButtonRelease, QPointF(16, 24), QPointF(16, 24), Qt.LeftButton, Qt.NoButton, Qt.NoModifier)
+    test_chibi.mouseReleaseEvent(rel_click)
+    check("chibi click with under 5px toggles pose cleanly", test_chibi.state in ("sit", "walk"))
+    app.clear_all_chibis()
+
+    # 7 & 8 & 9. QML Webhook、鬧鐘與 Q 版小人行為控制屬性
+    check("qml_backend has discordWebhookUrl property", hasattr(qml_backend, "discordWebhookUrl"))
+    check("qml_backend has telegramBotToken property", hasattr(qml_backend, "telegramBotToken"))
+    check("qml_backend has telegramChatId property", hasattr(qml_backend, "telegramChatId"))
+    check("qml_backend has alarmsList property", hasattr(qml_backend, "alarmsList"))
+    check("qml_backend has sendTestWebhookNotification method", hasattr(qml_backend, "sendTestWebhookNotification"))
+    check("qml_backend has addClockAlarm method", hasattr(qml_backend, "addClockAlarm"))
+    check("qml_backend has addTimerAlarm method", hasattr(qml_backend, "addTimerAlarm"))
+    check("qml_backend has qChibiParticlesEnabled property", hasattr(qml_backend, "qChibiParticlesEnabled"))
+    check("qml_backend has setQChibiParticlesEnabled method", hasattr(qml_backend, "setQChibiParticlesEnabled"))
+
+    qml_backend.setDiscordWebhookUrl("https://discord.com/api/webhooks/test")
+    check("discordWebhookUrl persists", cfg.get("discord_webhook_url") == "https://discord.com/api/webhooks/test")
+    qml_backend.setTelegramBotToken("123456:ABC-DEF")
+    check("telegramBotToken persists", cfg.get("telegram_bot_token") == "123456:ABC-DEF")
+    qml_backend.setTelegramChatId("-100123456")
+    check("telegramChatId persists", cfg.get("telegram_chat_id") == "-100123456")
+
+    # 鬧鐘新增與移除測試
+    qml_backend.addClockAlarm("早安提醒", "07:30")
+    check("alarmsList contains new clock alarm", any(a.get("name") == "早安提醒" for a in qml_backend.alarmsList))
+    a_id = [a.get("id") for a in qml_backend.alarmsList if a.get("name") == "早安提醒"][0]
+    qml_backend.removeAlarm(a_id)
+    check("removeAlarm removes alarm cleanly", not any(a.get("id") == a_id for a in qml_backend.alarmsList))
+
+    # 10. 大破壞模式全螢幕截圖覆蓋與擊碎碎裂視覺效果
+    dest_overlay = app.destruction_overlay
+    dest_overlay.start_interactive_mode()
+    check("destruction overlay starts interactive mode", dest_overlay.is_interactive_mode is True)
+    from PySide6.QtWidgets import QLabel
+    check("toolbar note displays safety notice", any("純視覺效果，不會造成任何系統破壞或資料遺失" in lbl.text() for lbl in dest_overlay.toolbar.findChildren(QLabel)))
+    check("toolbar exit button labeled repair", "修復還原" in dest_overlay.toolbar.btn_sponge.text())
+    dest_overlay._trigger_hammer_hit(500, 400)
+    check("hammer hit generates glass shatter impact", len(dest_overlay.shatter_impacts) > 0)
+    check("glass shatter impact contains polygon shards", len(dest_overlay.shatter_impacts[-1].shards) >= 6)
+    dest_overlay.stop_interactive_mode()
+    dest_overlay._finish_exit()
+    check("finish_exit clears shatter impacts and screen pixmap", len(dest_overlay.shatter_impacts) == 0 and dest_overlay.screen_pixmap is None)
+
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} checks passed")
     app.tray.hide()

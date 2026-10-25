@@ -29,9 +29,23 @@ BALANCE_PET_SPECS = {
 }
 
 
-def get_menu_qss(theme: str = "light") -> str:
+def get_menu_qss(theme: str = "light", font_family: str | None = None, cfg=None) -> str:
     chk_dark = (ASSETS / "menu_check_dark.svg").as_posix()
     chk_light = (ASSETS / "menu_check_light.svg").as_posix()
+    if not font_family and cfg is not None:
+        font_family = cfg.get("font_family", "")
+    if not font_family:
+        try:
+            from .config import Config
+            font_family = Config().get("font_family", "")
+        except Exception:
+            pass
+    if not font_family:
+        from .font_manager import resolve_best_default_font
+        font_family = resolve_best_default_font()
+
+    font_rule = f'font-family: "{font_family}", sans-serif;'
+
     if theme == "dark":
         return f"""
         QMenu {{
@@ -40,7 +54,7 @@ def get_menu_qss(theme: str = "light") -> str:
             border: 1px solid #2d313b;
             border-radius: 10px;
             padding: 6px 4px;
-            font-family: "Microsoft JhengHei UI", sans-serif;
+            {font_rule}
             font-size: 13px;
         }}
         QMenu::item {{
@@ -82,7 +96,7 @@ def get_menu_qss(theme: str = "light") -> str:
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             padding: 6px 4px;
-            font-family: "Microsoft JhengHei UI", sans-serif;
+            {font_rule}
             font-size: 13px;
         }}
         QMenu::item {{
@@ -168,7 +182,7 @@ class App(QObject):
         self.tray.setToolTip("Desktop Pet")
         self.tray_menu = QMenu()
         theme = self.cfg.get("theme", "light")
-        self.tray_menu.setStyleSheet(get_menu_qss(theme))
+        self.tray_menu.setStyleSheet(get_menu_qss(theme, self.cfg.get("font_family")))
         self.tray_menu.setAttribute(Qt.WA_TranslucentBackground, True)
         self.tray_menu.setWindowFlags(self.tray_menu.windowFlags() | Qt.FramelessWindowHint)
         self.tray_menu.aboutToShow.connect(lambda: self._fill_menu(self.tray_menu, tray=True))
@@ -649,7 +663,7 @@ class App(QObject):
         c = self.cfg
         cur_pet = pet or self.pet
         theme = self.cfg.get("theme", "light")
-        m.setStyleSheet(get_menu_qss(theme))
+        m.setStyleSheet(get_menu_qss(theme, self.cfg.get("font_family")))
         m.setAttribute(Qt.WA_TranslucentBackground, True)
         m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
 
@@ -1029,7 +1043,7 @@ class App(QObject):
         target = pet or self.pet
         m = QMenu()
         theme = self.cfg.get("theme", "light")
-        m.setStyleSheet(get_menu_qss(theme))
+        m.setStyleSheet(get_menu_qss(theme, self.cfg.get("font_family")))
         m.setAttribute(Qt.WA_TranslucentBackground, True)
         m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
         self._fill_menu(m, pet=target)
@@ -1041,7 +1055,7 @@ class App(QObject):
     def prop_menu(self, prop, gpos: QPoint):
         m = QMenu()
         theme = self.cfg.get("theme", "light")
-        m.setStyleSheet(get_menu_qss(theme))
+        m.setStyleSheet(get_menu_qss(theme, self.cfg.get("font_family")))
         m.setAttribute(Qt.WA_TranslucentBackground, True)
         m.setWindowFlags(m.windowFlags() | Qt.FramelessWindowHint)
         cur_sym = "¥" if self.ledger.currency == "CNY" else "$"
@@ -1346,6 +1360,11 @@ class App(QObject):
         self.cfg.set("q_fireworks_prop", bool(on), save=True)
         self._changed()
 
+    def apply_font_family(self, fam: str):
+        """當字體切換時即時更新托盤選單樣式表。"""
+        if hasattr(self, "tray_menu") and self.tray_menu:
+            self.tray_menu.setStyleSheet(get_menu_qss(self.cfg.get("theme", "light"), fam))
+
     def set_theme(self, t: str):
         self.cfg.set("theme", t)
         if self.panel:
@@ -1355,7 +1374,7 @@ class App(QObject):
         if self.chat_dialog:
             self.chat_dialog.apply_theme(t)
         if hasattr(self, "tray_menu") and self.tray_menu:
-            self.tray_menu.setStyleSheet(get_menu_qss(t))
+            self.tray_menu.setStyleSheet(get_menu_qss(t, self.cfg.get("font_family")))
         self._changed()
 
     # 效能、FPS、垂直同步與渲染後端配置

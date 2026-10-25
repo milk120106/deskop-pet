@@ -132,6 +132,7 @@ class QMLBackend(QObject):
     qFireworksPropChanged = Signal(bool)
     alarmsChanged = Signal()
     notificationsChanged = Signal()
+    webhookConfigChanged = Signal()
     strictCustomImageRatioChanged = Signal(bool)
     activeBalanceChanged = Signal()
     activeBalanceProviderChanged = Signal(str)
@@ -518,8 +519,15 @@ class QMLBackend(QObject):
 
     def _update_logs_cache(self, level: str | None = None, search: str | None = None):
         lvl_arg = None if (not level or "ALL" in level or "全部" in level) else level
+        if lvl_arg in ("資訊", "INFO"):
+            lvl_arg = "INFO"
+        elif lvl_arg in ("警告", "WARNING"):
+            lvl_arg = "WARNING"
+        elif lvl_arg in ("錯誤", "ERROR"):
+            lvl_arg = "ERROR"
         query_arg = search.strip() if search and search.strip() else None
-        entries = get_recent_logs(count=150, level=lvl_arg, search=query_arg)
+        # 限制最大行數緩存（最多 300 行），徹底消除滾動時的崩潰隱患
+        entries = get_recent_logs(count=300, level=lvl_arg, search=query_arg)
         lines = []
         for e in entries:
             ts = e.get("timestamp", "")[-8:]
@@ -527,6 +535,8 @@ class QMLBackend(QObject):
             src = e.get("source", "Pet")
             msg = e.get("message", "").replace("\n", " ")
             lines.append(f"[{ts}] [{lvl:5s}] [{src}] {msg}")
+        if len(lines) > 300:
+            lines = lines[-300:]
         self._cached_logs = "\n".join(lines) if lines else "目前尚無符合篩選條件的日誌紀錄。"
 
     # 模組一：自訂按鍵綁定與衝突檢測
@@ -637,6 +647,72 @@ class QMLBackend(QObject):
     def get_floating_hud_enabled(self) -> bool:
         return bool(self.app.cfg.get("floating_hud_enabled", False))
 
+
+    def get_discord_webhook_url(self) -> str:
+        return str(self.app.cfg.get("discord_webhook_url", ""))
+
+    def set_discord_webhook_url(self, val: str):
+        self.app.cfg.set("discord_webhook_url", val.strip(), save=True)
+        self.webhookConfigChanged.emit()
+
+    def get_telegram_bot_token(self) -> str:
+        return str(self.app.cfg.get("telegram_bot_token", ""))
+
+    def set_telegram_bot_token(self, val: str):
+        self.app.cfg.set("telegram_bot_token", val.strip(), save=True)
+        self.webhookConfigChanged.emit()
+
+    def get_telegram_chat_id(self) -> str:
+        return str(self.app.cfg.get("telegram_chat_id", ""))
+
+    def set_telegram_chat_id(self, val: str):
+        self.app.cfg.set("telegram_chat_id", val.strip(), save=True)
+        self.webhookConfigChanged.emit()
+
+    @Slot(str)
+    def setDiscordWebhookUrl(self, val: str):
+        self.set_discord_webhook_url(val)
+
+    @Slot(str)
+    def setTelegramBotToken(self, val: str):
+        self.set_telegram_bot_token(val)
+
+    @Slot(str)
+    def setTelegramChatId(self, val: str):
+        self.set_telegram_chat_id(val)
+
+    def get_alarms_list(self) -> list:
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            return self.app.alarm_dispatcher.get_alarms()
+        return []
+
+    def get_q_chibi_particles_enabled(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_particle_heart", True))
+
+    @Slot(bool)
+    def setQChibiParticlesEnabled(self, val: bool):
+        self.app.cfg.set("q_chibi_particle_heart", bool(val), save=False)
+        self.app.cfg.set("q_chibi_particle_note", bool(val), save=False)
+        self.app.cfg.set("q_chibi_particle_angry", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(result=bool)
+    def sendTestWebhookNotification(self) -> bool:
+        if hasattr(self.app, "alarm_dispatcher") and self.app.alarm_dispatcher:
+            self.app.alarm_dispatcher.dispatch_notification("桌面寵物 Webhook 測試", "這是一則來自桌面寵物的測試通知！管道連動正常。")
+            self.noticeMessage.emit("已發送測試 Webhook 通知！請檢查 Discord / Telegram 訊息。", False)
+            return True
+        self.noticeMessage.emit("鬧鐘分發器尚未初始化，無法發送通知。", True)
+        return False
+
+    @Slot(str, str)
+    def addClockAlarm(self, name: str, time_str: str):
+        self.addAlarm(name, time_str, "clock", 0)
+
+    @Slot(str, int)
+    def addTimerAlarm(self, name: str, duration_sec: int):
+        self.addAlarm(name, "", "timer", duration_sec)
+
     def get_floating_hud_opacity(self) -> int:
         return int(self.app.cfg.get("floating_hud_opacity", 90))
 
@@ -698,6 +774,18 @@ class QMLBackend(QObject):
     currencyDisplayMode = Property(str, get_currency_display_mode, notify=currencyDisplayModeChanged)
     currencyApiKey = Property(str, get_currency_api_key, notify=currencyApiKeyChanged)
     currencyCustomEndpoint = Property(str, get_currency_custom_endpoint, notify=currencyCustomEndpointChanged)
+    discordWebhookUrl = Property(str, get_discord_webhook_url, set_discord_webhook_url, notify=webhookConfigChanged)
+    telegramBotToken = Property(str, get_telegram_bot_token, set_telegram_bot_token, notify=webhookConfigChanged)
+    telegramChatId = Property(str, get_telegram_chat_id, set_telegram_chat_id, notify=webhookConfigChanged)
+    alarmsList = Property(list, get_alarms_list, notify=alarmsChanged)
+    qChibiAllowWalk = Property(bool, get_q_chibi_allow_walk, notify=qChibiBehaviorChanged)
+    qChibiAllowClimbWindow = Property(bool, get_q_chibi_allow_climb_window, notify=qChibiBehaviorChanged)
+    qChibiAllowPlayButtons = Property(bool, get_q_chibi_allow_play_buttons, notify=qChibiBehaviorChanged)
+    qChibiAllowMischief = Property(bool, get_q_chibi_allow_mischief, notify=qChibiBehaviorChanged)
+    qChibiAllowSplat = Property(bool, get_q_chibi_allow_splat, notify=qChibiBehaviorChanged)
+    qChibiAllowSleep = Property(bool, get_q_chibi_allow_sleep, notify=qChibiBehaviorChanged)
+    qChibiParticlesEnabled = Property(bool, get_q_chibi_particles_enabled, notify=qChibiBehaviorChanged)
+
     currencyLastUpdated = Property(str, get_currency_last_updated, notify=currencyLastUpdatedChanged)
     currencyRatesSnippet = Property(str, get_currency_rates_snippet, notify=currencyRatesSnippetChanged)
     currencyTargetsList = Property(list, get_currency_targets_list, constant=True)

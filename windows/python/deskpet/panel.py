@@ -1964,7 +1964,7 @@ class ControlPanel(QWidget):
 
         t_lbl = QLabel("關於 Desktop Pet 桌面寵物")
         t_lbl.setObjectName("PageTitle")
-        d_lbl = QLabel("專案版本、官方開源倉庫、更新檢查與社群美術資源。")
+        d_lbl = QLabel("專案版本、官方開源倉庫、更新檢查與系統資訊。")
         d_lbl.setObjectName("PageDesc")
         lay.addWidget(t_lbl)
         lay.addWidget(d_lbl)
@@ -2014,35 +2014,24 @@ class ControlPanel(QWidget):
 
         lay.addWidget(card1)
 
-        # Card 2: 徵求圖片與美術資源 (Community Art & Assets)
+        # Card 2: 本機自訂資源目錄 (Local Custom Assets)
         card_art = QFrame()
         card_art.setObjectName("AboutCard")
         c_art_lay = QVBoxLayout(card_art)
         c_art_lay.setContentsMargins(18, 16, 18, 16)
         c_art_lay.setSpacing(10)
 
-        h_art = QLabel("美術與音效資源徵求 (Art & Asset Invitation)")
+        h_art = QLabel("本機自訂資源目錄")
         h_art.setStyleSheet("font-size: 15px; font-weight: bold; color: #10b981;")
         c_art_lay.addWidget(h_art)
 
         art_desc = QLabel(
-            "歡迎提供角色立繪、表情差分或自訂道具，可至 GitHub 提交 Pull Request 或 Issue：\n"
-            "· 角色立繪（支援 1:1 標準正方形與 1.5:1 寬屏立繪）\n"
-            "· 表情差分素材包\n"
-            "· 摸頭互動回饋與特殊動作素材\n"
-            "· 桌面道具素材（如米飯盆、頭頂鐵盆等）\n"
-            "歡迎透過 GitHub 提交 Pull Request 或 Issue 分享您的作品，作品將署名列入感謝名單。"
+            "使用者可自由將自訂的角色立繪（支援 1:1 標準正方形與 1.5:1 帶尾巴形態）與音訊素材放入本機對應目錄中載入使用。"
         )
         art_desc.setWordWrap(True)
         c_art_lay.addWidget(art_desc)
 
         r_art_btns = QHBoxLayout()
-        b_art_repo = QPushButton("前往 GitHub 提交美術資源")
-        b_art_repo.setObjectName("primary")
-        b_art_repo.setIcon(get_icon("code", "#ffffff", 16))
-        b_art_repo.clicked.connect(lambda: webbrowser.open(f"{GITHUB_REPO_URL}/issues"))
-        r_art_btns.addWidget(b_art_repo)
-
         b_art_dir = QPushButton("開啟本機自訂立繪目錄")
         b_art_dir.setIcon(get_icon("folder", "#334155", 16))
         b_art_dir.clicked.connect(self._open_custom_chars_dir)

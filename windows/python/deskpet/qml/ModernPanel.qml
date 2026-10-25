@@ -2764,7 +2764,7 @@ Rectangle {
                     }
                 }
 
-                // 卡片 4: 開源協議與美術徵求
+                // 卡片 4: 開源協議與本機目錄
                 Rectangle {
                     width: parent.width
                     height: 160
@@ -2779,7 +2779,7 @@ Rectangle {
                         spacing: 10
 
                         Text {
-                            text: "開源授權與社群美術徵求"
+                            text: "開源授權與本機目錄"
                             color: themeColors.text
                             font.pixelSize: 14
                             font.bold: true
@@ -2788,7 +2788,7 @@ Rectangle {
                         }
 
                         Text {
-                            text: "本專案採用 MIT License 開源許可協議發布；圖示採用 Google Material Symbols (Apache 2.0)。\n歡迎提供角色立繪（支援 1:1 標準正方形與 1.5:1 帶尾巴形態）、表情差分素材包或桌面互動道具！"
+                            text: "本專案採用 MIT License 開源許可協議發布；圖示採用 Google Material Symbols (Apache 2.0)。\n角色立繪與音訊素材著作權歸原創作者所有，使用者可於本機目錄中自由管理自訂素材。"
                             color: themeColors.textSub
                             font.pixelSize: 11
                             font.family: root.modernFontStack

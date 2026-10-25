@@ -49,6 +49,7 @@ def run(qapp) -> int:
     pet = app.pet
     cfg = app.cfg
     cfg.set("sim_auto", False)
+    app.set_character('deepseek')
     app.ledger.apply_mode()
     wait(400)
 
@@ -1470,6 +1471,185 @@ def run(qapp) -> int:
     bomb_compressed_data = zlib.compress(bomb_raw_data, 9)
     ok_ratio, msg_ratio, _ = safe_decompress_stream([bomb_compressed_data], content_encoding="deflate")
     check("decompression bomb defense triggers ratio safeguard on expansion exceeding 100:1", ok_ratio is False and "膨脹比例" in msg_ratio)
+
+    # ========================================================= 31. Module 1: Input & Action Binding System
+    from deskpet.input_manager import ConflictDetector, InputDispatcher, DEFAULT_BINDINGS_INFO, normalize_hotkey
+
+    # 1. 預設綁定項目存在性檢查
+    ib = cfg.get("input_bindings")
+    check("input_bindings config is dict", isinstance(ib, dict))
+    check("input_bindings contains switch_tablet_page", "switch_tablet_page" in ib)
+    check("input_bindings contains pet_head", "pet_head" in ib)
+    check("input_bindings contains remove_iron_pot", "remove_iron_pot" in ib)
+    check("input_bindings contains remove_all_iron_pots", "remove_all_iron_pots" in ib)
+
+    # 2. ConflictDetector: 區域手勢衝突
+    cd_test1 = ConflictDetector({
+        "act1": {"trigger": "head_single_click", "enabled": True},
+        "act2": {"trigger": "head_single_click", "enabled": True},
+    })
+    conflicts1 = cd_test1.detect_trigger_conflicts()
+    check("detect_trigger_conflicts finds AREA_DUPLICATE", any(c["type"] == "AREA_DUPLICATE" for c in conflicts1))
+
+    # 3. ConflictDetector: 熱鍵碰撞與 Windows 系統保留熱鍵
+    cd_test2 = ConflictDetector({
+        "act1": {"hotkey": "Ctrl+Alt+F", "enabled": True},
+        "act2": {"hotkey": "Ctrl+Alt+F", "enabled": True},
+        "act3": {"hotkey": "Ctrl+Alt+Del", "enabled": True},
+    })
+    conflicts2 = cd_test2.detect_hotkey_conflicts()
+    check("detect_hotkey_conflicts finds HOTKEY_COLLISION", any(c["type"] == "HOTKEY_COLLISION" for c in conflicts2))
+    check("detect_hotkey_conflicts finds WINDOWS_RESERVED", any(c["type"] == "WINDOWS_RESERVED" for c in conflicts2))
+
+    # 4. ConflictDetector: 單雙擊時序防抖干涉檢測
+    cd_test3 = ConflictDetector(DEFAULT_BINDINGS_INFO)
+    conflicts3 = cd_test3.detect_timing_conflicts()
+    check("detect_timing_conflicts identifies head single/double click timing delay", any(c["type"] == "TIMING_DELAY" for c in conflicts3))
+
+    # 5. InputDispatcher 調度與動作觸發
+    dispatcher = InputDispatcher(cfg, pet)
+    test_called = []
+    dispatcher.register_action("test_act", lambda: test_called.append(True))
+    dispatcher.dispatch("test_act")
+    check("InputDispatcher dispatches registered action", len(test_called) == 1)
+
+    # ========================================================= 32. Module 2: Q-Chibi Behaviors & Pure Patrol Companion
+    chibi = app.pixel_chibi
+    check("q_chibi_balance_display defaults to False (pure patrol)", cfg.get("q_chibi_balance_display") is False)
+    check("q_chibi_auto_bind_provider defaults to False", cfg.get("q_chibi_auto_bind_provider") is False)
+    check("q_chibi_allow_climb_window defaults to False", cfg.get("q_chibi_allow_climb_window") is False)
+    check("q_chibi_allow_climb_pet defaults to True", cfg.get("q_chibi_allow_climb_pet") is True)
+    check("q_chibi_allow_mischief defaults to True", cfg.get("q_chibi_allow_mischief") is True)
+    check("q_chibi_allow_splat defaults to True", cfg.get("q_chibi_allow_splat") is True)
+    check("q_chibi_allow_sleep defaults to True", cfg.get("q_chibi_allow_sleep") is True)
+
+    # 測試情緒像素粒子生成 (heart, note, angry)
+    chibi.spawn_emotion_particle("heart")
+    check("spawn_emotion_particle creates heart particle", any(p.kind == "heart" for p in chibi.particles))
+    chibi.spawn_emotion_particle("note")
+    check("spawn_emotion_particle creates note particle", any(p.kind == "note" for p in chibi.particles))
+    chibi.spawn_emotion_particle("angry")
+    check("spawn_emotion_particle creates angry particle", any(p.kind == "angry" for p in chibi.particles))
+
+    # 測試小人被鍋砸中扛起慢走與主動投擲
+    chibi.trigger_lift_pot()
+    check("trigger_lift_pot enters lift_walk state", chibi.state == "lift_walk" and chibi.has_lift_pot is True)
+    chibi.chibi_throw_pot()
+    check("chibi_throw_pot exits lift_walk state", chibi.has_lift_pot is False)
+
+    # ========================================================= 33. Module 3: Visual Anchor Editor & Protected Chars
+    from deskpet.anchor_editor import load_character_anchors, save_character_anchors, VisualAnchorEditorDialog
+
+    anchors_ds = load_character_anchors("deepseek")
+    check("load_character_anchors returns head_zone", "head_zone" in anchors_ds)
+    check("load_character_anchors returns iron_bowl", "iron_bowl" in anchors_ds)
+    check("load_character_anchors returns tablet_quad", "tablet_quad" in anchors_ds)
+
+    # 官方角色刪除防護機制
+    dlg_editor = VisualAnchorEditorDialog("deepseek", parent=None)
+    check("official characters block deletion", dlg_editor.btn_delete.isEnabled() is False)
+    dlg_editor.close()
+
+    # ========================================================= 34. Module 4: Dynamic Mood Engine & Floating HUD
+    from deskpet.mood_engine import MoodEngine, ALLOWED_URL_DOMAINS
+    from deskpet.floating_hud import FloatingMoodHUD
+
+    mood_eng = pet.mood_engine
+    check("mood_system_enabled defaults to False", cfg.get("mood_system_enabled") is False)
+    check("mood_value defaults to 50.0", abs(float(cfg.get("mood_value", 50.0)) - 50.0) < 1e-3)
+    check("mood_max_limit defaults to 100.0", float(cfg.get("mood_max_limit", 100.0)) == 100.0)
+
+    # 驗證嚴格保護下限：不可低於 100.0
+    cfg.set("mood_max_limit", 80.0)
+    check("mood_max_limit lower bound safeguard enforces >= 100.0", float(cfg.get("mood_max_limit")) >= 100.0)
+
+    # 動態因子測試：連擊餵食獎勵 (8秒窗口)
+    mood_eng.on_feed(1.0)
+    combo1 = int(cfg.get("pet_stats", {}).get("feed_combo_count", 0))
+    check("feed combo count initiates at 1", combo1 == 1)
+    mood_eng.on_feed(1.0)
+    combo2 = int(cfg.get("pet_stats", {}).get("feed_combo_count", 0))
+    check("feed combo increases within 8s window", combo2 == 2)
+
+    # 動態因子測試：撫摸速度與時長
+    val_before_pat = mood_eng.get_mood()
+    mood_eng.on_pat(velocity=300.0, duration=0.5)
+    check("on_pat increases mood", mood_eng.get_mood() > val_before_pat)
+
+    # 動態因子測試：AI 對話解析 [MOOD: +5]
+    clean_txt, m_adj = mood_eng.parse_ai_dialogue_mood("你好主人！[MOOD: +5]")
+    check("parse_ai_dialogue_mood strips tag", clean_txt == "你好主人！" and m_adj == 5.0)
+
+    # URL 安全白名單防護
+    check("ALLOWED_URL_DOMAINS contains trusted hosts", "github.com" in ALLOWED_URL_DOMAINS and "deepseek.com" in ALLOWED_URL_DOMAINS)
+    check("validate_action_url accepts github.com", mood_eng.validate_action_url("https://github.com/test") is True)
+    check("validate_action_url rejects untrusted domain", mood_eng.validate_action_url("https://malicious-site.com/exploit") is False)
+
+    # 懸浮心情 HUD
+    hud = pet.floating_hud
+    check("floating_hud exists and has capsule toggle", hasattr(hud, "toggle_collapse"))
+    hud.toggle_collapse()
+    check("floating_hud collapses to mini capsule", hud.is_collapsed is True)
+    hud.toggle_collapse()
+    check("floating_hud expands back to detailed view", hud.is_collapsed is False)
+
+    # 平板第 4 頁心情統計分頁輪替
+    cfg.set("mood_system_enabled", True)
+    pet.page = 3
+    pet.next_tablet_page()
+    check("next_tablet_page reaches page 4 when mood_system_enabled is True", pet.page == 4)
+
+    # ========================================================= 35. Module 5: Dynamic Iron Pot Limit & Sky Pot Drop
+    # 頭頂可用空間動態上限計算
+    max_pots = pet.get_max_iron_pots()
+    check("get_max_iron_pots returns valid limit between 1 and 10", 1 <= max_pots <= 10, f"max_pots={max_pots}")
+
+    # 天降空鍋與自然微幅滑落
+    sky_pot = pet.props.spawn_sky_pot()
+    check("spawn_sky_pot generates pot with sky origin", sky_pot is not None and getattr(sky_pot, "is_sky_drop", False) is True)
+    pet.wear_iron()
+    check("wear_iron increments iron_count", pet.iron_count >= 1)
+    pet.wear_iron()
+    cur_count = pet.iron_count
+    pet.props.trigger_natural_slip()
+    check("trigger_natural_slip slips top pot", pet.iron_count == cur_count - 1)
+
+    # ========================================================= 36. Module 6: Ceiling Hang 180° Inversion & Zero Gravity
+    # 互斥機制驗證
+    cfg.set("q_chibi_ceiling_mode", True)
+    check("q_chibi_ceiling_mode enables", cfg.get("q_chibi_ceiling_mode") is True)
+    check("enabling ceiling mode auto-disables four_edges_floor_mode", cfg.get("q_chibi_four_edges_floor_mode") is False)
+
+    cfg.set("q_chibi_four_edges_floor_mode", True)
+    check("q_chibi_four_edges_floor_mode enables", cfg.get("q_chibi_four_edges_floor_mode") is True)
+    check("enabling four_edges_floor_mode auto-disables ceiling_mode", cfg.get("q_chibi_ceiling_mode") is False)
+
+    # 主寵天花板倒掛模式
+    cfg.set("ceiling_hang_enabled", True)
+    cfg.set("ceiling_hang_corner", "top_right")
+    target_hang = pet.snap_target(force_corner=True)
+    check("ceiling_hang snaps to screen top boundary", target_hang.y() == ag.top() - 130)
+
+    # 平板正立逆向轉換補償
+    cfg.set("tablet_auto_upright", True)
+    pet._update_tablet_transform()
+    check("tablet transform valid in ceiling hang auto-upright mode", pet._screen_tf is not None)
+
+    # 驗證絕無動物爪子/腳爪字樣與繪圖 (嚴格遵守使用者核心要求)
+    import inspect
+    pet_src = inspect.getsource(pet.paintEvent)
+    check("paintEvent has strictly NO paws/claws drawing", "paw" not in pet_src.lower() and "claw" not in pet_src.lower())
+    check("paintEvent performs pure 180 geometric inverted rendering", "rotate(180)" in pet_src)
+
+    # 無重力模式
+    cfg.set("zero_gravity_mode", True)
+    check("zero_gravity_mode config enabled", cfg.get("zero_gravity_mode") is True)
+
+    # QML 後端雙向綁定槽函式驗證
+    check("qml_backend has setQChibiCeilingMode", hasattr(qml_backend, "setQChibiCeilingMode"))
+    check("qml_backend has setCeilingHangEnabled", hasattr(qml_backend, "setCeilingHangEnabled"))
+    check("qml_backend has setMoodSystemEnabled", hasattr(qml_backend, "setMoodSystemEnabled"))
+    check("qml_backend has saveInputBinding", hasattr(qml_backend, "saveInputBinding"))
 
     # 清理測試自訂立繪
     pet.set_character("deepseek")

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import random
 import time
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
@@ -273,7 +274,8 @@ class PropManager:
         return b
 
     def spawn_iron(self, x: float, y: float):
-        if self.pet.iron_count >= 5 or (len(self.irons()) + self.pet.iron_count) >= 5:
+        max_pots = getattr(self.pet, "get_max_iron_pots", lambda: 5)()
+        if self.pet.iron_count >= max_pots or (len(self.irons()) + self.pet.iron_count) >= max_pots:
             return None
         b = Prop(self, "iron", self.bowl_width(), 0.0)
         b.x, b.y = x, y
@@ -281,6 +283,59 @@ class PropManager:
         b.max_bounces = 2
         self._add(b)
         return b
+
+    def spawn_sky_pot(self):
+        """天降空鐵鍋：從螢幕頂部水平隨機坐標自由落體墜落。"""
+        scr = QGuiApplication.screenAt(self.pet.frameGeometry().center()) or QGuiApplication.primaryScreen()
+        ag = scr.availableGeometry()
+        b = Prop(self, "iron", self.bowl_width(), 0.0)
+        b.is_sky_drop = True
+        b.x = random.uniform(ag.left() + 60, ag.right() - 60)
+        b.y = ag.top() + 10
+        b.vx = random.uniform(-20.0, 20.0)
+        b.vy = 40.0
+        b.max_bounces = 2
+        self._add(b)
+        return b
+
+    def trigger_pot_collapse(self):
+        """大崩塌：所有鐵鍋歸零並全域四散炸開！"""
+        cnt = self.pet.iron_count
+        if cnt <= 0:
+            return
+        self.pet.iron_count = 0
+        self.pet.refresh_expr()
+        head = self.pet.head_zone_global()
+        for _ in range(cnt):
+            b = Prop(self, "iron", self.bowl_width(), 0.0)
+            b.x = head.center().x() + random.uniform(-25, 25)
+            b.y = head.top() + random.uniform(-15, 15)
+            b.vx = random.uniform(-450.0, 450.0)
+            b.vy = random.uniform(-380.0, -120.0)
+            b.max_bounces = 3
+            self._add(b)
+        if self.sounds:
+            self.sounds.play("hit")
+
+    def trigger_natural_slip(self, count: int = 1):
+        """自然滑落：隨機微幅滑落鐵鍋至地面。"""
+        if self.pet.iron_count <= 0:
+            return
+        slip_cnt = min(self.pet.iron_count, count)
+        self.pet.iron_count -= slip_cnt
+        self.pet.refresh_expr()
+        head = self.pet.head_zone_global()
+        is_right = getattr(self.pet, "snap_right", False)
+        for _ in range(slip_cnt):
+            b = Prop(self, "iron", self.bowl_width(), 0.0)
+            b.x = head.center().x() + (30 if is_right else -30)
+            b.y = head.top()
+            b.vx = random.uniform(80.0, 160.0) if is_right else random.uniform(-160.0, -80.0)
+            b.vy = -60.0
+            b.max_bounces = 2
+            self._add(b)
+        if self.sounds:
+            self.sounds.play("land")
 
     def _add(self, b: Prop):
         self.props.append(b)
@@ -342,7 +397,8 @@ class PropManager:
                 self.remove(b)
         else:
             head = self.pet.head_zone_global()
-            if (head.contains(c) or head.intersects(b.art_rect())) and self.pet.iron_count < 5:
+            max_pots = getattr(self.pet, "get_max_iron_pots", lambda: 5)()
+            if (head.contains(c) or head.intersects(b.art_rect())) and self.pet.iron_count < max_pots:
                 self.pet.wear_iron()
                 self.remove(b)
 
@@ -515,7 +571,8 @@ class PropManager:
         b.place()
 
         # Iron bowl dropped onto head from above
-        if b.kind == "iron" and b.vy > 30 and self.pet.iron_count < 5:
+        max_pots = getattr(self.pet, "get_max_iron_pots", lambda: 5)()
+        if b.kind == "iron" and b.vy > 30 and self.pet.iron_count < max_pots:
             head = self.pet.head_zone_global()
             test_pt = QPointF(b.x, b.y + b.ah * 0.25)
             swept_catch = (head.left() <= b.x <= head.right() and (b.y - b.vy * dt) <= head.top() <= (b.y + b.ah * 0.5))
@@ -523,4 +580,17 @@ class PropManager:
                 self.pet.wear_iron()
                 self.remove(b)
                 return False
+
+        # 天降空鐵鍋砸中 Q 版小人 -> 觸發舉鍋巡邏 (lift_walk)
+        if b.kind == "iron" and b.vy > 30:
+            chibi_mgr = getattr(self.pet, "chibi_mgr", None) or (getattr(self.pet, "app", None) and getattr(self.pet.app, "chibi_mgr", None))
+            chibis = chibi_mgr.chibis if chibi_mgr else ([getattr(self.pet, "pixel_chibi", None)] if getattr(self.pet, "pixel_chibi", None) else [])
+            for ch in chibis:
+                if ch and ch.isVisible() and not getattr(ch, "climbing_pet", False) and getattr(ch, "state", "") not in ("lift_walk", "bowl_smash"):
+                    ch_rect = QRectF(ch.geometry())
+                    if ch_rect.intersects(b.art_rect()) or ch_rect.contains(QPointF(b.x, b.y)):
+                        if hasattr(ch, "trigger_lift_pot"):
+                            ch.trigger_lift_pot()
+                            self.remove(b)
+                            return False
         return True

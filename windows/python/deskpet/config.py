@@ -303,6 +303,156 @@ DEFAULTS = {
     },
     "currency_custom_endpoint": "",                 # 自訂匯率 API 端點網址
     "currency_cache": {},                           # 匯率本機快取 {rates: {...}, last_updated: "...", source: "..."}
+
+    # ========================================================= 模組一：用戶自訂操作與按鍵綁定系統
+    "input_bindings": {
+        "switch_tablet_page": {
+            "trigger": "tablet_double_click",
+            "hotkey": "",
+            "enabled": True,
+            "description": "切換平板分頁"
+        },
+        "pet_head": {
+            "trigger": "head_stroke",
+            "hotkey": "",
+            "enabled": True,
+            "description": "摸頭撫摸互動"
+        },
+        "drag_pet": {
+            "trigger": "body_left_drag",
+            "hotkey": "",
+            "enabled": True,
+            "description": "拖曳寵物移動"
+        },
+        "remove_iron_pot": {
+            "trigger": "head_single_click",
+            "hotkey": "",
+            "enabled": True,
+            "description": "取下單層鐵盆"
+        },
+        "remove_all_iron_pots": {
+            "trigger": "head_double_click",
+            "hotkey": "",
+            "enabled": True,
+            "description": "取下全部鐵盆"
+        },
+        "feed_pet": {
+            "trigger": "drop_rice",
+            "hotkey": "Ctrl+Alt+F",
+            "enabled": True,
+            "description": "快捷餵食"
+        },
+        "summon_chibi": {
+            "trigger": "hotkey",
+            "hotkey": "Ctrl+Alt+C",
+            "enabled": True,
+            "description": "召喚 Q 版小人"
+        },
+        "quick_hide": {
+            "trigger": "hotkey",
+            "hotkey": "Ctrl+Shift+H",
+            "enabled": False,
+            "description": "老闆鍵：快速隱藏/顯示寵物"
+        },
+        "open_panel": {
+            "trigger": "body_right_click",
+            "hotkey": "Ctrl+Alt+P",
+            "enabled": True,
+            "description": "開啟設定面板"
+        }
+    },
+
+    # ========================================================= 模組二：Q 版人物純淨巡邏與精細行為開關
+    "q_chibi_balance_display": False,       # Q 版人物餘額顯示（預設關閉，回歸純可愛巡邏）
+    "q_chibi_auto_bind_provider": False,    # 是否自動綁定廠商（預設關閉）
+    "q_chibi_allow_climb_window": False,    # 是否允許攀爬視窗邊界（預設關閉）
+    "q_chibi_allow_climb_pet": True,        # 是否允許攀爬主寵物（預設啟用）
+    "q_chibi_allow_play_buttons": False,    # 是否允許踩跳視窗按鈕（預設關閉）
+    "q_chibi_allow_mischief": True,         # 是否允許搗亂（做鬼臉、手舞足蹈，預設啟用）
+    "q_chibi_allow_splat": True,            # 是否允許軟趴趴 (splat，預設啟用)
+    "q_chibi_allow_sleep": True,            # 是否允許睡覺 (sleep，預設啟用)
+    "q_chibi_particle_heart": True,         # 愛心粒子情緒開關
+    "q_chibi_particle_note": True,          # 音符粒子情緒開關
+    "q_chibi_particle_angry": True,         # 生氣符號粒子情緒開關
+    "q_chibi_ceiling_mode": False,          # Q 版人物天花板模式（與四邊皆地板模式互斥）
+    "q_chibi_four_edges_floor_mode": False, # Q 版人物四邊皆地板模式（與天花板模式互斥）
+    "zero_gravity_mode": False,             # 全局無重力太空失重漂浮模式
+
+    # ========================================================= 模組三：大寵物視覺開關
+    "pet_particles_enabled": True,          # 大寵物粒子情緒開關（愛心、浮動金錢與飄字）
+    "pet_expression_enabled": True,         # 大寵物表情切換開關
+
+    # ========================================================= 模組四：全維度行為因子心情值系統與統計 HUD
+    "mood_system_enabled": False,           # 心情系統（預設關閉與隱藏）
+    "mood_value": 50.0,                     # 當前心情值
+    "mood_max_limit": 100.0,                # 心情上限（保護下限 >= 100.0）
+    "mood_decay_interval_sec": 600,         # 自然衰減週期（10 分鐘）
+    "mood_decay_amount": 1.0,               # 每週期衰減點數
+    "mood_thresholds": [
+        {
+            "id": "t_25",
+            "threshold": 25.0,
+            "type": "percentage",
+            "actions": ["play_sound"],
+            "max_triggers": 1,
+            "triggered_count": 0
+        },
+        {
+            "id": "t_50",
+            "threshold": 50.0,
+            "type": "percentage",
+            "actions": ["desktop_toast"],
+            "max_triggers": 2,
+            "triggered_count": 0
+        },
+        {
+            "id": "t_75",
+            "threshold": 75.0,
+            "type": "percentage",
+            "actions": ["webhook"],
+            "max_triggers": 1,
+            "triggered_count": 0
+        },
+        {
+            "id": "t_100",
+            "threshold": 100.0,
+            "type": "percentage",
+            "actions": ["fireworks", "pet_interact"],
+            "max_triggers": 0,
+            "triggered_count": 0
+        }
+    ],
+    "pet_stats": {
+        "first_launch_timestamp": 0.0,
+        "total_interactions": 0,
+        "pat_count": 0,
+        "keystroke_count": 0,
+        "ai_dialogue_count": 0,
+        "current_feed_combo": 0,
+        "highest_feed_combo": 0,
+        "total_pots_worn": 0,
+        "max_pots_record": 0,
+        "custom_counters": [
+            {"id": "c_water", "name": "喝水次數", "count": 0},
+            {"id": "c_stretch", "name": "伸展放鬆", "count": 0}
+        ]
+    },
+    "floating_hud_enabled": False,
+    "floating_hud_pos": [100, 100],
+    "floating_hud_opacity": 90,
+    "floating_hud_scale": 1.0,
+    "floating_hud_visible_metrics": [
+        "mood_bar", "feed_combo", "uptime", "pat_count", "keystroke_count"
+    ],
+
+    # ========================================================= 模組五：鐵鍋動態物理與天降道具
+    "sky_pot_drop_enabled": True,           # 天降空鍋開關
+    "natural_pot_slip_enabled": True,       # 戴鍋自然滑落開關
+
+    # ========================================================= 模組六：寵物天花板倒掛模式
+    "ceiling_hang_enabled": False,          # 天花板倒掛模式（預設關閉）
+    "ceiling_hang_corner": "top_right",     # 倒掛角落: top_left / top_right
+    "tablet_auto_upright": True,            # 平板內容自動回正便於閱讀（預設啟用）
 }
 
 CHIBI_MAX_COUNT_OPTIONS = (5, 10, 15, 20, 25, 30)
@@ -361,6 +511,21 @@ class Config:
                 for k, v in raw.items():
                     if k in DEFAULTS:
                         self.data[k] = v
+
+                # 合併可能缺漏的預設巢狀字典結構 (如 input_bindings, pet_stats)
+                for dict_key in ("input_bindings", "pet_stats"):
+                    if dict_key in self.data and isinstance(self.data[dict_key], dict):
+                        default_dict = DEFAULTS.get(dict_key, {})
+                        for dk, dv in default_dict.items():
+                            if dk not in self.data[dict_key]:
+                                self.data[dict_key][dk] = dv
+
+                # 強制心情上限保護性下限 (>= 100.0)
+                if "mood_max_limit" in self.data:
+                    try:
+                        self.data["mood_max_limit"] = max(100.0, float(self.data["mood_max_limit"]))
+                    except Exception:
+                        self.data["mood_max_limit"] = 100.0
 
                 # 使用 Windows DPAPI 解密還原 api_keys
                 if "api_keys" in self.data and isinstance(self.data["api_keys"], dict):
@@ -571,12 +736,33 @@ class Config:
             self.save()
 
     def __getitem__(self, k):
+        if k == "mood_max_limit":
+            val = self.data.get(k, 100.0)
+            try:
+                return max(100.0, float(val))
+            except Exception:
+                return 100.0
         return self.data[k]
 
     def get(self, k, default=None):
+        if k == "mood_max_limit":
+            val = self.data.get(k, 100.0 if default is None else default)
+            try:
+                return max(100.0, float(val))
+            except Exception:
+                return 100.0
         return self.data.get(k, default)
 
     def set(self, k, v, save=True):
+        if k == "mood_max_limit":
+            try:
+                v = max(100.0, float(v))
+            except Exception:
+                v = 100.0
+        elif k == "q_chibi_ceiling_mode" and bool(v):
+            self.data["q_chibi_four_edges_floor_mode"] = False
+        elif k == "q_chibi_four_edges_floor_mode" and bool(v):
+            self.data["q_chibi_ceiling_mode"] = False
         self.data[k] = v
         if save:
             self.save()

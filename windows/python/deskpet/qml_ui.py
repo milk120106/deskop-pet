@@ -146,6 +146,12 @@ class QMLBackend(QObject):
     currencyLastUpdatedChanged = Signal(str)
     currencyRatesSnippetChanged = Signal(str)
     activePetsListChanged = Signal()
+    inputBindingsChanged = Signal()
+    bindingConflictsChanged = Signal()
+    qChibiBehaviorChanged = Signal()
+    petVisualsChanged = Signal()
+    ceilingHangChanged = Signal()
+    moodSystemChanged = Signal()
 
     def __init__(self, app, win: QWidget):
         super().__init__()
@@ -520,6 +526,102 @@ class QMLBackend(QObject):
             lines.append(f"[{ts}] [{lvl:5s}] [{src}] {msg}")
         self._cached_logs = "\n".join(lines) if lines else "目前尚無符合篩選條件的日誌紀錄。"
 
+    # 模組一：自訂按鍵綁定與衝突檢測
+    def get_input_bindings(self) -> list:
+        res = []
+        bindings = self.app.cfg.get("input_bindings", {})
+        from .input_manager import DEFAULT_BINDINGS_INFO
+        for act_id, default_item in DEFAULT_BINDINGS_INFO.items():
+            cur = bindings.get(act_id, default_item)
+            res.append({
+                "action_id": act_id,
+                "description": default_item.get("description", act_id),
+                "trigger": str(cur.get("trigger", default_item.get("trigger", ""))),
+                "hotkey": str(cur.get("hotkey", default_item.get("hotkey", ""))),
+                "enabled": bool(cur.get("enabled", default_item.get("enabled", True))),
+            })
+        return res
+
+    def get_binding_conflicts(self) -> list:
+        try:
+            from .input_manager import ConflictDetector
+            cd = ConflictDetector(self.app.cfg.get("input_bindings", {}))
+            return cd.detect_all_conflicts()
+        except Exception:
+            return []
+
+    # 模組二：Q 版小人巡邏與行為開關
+    def get_q_chibi_balance_display(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_balance_display", False))
+
+    def get_q_chibi_auto_bind_provider(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_auto_bind_provider", False))
+
+    def get_q_chibi_allow_climb_window(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_climb_window", False))
+
+    def get_q_chibi_allow_climb_pet(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_climb_pet", True))
+
+    def get_q_chibi_allow_play_buttons(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_play_buttons", False))
+
+    def get_q_chibi_allow_mischief(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_mischief", True))
+
+    def get_q_chibi_allow_splat(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_splat", True))
+
+    def get_q_chibi_allow_sleep(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_allow_sleep", True))
+
+    def get_q_chibi_ceiling_mode(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_ceiling_mode", False))
+
+    def get_q_chibi_four_edges_floor_mode(self) -> bool:
+        return bool(self.app.cfg.get("q_chibi_four_edges_floor_mode", False))
+
+    def get_zero_gravity_mode(self) -> bool:
+        return bool(self.app.cfg.get("zero_gravity_mode", False))
+
+    # 模組三與模組六：主寵視覺與天花板倒掛
+    def get_pet_particles_enabled(self) -> bool:
+        return bool(self.app.cfg.get("pet_particles_enabled", True))
+
+    def get_pet_expression_enabled(self) -> bool:
+        return bool(self.app.cfg.get("pet_expression_enabled", True))
+
+    def get_ceiling_hang_enabled(self) -> bool:
+        return bool(self.app.cfg.get("ceiling_hang_enabled", False))
+
+    def get_ceiling_hang_corner(self) -> str:
+        return str(self.app.cfg.get("ceiling_hang_corner", "top_right"))
+
+    def get_tablet_auto_upright(self) -> bool:
+        return bool(self.app.cfg.get("tablet_auto_upright", True))
+
+    def get_sky_pot_drop_enabled(self) -> bool:
+        return bool(self.app.cfg.get("sky_pot_drop_enabled", True))
+
+    def get_natural_pot_slip_enabled(self) -> bool:
+        return bool(self.app.cfg.get("natural_pot_slip_enabled", True))
+
+    # 模組四：心情值與浮動 HUD
+    def get_mood_system_enabled(self) -> bool:
+        return bool(self.app.cfg.get("mood_system_enabled", False))
+
+    def get_mood_value(self) -> float:
+        return float(self.app.cfg.get("mood_value", 50.0))
+
+    def get_mood_max_limit(self) -> float:
+        return float(self.app.cfg.get("mood_max_limit", 100.0))
+
+    def get_floating_hud_enabled(self) -> bool:
+        return bool(self.app.cfg.get("floating_hud_enabled", False))
+
+    def get_floating_hud_opacity(self) -> int:
+        return int(self.app.cfg.get("floating_hud_opacity", 90))
+
     # --------------------------------------------------------- 雙向屬性綁定宣告
     theme = Property(str, get_theme, notify=themeChanged)
     character = Property(str, get_character, notify=characterChanged)
@@ -584,6 +686,31 @@ class QMLBackend(QObject):
     currencySourcesList = Property(list, get_currency_sources_list, constant=True)
     currencyDisplayModesList = Property(list, get_currency_display_modes_list, constant=True)
     activePetsList = Property(list, get_active_pets_list, notify=activePetsListChanged)
+    inputBindings = Property(list, get_input_bindings, notify=inputBindingsChanged)
+    bindingConflicts = Property(list, get_binding_conflicts, notify=bindingConflictsChanged)
+    qChibiBalanceDisplay = Property(bool, get_q_chibi_balance_display, notify=qChibiBehaviorChanged)
+    qChibiAutoBindProvider = Property(bool, get_q_chibi_auto_bind_provider, notify=qChibiBehaviorChanged)
+    qChibiAllowClimbWindow = Property(bool, get_q_chibi_allow_climb_window, notify=qChibiBehaviorChanged)
+    qChibiAllowClimbPet = Property(bool, get_q_chibi_allow_climb_pet, notify=qChibiBehaviorChanged)
+    qChibiAllowPlayButtons = Property(bool, get_q_chibi_allow_play_buttons, notify=qChibiBehaviorChanged)
+    qChibiAllowMischief = Property(bool, get_q_chibi_allow_mischief, notify=qChibiBehaviorChanged)
+    qChibiAllowSplat = Property(bool, get_q_chibi_allow_splat, notify=qChibiBehaviorChanged)
+    qChibiAllowSleep = Property(bool, get_q_chibi_allow_sleep, notify=qChibiBehaviorChanged)
+    qChibiCeilingMode = Property(bool, get_q_chibi_ceiling_mode, notify=qChibiBehaviorChanged)
+    qChibiFourEdgesFloorMode = Property(bool, get_q_chibi_four_edges_floor_mode, notify=qChibiBehaviorChanged)
+    zeroGravityMode = Property(bool, get_zero_gravity_mode, notify=qChibiBehaviorChanged)
+    petParticlesEnabled = Property(bool, get_pet_particles_enabled, notify=petVisualsChanged)
+    petExpressionEnabled = Property(bool, get_pet_expression_enabled, notify=petVisualsChanged)
+    ceilingHangEnabled = Property(bool, get_ceiling_hang_enabled, notify=ceilingHangChanged)
+    ceilingHangCorner = Property(str, get_ceiling_hang_corner, notify=ceilingHangChanged)
+    tabletAutoUpright = Property(bool, get_tablet_auto_upright, notify=ceilingHangChanged)
+    skyPotDropEnabled = Property(bool, get_sky_pot_drop_enabled, notify=petVisualsChanged)
+    naturalPotSlipEnabled = Property(bool, get_natural_pot_slip_enabled, notify=petVisualsChanged)
+    moodSystemEnabled = Property(bool, get_mood_system_enabled, notify=moodSystemChanged)
+    moodValue = Property(float, get_mood_value, notify=moodSystemChanged)
+    moodMaxLimit = Property(float, get_mood_max_limit, notify=moodSystemChanged)
+    floatingHudEnabled = Property(bool, get_floating_hud_enabled, notify=moodSystemChanged)
+    floatingHudOpacity = Property(int, get_floating_hud_opacity, notify=moodSystemChanged)
 
     # --------------------------------------------------------- 槽函式 (Slots)
     @Slot(str)
@@ -1407,6 +1534,184 @@ class QMLBackend(QObject):
     def closeWindow(self):
         self.win.close()
 
+    # --------------------------------------------------------- 模組一至模組六設定管理槽函式
+    @Slot(str, str, str, bool)
+    def saveInputBinding(self, action_id: str, trigger: str, hotkey: str, enabled: bool):
+        bindings = dict(self.app.cfg.get("input_bindings") or {})
+        bindings[action_id] = {
+            "trigger": trigger,
+            "hotkey": hotkey,
+            "enabled": enabled,
+        }
+        self.app.cfg.set("input_bindings", bindings, save=True)
+        if hasattr(self.app.pet, "input_dispatcher"):
+            self.app.pet.input_dispatcher.update_hotkeys()
+        self.inputBindingsChanged.emit()
+        self.bindingConflictsChanged.emit()
+
+    @Slot()
+    def resetInputBindings(self):
+        from .input_manager import DEFAULT_BINDINGS_INFO
+        self.app.cfg.set("input_bindings", dict(DEFAULT_BINDINGS_INFO), save=True)
+        if hasattr(self.app.pet, "input_dispatcher"):
+            self.app.pet.input_dispatcher.update_hotkeys()
+        self.inputBindingsChanged.emit()
+        self.bindingConflictsChanged.emit()
+
+    @Slot(bool)
+    def setQChibiBalanceDisplay(self, val: bool):
+        self.app.cfg.set("q_chibi_balance_display", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAutoBindProvider(self, val: bool):
+        self.app.cfg.set("q_chibi_auto_bind_provider", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowClimbWindow(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_climb_window", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowClimbPet(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_climb_pet", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowPlayButtons(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_play_buttons", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowMischief(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_mischief", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowSplat(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_splat", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiAllowSleep(self, val: bool):
+        self.app.cfg.set("q_chibi_allow_sleep", bool(val), save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiCeilingMode(self, val: bool):
+        # 互斥機制：啟用天花板倒掛巡邏時，自動關閉四邊緣巡邏模式
+        self.app.cfg.set("q_chibi_ceiling_mode", bool(val), save=True)
+        if bool(val):
+            self.app.cfg.set("q_chibi_four_edges_floor_mode", False, save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setQChibiFourEdgesFloorMode(self, val: bool):
+        # 互斥機制：啟用四邊緣巡邏時，自動關閉天花板倒掛巡邏模式
+        self.app.cfg.set("q_chibi_four_edges_floor_mode", bool(val), save=True)
+        if bool(val):
+            self.app.cfg.set("q_chibi_ceiling_mode", False, save=True)
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setZeroGravityMode(self, val: bool):
+        self.app.cfg.set("zero_gravity_mode", bool(val), save=True)
+        if hasattr(self.app.pet, "wake"):
+            self.app.pet.wake()
+        self.qChibiBehaviorChanged.emit()
+
+    @Slot(bool)
+    def setPetParticlesEnabled(self, val: bool):
+        self.app.cfg.set("pet_particles_enabled", bool(val), save=True)
+        self.app.pet.update()
+        self.petVisualsChanged.emit()
+
+    @Slot(bool)
+    def setPetExpressionEnabled(self, val: bool):
+        self.app.cfg.set("pet_expression_enabled", bool(val), save=True)
+        self.app.pet.refresh_expr()
+        self.petVisualsChanged.emit()
+
+    @Slot(bool)
+    def setCeilingHangEnabled(self, val: bool):
+        self.app.cfg.set("ceiling_hang_enabled", bool(val), save=True)
+        self.app.pet._update_tablet_transform()
+        self.app.pet.snap_now(force_corner=True)
+        self.app.pet.update()
+        self.ceilingHangChanged.emit()
+
+    @Slot(str)
+    def setCeilingHangCorner(self, corner: str):
+        if corner in ("top_left", "top_right"):
+            self.app.cfg.set("ceiling_hang_corner", corner, save=True)
+            self.app.pet.snap_now(force_corner=True)
+            self.app.pet.update()
+            self.ceilingHangChanged.emit()
+
+    @Slot(bool)
+    def setTabletAutoUpright(self, val: bool):
+        self.app.cfg.set("tablet_auto_upright", bool(val), save=True)
+        self.app.pet._update_tablet_transform()
+        self.app.pet.update()
+        self.ceilingHangChanged.emit()
+
+    @Slot(bool)
+    def setSkyPotDropEnabled(self, val: bool):
+        self.app.cfg.set("sky_pot_drop_enabled", bool(val), save=True)
+        self.petVisualsChanged.emit()
+
+    @Slot(bool)
+    def setNaturalPotSlipEnabled(self, val: bool):
+        self.app.cfg.set("natural_pot_slip_enabled", bool(val), save=True)
+        self.petVisualsChanged.emit()
+
+    @Slot(str)
+    def openVisualAnchorEditor(self, char_id: str = ""):
+        from .anchor_editor import VisualAnchorEditorDialog, load_character_anchors
+        target_char = char_id or self.app.pet.character
+        dlg = VisualAnchorEditorDialog(target_char, parent=self.win)
+        dlg.exec()
+        self.app.pet.anchors = load_character_anchors(self.app.pet.character)
+        self.app.pet._update_tablet_transform()
+        self.app.pet.update()
+
+    @Slot(bool)
+    def setMoodSystemEnabled(self, val: bool):
+        self.app.cfg.set("mood_system_enabled", bool(val), save=True)
+        if hasattr(self.app.pet, "floating_hud"):
+            if bool(val) and self.app.cfg.get("floating_hud_enabled", False):
+                self.app.pet.floating_hud.show()
+            else:
+                self.app.pet.floating_hud.hide()
+        self.app.pet._build_screen()
+        self.moodSystemChanged.emit()
+
+    @Slot(float)
+    def setMoodMaxLimit(self, val: float):
+        v = max(100.0, float(val))
+        self.app.cfg.set("mood_max_limit", v, save=True)
+        self.app.pet._build_screen()
+        self.moodSystemChanged.emit()
+
+    @Slot(bool)
+    def setFloatingHudEnabled(self, val: bool):
+        self.app.cfg.set("floating_hud_enabled", bool(val), save=True)
+        if hasattr(self.app.pet, "floating_hud"):
+            if bool(val) and self.app.cfg.get("mood_system_enabled", False):
+                self.app.pet.floating_hud.show()
+            else:
+                self.app.pet.floating_hud.hide()
+        self.moodSystemChanged.emit()
+
+    @Slot(int)
+    def setFloatingHudOpacity(self, val: int):
+        v = max(20, min(100, int(val)))
+        self.app.cfg.set("floating_hud_opacity", v, save=True)
+        if hasattr(self.app.pet, "floating_hud"):
+            self.app.pet.floating_hud.setWindowOpacity(v / 100.0)
+        self.moodSystemChanged.emit()
+
     def sync_from_app(self):
         """當控制器狀態變更時，觸發通知讓 QML 保持同步。"""
         self.themeChanged.emit(self.get_theme())
@@ -1421,6 +1726,15 @@ class QMLBackend(QObject):
         self.volumeChanged.emit(self.get_volume())
         self.pureVoiceChanged.emit(self.get_pure_voice_active())
         self.geminiLiveVoiceChanged.emit(self.get_gemini_live_voice())
+        self.statusSummaryChanged.emit(self.get_status_summary())
+        self.currentFontChanged.emit(self.get_current_font_family())
+        self.cueFilesChanged.emit()
+        self.inputBindingsChanged.emit()
+        self.bindingConflictsChanged.emit()
+        self.qChibiBehaviorChanged.emit()
+        self.petVisualsChanged.emit()
+        self.ceilingHangChanged.emit()
+        self.moodSystemChanged.emit()
         self.statusSummaryChanged.emit(self.get_status_summary())
         self.currentFontChanged.emit(self.get_current_font_family())
         self.cueFilesChanged.emit()

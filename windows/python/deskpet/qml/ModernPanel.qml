@@ -690,6 +690,37 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // 項目 4: 視覺部位錨點編輯器按鈕 (自訂頭頂、鐵鍋與平板透視頂點)
+                        Rectangle {
+                            width: parent.width
+                            height: 38
+                            radius: 10
+                            color: anchorBtnMouse.containsMouse ? themeColors.primaryHover : themeColors.primary
+                            Behavior on color { ColorAnimation { duration: 180 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "開啟視覺部位錨點編輯器 (頭頂 / 鐵盆 / 平板透視)"
+                                color: "#FFFFFF"
+                                font.pixelSize: 13
+                                font.bold: true
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                            }
+
+                            MouseArea {
+                                id: anchorBtnMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (typeof backend !== "undefined" && backend) {
+                                        backend.openVisualAnchorEditor(backend.character)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1145,6 +1176,241 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // 項目 4: 天花板倒掛模式 (180 度幾何反轉渲染)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "天花板倒掛停靠模式（純粹 180 度反轉幾何對齊頂部）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.ceilingHangEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangEnabled(!backend.ceilingHangEnabled)
+                                }
+                            }
+                        }
+
+                        // 項目 4.1: 倒掛停靠角落與平板正立
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            visible: typeof backend !== "undefined" && backend && backend.ceilingHangEnabled
+                            Text {
+                                text: "倒掛停靠角落與平板自動正立"
+                                color: themeColors.textSub
+                                font.pixelSize: 12
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 220
+                            }
+                            Rectangle {
+                                width: 90
+                                height: 28
+                                radius: 8
+                                color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primary : themeColors.border
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "螢幕左上"
+                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_left") ? themeColors.primary : themeColors.text
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangCorner("top_left")
+                                }
+                            }
+                            Rectangle {
+                                width: 90
+                                height: 28
+                                radius: 8
+                                color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primary : themeColors.border
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "螢幕右上"
+                                    color: (typeof backend !== "undefined" && backend && backend.ceilingHangCorner === "top_right") ? themeColors.primary : themeColors.text
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setCeilingHangCorner("top_right")
+                                }
+                            }
+                            Rectangle {
+                                width: 110
+                                height: 28
+                                radius: 8
+                                color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primaryContainer : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primary : themeColors.border
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? "平板正立：開啟" : "平板正立：關閉"
+                                    color: (typeof backend !== "undefined" && backend && backend.tabletAutoUpright) ? themeColors.primary : themeColors.text
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setTabletAutoUpright(!backend.tabletAutoUpright)
+                                }
+                            }
+                        }
+
+                        // 項目 5: 無重力懸浮飄動模式
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "無重力懸浮飄動（主寵微幅垂直浮動，Q版小人低重力漂浮）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.zeroGravityMode) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.zeroGravityMode) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setZeroGravityMode(!backend.zeroGravityMode)
+                                }
+                            }
+                        }
+
+                        // 項目 6: 主寵動態表情切換
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "主寵心情狀態表情動態切換（開心 / 傲嬌 / 慌張 / 扣鍋）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.petExpressionEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.petExpressionEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setPetExpressionEnabled(!backend.petExpressionEnabled)
+                                }
+                            }
+                        }
+
+                        // 項目 7: 主寵粒子特效 (愛心與飄字)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "主寵粒子特效與飄字上升動效（餵食愛心、傷害數字飄字）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.petParticlesEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.petParticlesEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setPetParticlesEnabled(!backend.petParticlesEnabled)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1343,6 +1609,279 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // 項目 5: 額度餘額顯示氣泡 (預設關閉為純粹陪伴巡邏)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "額度餘額氣泡顯示（預設關閉：純粹巡邏伴侶）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiBalanceDisplay) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiBalanceDisplay) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiBalanceDisplay(!backend.qChibiBalanceDisplay)
+                                }
+                            }
+                        }
+
+                        // 項目 6: 攀爬主寵身體 (頭頂、肩膀)
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "攀爬主寵身體互動（跳躍至主寵頭頂與肩膀）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowClimbPet) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowClimbPet) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiAllowClimbPet(!backend.qChibiAllowClimbPet)
+                                }
+                            }
+                        }
+
+                        // 項目 7: 惡作劇推倒與扛起鐵鍋
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "調皮惡作劇（被鐵鍋砸中扛起慢走、主動推倒鐵盆）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowMischief) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowMischief) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiAllowMischief(!backend.qChibiAllowMischief)
+                                }
+                            }
+                        }
+
+                        // 項目 8: 失足摔倒扁平動效
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "失足摔倒滑稽壓扁動效（著陸壓扁後搖晃爬起）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowSplat) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowSplat) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiAllowSplat(!backend.qChibiAllowSplat)
+                                }
+                            }
+                        }
+
+                        // 項目 9: 原地坐下打瞌睡
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "閒置打瞌睡（長時間未移動時坐下冒 Zzz 氣泡）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiAllowSleep) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiAllowSleep) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiAllowSleep(!backend.qChibiAllowSleep)
+                                }
+                            }
+                        }
+
+                        // 項目 10: 天花板倒掛巡邏模式（與四邊緣互斥）
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "天花板倒掛巡邏模式（180 度反轉巡邏頂部，與四邊緣互斥）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiCeilingMode) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiCeilingMode) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiCeilingMode(!backend.qChibiCeilingMode)
+                                }
+                            }
+                        }
+
+                        // 項目 11: 四邊緣貼邊巡邏模式（地面/右牆/頂部/左牆，與天花板倒掛互斥）
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "四邊緣貼邊巡邏模式（底部/右側/頂部/左側旋轉爬行，互斥）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.qChibiFourEdgesFloorMode) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.qChibiFourEdgesFloorMode) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setQChibiFourEdgesFloorMode(!backend.qChibiFourEdgesFloorMode)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1438,6 +1977,198 @@ Rectangle {
                                             backend.addAlarm("番茄工作鐘", "", "timer", 1500)
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 7: 全維度心情值系統與動態 HUD 儀表板
+                Rectangle {
+                    width: parent.width
+                    height: colCard7.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCard7
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Text {
+                            text: "全維度心情值系統與動態 HUD 儀表板"
+                            color: themeColors.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            text: "整合多維動態因子（餘額消耗、連擊餵食、撫摸速度、天降空鍋、自然衰減）與自訂懸浮統計 HUD"
+                            color: themeColors.textSub
+                            font.pixelSize: 12
+                            font.family: root.modernFontStack
+                            renderType: Text.NativeRendering
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                        }
+
+                        // 項目 1: 啟用心情值系統
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "啟用心情值系統（解鎖平板第 4 頁與動態行為表現）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.moodSystemEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.moodSystemEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setMoodSystemEnabled(!backend.moodSystemEnabled)
+                                }
+                            }
+                        }
+
+                        // 項目 2: 獨立懸浮心情 HUD
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "顯示獨立懸浮心情動態 HUD（可拖曳、自動記位、迷你折疊）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.floatingHudEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.floatingHudEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setFloatingHudEnabled(!backend.floatingHudEnabled)
+                                }
+                            }
+                        }
+
+                        // 項目 3: 天降空鍋隨機掉落
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "天降空鍋掉落事件（隨機從螢幕頂部掉落可接住或由小人扛走）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.skyPotDropEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.skyPotDropEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setSkyPotDropEnabled(!backend.skyPotDropEnabled)
+                                }
+                            }
+                        }
+
+                        // 項目 4: 多層鐵盆微幅自然滑落
+                        Row {
+                            width: parent.width
+                            spacing: 12
+                            Text {
+                                text: "頭頂多層鐵盆自然滑落（疊鍋過高時微幅傾斜滑落掉地）"
+                                color: themeColors.text
+                                font.pixelSize: 13
+                                font.family: root.modernFontStack
+                                renderType: Text.NativeRendering
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 340
+                            }
+                            Item {
+                                width: 48
+                                height: 26
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 13
+                                    color: (typeof backend !== "undefined" && backend && backend.naturalPotSlipEnabled) ? themeColors.primary : themeColors.surfaceVariant
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        y: 3
+                                        color: "#FFFFFF"
+                                        x: (typeof backend !== "undefined" && backend && backend.naturalPotSlipEnabled) ? 25 : 3
+                                        Behavior on x { SpringAnimation { spring: 3.5; damping: 0.3 } }
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.setNaturalPotSlipEnabled(!backend.naturalPotSlipEnabled)
                                 }
                             }
                         }
@@ -1871,6 +2602,203 @@ Rectangle {
                                             onClicked: {
                                                 if (typeof backend !== "undefined" && backend) {
                                                     backend.setGeminiLiveVoice(modelData)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 卡片 4: 用戶自訂操作與按鍵綁定系統 (Input & Action Binding System)
+                Rectangle {
+                    width: parent.width
+                    height: colCardInputBindings.implicitHeight + 32
+                    radius: 14
+                    color: themeColors.surface
+                    border.width: 1
+                    border.color: themeColors.border
+
+                    Column {
+                        id: colCardInputBindings
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Column {
+                                width: parent.width - 130
+                                spacing: 4
+                                Text {
+                                    text: "用戶自訂操作與按鍵綁定系統"
+                                    color: themeColors.text
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                                Text {
+                                    text: "自訂身體/頭部/平板手勢與全域熱鍵，具備時序干涉防抖與衝突檢測"
+                                    color: themeColors.textSub
+                                    font.pixelSize: 12
+                                    font.family: root.modernFontStack
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            Rectangle {
+                                width: 110
+                                height: 32
+                                radius: 8
+                                color: resetHkMouse.containsMouse ? themeColors.surfaceHover : themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "重設預設綁定"
+                                    color: themeColors.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+                                MouseArea {
+                                    id: resetHkMouse
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (typeof backend !== "undefined" && backend) backend.resetInputBindings()
+                                }
+                            }
+                        }
+
+                        // 衝突警告橫幅 (紅色顯著高亮)
+                        Rectangle {
+                            width: parent.width
+                            height: colConflicts.implicitHeight + 16
+                            radius: 10
+                            color: "#FEF2F2"
+                            border.width: 1
+                            border.color: "#EF4444"
+                            visible: typeof backend !== "undefined" && backend && backend.bindingConflicts && backend.bindingConflicts.length > 0
+
+                            Column {
+                                id: colConflicts
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 4
+                                Text {
+                                    text: "警告：檢測到按鍵手勢或熱鍵衝突！"
+                                    color: "#B91C1C"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: root.modernFontStack
+                                }
+                                Repeater {
+                                    model: (typeof backend !== "undefined" && backend) ? backend.bindingConflicts : []
+                                    delegate: Text {
+                                        text: "• [" + modelData.type + "] " + modelData.description
+                                        color: "#DC2626"
+                                        font.pixelSize: 11
+                                        font.family: root.modernFontStack
+                                        wrapMode: Text.WordWrap
+                                        width: colConflicts.width
+                                    }
+                                }
+                            }
+                        }
+
+                        // 按鍵綁定清單
+                        Repeater {
+                            model: (typeof backend !== "undefined" && backend) ? backend.inputBindings : []
+                            delegate: Rectangle {
+                                width: colCardInputBindings.width
+                                height: 44
+                                radius: 8
+                                color: themeColors.surfaceVariant
+                                border.width: 1
+                                border.color: themeColors.border
+
+                                Row {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 12
+                                    spacing: 8
+
+                                    Text {
+                                        text: modelData.description
+                                        color: themeColors.text
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        font.family: root.modernFontStack
+                                        width: 160
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+
+                                    Rectangle {
+                                        height: 24
+                                        width: 140
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.trigger ? ("手勢: " + modelData.trigger) : "無手勢"
+                                            color: themeColors.textSub
+                                            font.pixelSize: 10
+                                            font.family: root.modernFontStack
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        height: 24
+                                        width: 120
+                                        radius: 6
+                                        color: themeColors.surface
+                                        border.width: 1
+                                        border.color: themeColors.border
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.hotkey ? modelData.hotkey : "無熱鍵"
+                                            color: modelData.hotkey ? themeColors.primary : themeColors.textSub
+                                            font.pixelSize: 11
+                                            font.bold: modelData.hotkey ? true : false
+                                            font.family: root.modernFontStack
+                                        }
+                                    }
+
+                                    Item { width: 1; height: 1 }
+
+                                    Item {
+                                        width: 40
+                                        height: 22
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: 11
+                                            color: modelData.enabled ? themeColors.primary : themeColors.border
+                                            Rectangle {
+                                                width: 16
+                                                height: 16
+                                                radius: 8
+                                                y: 3
+                                                color: "#FFFFFF"
+                                                x: modelData.enabled ? 21 : 3
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (typeof backend !== "undefined" && backend) {
+                                                    backend.saveInputBinding(modelData.action_id, modelData.trigger, modelData.hotkey, !modelData.enabled)
                                                 }
                                             }
                                         }

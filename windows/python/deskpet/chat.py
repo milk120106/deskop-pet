@@ -1257,6 +1257,9 @@ class SpeechBubble(QLabel):
         painter.end()
 
     def show_message(self, text: str, thought: bool = False, timeout_ms: int = 6500, persistent: bool = False):
+        if hasattr(self.pet, "mood_engine") and self.pet.mood_engine:
+            text, delta = self.pet.mood_engine.parse_ai_dialogue_mood(text)
+
         self._thought = thought
         self._persistent = persistent
         self.setText(text)

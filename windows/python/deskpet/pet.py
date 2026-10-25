@@ -16,6 +16,10 @@ from PySide6.QtWidgets import QWidget
 from . import winapi
 from .config import APP_DIR, ASSETS, CUSTOM_CHARS_DIR, PROV_NAMES, PROV_IDS, asset, log
 from .props import Art, PropManager
+from .input_manager import InputDispatcher
+from .mood_engine import MoodEngine
+from .floating_hud import FloatingMoodHUD
+from .anchor_editor import load_character_anchors
 
 M_L, M_R, M_T, M_B = 48, 48, 130, 28
 
@@ -180,9 +184,85 @@ class PetWindow(QWidget):
         ledger.topup.connect(self.on_topup)
         ledger.changed.connect(self._build_screen)
 
+        # 視覺部位錨點載入
+        self.anchors = load_character_anchors(self.character)
+
+        # 模組一：用戶自訂操作與按鍵綁定系統 (InputDispatcher)
+        self.input_dispatcher = InputDispatcher(self.cfg, self)
+        self._init_input_actions()
+
+        # 模組四：全維度行為因子心情值系統與自訂統計 HUD
+        self.mood_engine = MoodEngine(self.cfg, self, sounds)
+        self.floating_hud = FloatingMoodHUD(self.cfg, self.mood_engine)
+        if bool(self.cfg.get("floating_hud_enabled", False)):
+            self.floating_hud.show()
+
+        self._last_pot_pulse = time.monotonic()
+
+        # 模組五：鐵鍋動態滑落與天降空鍋週期定時器 (每 45 秒檢查一次)
+        self.sky_pot_timer = QTimer(self)
+        self.sky_pot_timer.setInterval(45000)
+        self.sky_pot_timer.timeout.connect(self._on_sky_pot_timer)
+        self.sky_pot_timer.start()
+
         self._resize_window()
         self._build_screen()
         self.update_fps_timer()
+
+    def _init_input_actions(self):
+        disp = self.input_dispatcher
+        disp.register_action("switch_tablet_page", self.next_tablet_page)
+        disp.register_action("pet_head", self.start_pat)
+        disp.register_action("remove_iron_pot", lambda: self.remove_iron(all_pots=False))
+        disp.register_action("remove_all_iron_pots", lambda: self.remove_iron(all_pots=True))
+        disp.register_action("feed_pet", self.quick_feed)
+        disp.register_action("summon_chibi", self.summon_chibi_patrol)
+        disp.register_action("quick_hide", self.toggle_quick_hide)
+        disp.register_action("open_panel", self.request_open_panel)
+        disp.update_hotkeys()
+
+    def quick_feed(self):
+        """快捷餵食：直接生成飯盆並飄落。"""
+        self.props.spawn_rice(1.0)
+
+    def summon_chibi_patrol(self):
+        """召喚 Q 版小人巡邏隊。"""
+        mgr = getattr(self, "chibi_mgr", None) or (getattr(self, "app", None) and getattr(self.app, "chibi_mgr", None))
+        if mgr:
+            mgr.summon()
+
+    def toggle_quick_hide(self):
+        """老闆鍵：快速隱藏/顯示主寵與小人。"""
+        mgr = getattr(self, "chibi_mgr", None) or (getattr(self, "app", None) and getattr(self.app, "chibi_mgr", None))
+        if self.isVisible():
+            self.hide()
+            if mgr:
+                for c in mgr.chibis:
+                    c.hide()
+        else:
+            self.show()
+            if mgr:
+                for c in mgr.chibis:
+                    c.show()
+
+    def request_open_panel(self):
+        """請求開啟設定面板。"""
+        if getattr(self, "app", None) and hasattr(self.app, "open_panel"):
+            self.app.open_panel()
+        else:
+            self.context_requested.emit(self.mapToGlobal(QPoint(self.width() // 2, self.height() // 2)))
+
+    def _on_sky_pot_timer(self):
+        """天降空鍋與自然滑落週期檢查。"""
+        import random
+        # 1. 戴鍋自然微幅滑落
+        if bool(self.cfg.get("natural_pot_slip_enabled", True)) and self.iron_count > 1:
+            if random.random() < 0.25:
+                self.props.trigger_natural_slip()
+
+        # 2. 天降空鐵鍋隨機掉落
+        if bool(self.cfg.get("sky_pot_drop_enabled", True)) and random.random() < 0.15:
+            self.props.spawn_sky_pot()
 
     def update_fps_timer(self):
         """根據 target_fps 與 performance_mode 動態調度定時器幀率。"""
@@ -469,6 +549,10 @@ class PetWindow(QWidget):
         else:
             dst_pts = pts
 
+        # 天花板倒掛模式逆向旋轉 180 度補償（維持文字水平正立便於閱讀）
+        if bool(self.cfg.get("ceiling_hang_enabled", False)) and bool(self.cfg.get("tablet_auto_upright", True)):
+            dst_pts = [dst_pts[2], dst_pts[3], dst_pts[0], dst_pts[1]]
+
         self._screen_tf = _quad_transform(SCREEN_W, SCREEN_H, dst_pts)
 
     def _resize_window(self):
@@ -522,18 +606,37 @@ class PetWindow(QWidget):
         o = self.sprite_origin()
         W = self.art_w
         H = self.art_h
-        base_cx = 0.672 if self.is_tail else 0.60
+        if self.character.startswith("custom_"):
+            hz = getattr(self, "anchors", {}).get("head_zone", {})
+            base_cx = hz.get("center_ratio_x", 0.672 if self.is_tail else 0.60)
+            top_ry = hz.get("top_ratio_y", -0.14)
+            w_ry = hz.get("width_ratio", 0.56)
+            h_ry = hz.get("height_ratio", 0.54)
+        else:
+            base_cx = 0.672 if self.is_tail else 0.60
+            top_ry = -0.14
+            w_ry = 0.56
+            h_ry = 0.54
+
         cx = o.x() + (W * (1.0 - base_cx) if self.snap_right else W * base_cx)
-        w = H * 0.56
+        w = H * w_ry
         x = cx - w / 2.0
-        y = o.y() - H * 0.14
-        h = H * 0.54
+        y = o.y() + H * top_ry
+        h = H * h_ry
         if self.iron_count > 0:
             stack_extra = (self.iron_count - 1) * (H * 0.12)
             y -= (H * 0.10 + stack_extra)
             h += (H * 0.12 + stack_extra)
             w += H * 0.08
             x = cx - w / 2.0
+
+        # 天花板倒掛模式：180 度反轉幾何對齊（倒懸時頭部位於寵物下方）
+        if bool(self.cfg.get("ceiling_hang_enabled", False)):
+            cy = y + h / 2.0
+            new_cx = 2.0 * (o.x() + W / 2.0) - cx
+            new_cy = 2.0 * (o.y() + H / 2.0) - cy
+            return QRectF(new_cx - w / 2.0, new_cy - h / 2.0, w, h)
+
         return QRectF(x, y, w, h)
 
     def tablet_zone_global(self) -> QRectF:
@@ -541,7 +644,19 @@ class PetWindow(QWidget):
         W = self.art_w
         H = self.art_h
         tx = (W * 0.15) if self.snap_right else (W * 0.50 if self.is_tail else W * 0.45)
-        return QRectF(o.x() + tx, o.y() + H * 0.60, W * 0.40, H * 0.35)
+        ty = H * 0.60
+        tw = W * 0.40
+        th = H * 0.35
+
+        # 天花板倒掛模式幾何適配
+        if bool(self.cfg.get("ceiling_hang_enabled", False)):
+            cx = o.x() + tx + tw / 2.0
+            cy = o.y() + ty + th / 2.0
+            new_cx = 2.0 * (o.x() + W / 2.0) - cx
+            new_cy = 2.0 * (o.y() + H / 2.0) - cy
+            return QRectF(new_cx - tw / 2.0, new_cy - th / 2.0, tw, th)
+
+        return QRectF(o.x() + tx, o.y() + ty, tw, th)
 
     def contains_global(self, g: QPointF) -> bool:
         o = self.sprite_origin()
@@ -663,6 +778,18 @@ class PetWindow(QWidget):
         B = self.y() + M_T + self.art_h
         nx, ny = self.x(), self.y()
 
+        # 天花板倒掛模式：停靠螢幕上方邊界 (左上或右上角)
+        if bool(self.cfg.get("ceiling_hang_enabled", False)):
+            corner = self.cfg.get("ceiling_hang_corner", "top_right")
+            if corner == "top_left":
+                nx += (ag.left() - L)
+                self.set_snap_right(False)
+            else:
+                nx += (ag.right() + 1 - R)
+                self.set_snap_right(True)
+            ny += (ag.top() - T)
+            return QPoint(int(nx), int(ny))
+
         if force_corner:
             corner = self.cfg.get("snap_corner", "right")
             nx += (ag.left() - L) if corner == "left" else (ag.right() + 1 - R)
@@ -747,9 +874,15 @@ class PetWindow(QWidget):
         return ("deepseek" in prov) or ("deepseek" in active_prof_prov)
 
     def next_tablet_page(self):
-        """四分頁輪替：非 DeepSeek 角色自動跳過第 1 頁（峰谷頁）。"""
+        """分頁輪替：第 1 頁（峰谷頁）僅限 DeepSeek，第 4 頁（心情頁）僅限啟用心情系統。"""
         deepseek_ok = self.is_deepseek_active()
-        valid_pages = [0, 1, 2, 3] if deepseek_ok else [0, 2, 3]
+        mood_ok = bool(self.cfg.get("mood_system_enabled", False))
+        valid_pages = [0]
+        if deepseek_ok:
+            valid_pages.append(1)
+        valid_pages.extend([2, 3])
+        if mood_ok:
+            valid_pages.append(4)
         try:
             cur_idx = valid_pages.index(self.page)
             self.page = valid_pages[(cur_idx + 1) % len(valid_pages)]
@@ -902,6 +1035,39 @@ class PetWindow(QWidget):
                 hook_status = "Webhook 待命" if (self.cfg.get("discord_webhook_url") or self.cfg.get("telegram_bot_token")) else "通知分發器待命"
                 self._outlined(p, hook_status, QRectF(0, 178, SCREEN_W, 60), 28, bold=False)
 
+        elif self.page == 4:
+            # 第 4 頁：心情指數與寵物互動統計（僅在 mood_system_enabled 時啟用）
+            if not bool(self.cfg.get("mood_system_enabled", False)):
+                self.page = 0
+                return self._build_screen()
+
+            m_val = float(self.cfg.get("mood_value", 50.0))
+            m_max = float(self.cfg.get("mood_max_limit", 100.0))
+            stats = self.cfg.get("pet_stats", {})
+            total_pats = stats.get("total_pats", 0)
+            total_feeds = stats.get("total_feeds", 0)
+            combo = stats.get("feed_combo_count", 0)
+
+            if m_val >= 80.0:
+                mood_txt = "心情：雀躍興奮"
+                m_color = QColor(100, 230, 160)
+            elif m_val >= 50.0:
+                mood_txt = "心情：愉快放鬆"
+                m_color = QColor(120, 210, 255)
+            elif m_val >= 30.0:
+                mood_txt = "心情：平靜發呆"
+                m_color = QColor(240, 210, 120)
+            else:
+                mood_txt = "心情：有些低落"
+                m_color = QColor(255, 120, 120)
+
+            self._outlined(p, "心情與統計", QRectF(0, 12, SCREEN_W, 60), 32, bold=False)
+            self._outlined(p, f"{m_val:.1f} / {m_max:.0f}", QRectF(0, 68, SCREEN_W, 75), 52, bold=True, fill_color=m_color)
+            sub_info = f"{mood_txt} (連擊 {combo})"
+            self._outlined(p, sub_info, QRectF(0, 142, SCREEN_W, 50), 26, bold=False)
+            stat_info = f"撫摸 {total_pats} 次 | 餵食 {total_feeds} 次"
+            self._outlined(p, stat_info, QRectF(0, 186, SCREEN_W, 50), 24, bold=False, fill_color=QColor(200, 220, 255))
+
         # 鬧鐘響鈴動態：平板亮屏呼吸閃爍外框
         if self.alarm_glowing:
             alpha = int(180 + 75 * math.sin(time.monotonic() * 9.0))
@@ -913,7 +1079,7 @@ class PetWindow(QWidget):
         self._screen_img = img
         self.update()
 
-        if (self.page in (1, 2, 3) or self.alarm_glowing) and not self.clock_timer.isActive():
+        if (self.page in (1, 2, 3, 4) or self.alarm_glowing) and not self.clock_timer.isActive():
             self.clock_timer.start()
         elif self.page == 0 and not self.alarm_glowing:
             self.clock_timer.stop()
@@ -952,6 +1118,11 @@ class PetWindow(QWidget):
         return "happy"
 
     def refresh_expr(self):
+        if not bool(self.cfg.get("pet_expression_enabled", True)):
+            if self.expr != "happy":
+                self.expr = "happy"
+                self.update()
+            return
         e = self._want_expr()
         if e != self.expr:
             self.expr = e
@@ -988,6 +1159,11 @@ class PetWindow(QWidget):
                 flash += math.exp(-a / FLASH_DECAY)
             dx = max(-14.0, min(14.0, dx))
             dy = max(-6.0, min(6.0, dy))
+
+        # 無重力懸浮飄動模式（zero_gravity_mode）：在未拖曳時產生微幅垂直漂移
+        if bool(self.cfg.get("zero_gravity_mode", False)) and not self.is_dragging:
+            dy += 5.0 * math.sin(now * 2.0)
+
         max_tint = max(0.30, 0.64 - (H / 1024.0) * 0.75)
         flash = min(1.0, flash) * max_tint
 
@@ -1012,8 +1188,15 @@ class PetWindow(QWidget):
             progress = 1.0 - (self.paper_land_t / 0.20)
             paper_squish_y = 0.88 + 0.12 * math.sin(progress * math.pi / 2)
 
+        is_ceiling = bool(self.cfg.get("ceiling_hang_enabled", False))
         ox, oy = M_L + dx, M_T + dy
         p.save()
+        if is_ceiling:
+            # 天花板倒掛模式：純粹幾何 180 度反轉渲染 (絕無任何動物腳爪繪製)
+            p.translate(ox + W / 2, oy + H / 2)
+            p.rotate(180)
+            p.translate(-(ox + W / 2), -(oy + H / 2))
+
         p.translate(ox + W / 2, oy + H + shift_y)
         # 紙片懸空飄蕩微幅傾角 (±5 度)
         if self.flutter_angle != 0.0:
@@ -1057,17 +1240,36 @@ class PetWindow(QWidget):
         pm = self._iron()
         W = self.art_w
         H = self.art_h
-        tilt = -IRON_TILT if self.snap_right else IRON_TILT
-        base_cx = (0.672 if self.is_tail else 0.60)
-        cx = ox + (W * (1.0 - base_cx) if self.snap_right else W * base_cx)
-        base_cy = oy + H * 0.19
+
+        if self.character.startswith("custom_"):
+            ib = getattr(self, "anchors", {}).get("iron_bowl", {})
+            base_cx_ratio = ib.get("center_ratio_x", 0.672 if self.is_tail else 0.60)
+            base_cy_ratio = ib.get("center_ratio_y", 0.19)
+            anchor_tilt = ib.get("tilt_deg", IRON_TILT)
+            base_tilt = -anchor_tilt if self.snap_right else anchor_tilt
+        else:
+            base_cx_ratio = 0.672 if self.is_tail else 0.60
+            base_cy_ratio = 0.19
+            base_tilt = -IRON_TILT if self.snap_right else IRON_TILT
+
+        cx = ox + (W * (1.0 - base_cx_ratio) if self.snap_right else W * base_cx_ratio)
+        base_cy = oy + H * base_cy_ratio
+
+        # 疊鍋阻尼擺動物理 (Damped oscillation wobble)
+        now = time.monotonic()
+        wobble_dt = now - getattr(self, "_pot_wobble_time", 0.0)
+        wobble_amp = 0.0
+        if wobble_dt < 2.0:
+            decay = math.exp(-wobble_dt * 2.5)
+            wobble_amp = 7.5 * decay * math.sin(wobble_dt * 14.0)
 
         for idx in range(self.iron_count):
             p.save()
             p.setOpacity(max(0.0, self.iron_alpha))
             cy = base_cy + idx * (-H * 0.12)
+            pot_tilt = base_tilt + ((idx + 1) / max(1, self.iron_count)) * wobble_amp
             p.translate(cx, cy)
-            p.rotate(tilt)
+            p.rotate(pot_tilt)
             p.drawPixmap(int(-pm.width() / 2), int(-pm.height() * 0.5), pm)
             p.restore()
 
@@ -1127,6 +1329,8 @@ class PetWindow(QWidget):
         return self._heart_pix
 
     def _paint_fx(self, p: QPainter, ox, oy, now):
+        if not bool(self.cfg.get("pet_particles_enabled", True)):
+            return
         if self.cfg.get("performance_mode", False) or not self.cfg.get("animations_enabled", True):
             # 在效能模式或停用動效時，關閉愛心粒子與飄字上升動效
             return
@@ -1238,6 +1442,12 @@ class PetWindow(QWidget):
         elif self.expr == "nervous" and not self.pat_active:
             self.refresh_expr()
 
+        # 無重力懸浮飄動與鐵鍋 wobble 擺動持續動畫刷新
+        if bool(self.cfg.get("zero_gravity_mode", False)) and not self.is_dragging:
+            busy = True
+        if self.iron_worn and (now - getattr(self, "_pot_wobble_time", 0.0) < 2.0):
+            busy = True
+
         self.update()
         if not busy:
             self.timer.stop()
@@ -1270,6 +1480,8 @@ class PetWindow(QWidget):
         self.ledger.apply_cue(count=count)
         self.flashes.append(now)
         amount = round(count * 0.01, 2)
+        if hasattr(self, "mood_engine") and self.mood_engine.is_enabled():
+            self.mood_engine.on_api_cost(amount)
         cur_sym = "" if self.ledger.currency == "CNY" else "$"
         import random
         xo = random.uniform(-20.0, 20.0)
@@ -1281,6 +1493,8 @@ class PetWindow(QWidget):
         self.wake()
 
     def on_topup(self, amount: float):
+        if hasattr(self, "mood_engine") and self.mood_engine.is_enabled():
+            self.mood_engine.on_topup(amount)
         self.props.spawn_rice(amount)
         self.refresh_expr()
 
@@ -1299,9 +1513,24 @@ class PetWindow(QWidget):
         self.happy_until = now + HAPPY_AFTER_FEED
         self.bounce_t = 0.35
         self.props.spawn_iron(at.x(), at.y())
+        if hasattr(self, "mood_engine") and self.mood_engine.is_enabled():
+            self.mood_engine.on_feed(amount)
+            self.mood_engine.record_stat("total_feeds", 1)
         QTimer.singleShot(int(HAPPY_AFTER_FEED * 1000) + 50, self.refresh_expr)
         self.refresh_expr()
         self.wake()
+
+    def get_max_iron_pots(self) -> int:
+        """動態計算頭頂空間可容納的最大鐵鍋層數 (1..10)。"""
+        ag = self.screen_ag()
+        hz = self.head_zone_global()
+        if bool(self.cfg.get("ceiling_hang_enabled", False)):
+            headroom = ag.bottom() - hz.bottom()
+        else:
+            headroom = hz.top() - ag.top()
+        pot_step = max(10.0, self.art_h * 0.12)
+        max_allowed = int(headroom / pot_step)
+        return max(1, min(10, max_allowed if max_allowed >= 1 else 5))
 
     def wear_iron(self):
         chibi = getattr(self, "pixel_chibi", None) or (getattr(self, "app", None) and getattr(self.app, "pixel_chibi", None))
@@ -1309,16 +1538,25 @@ class PetWindow(QWidget):
             direction = -1 if getattr(self, "snap_right", False) else 1
             chibi.trigger_bowl_smash(direction=direction)
 
-        if self.iron_count < 5:
+        max_pots = self.get_max_iron_pots()
+        if self.iron_count < max_pots:
             self.iron_count += 1
         self.iron_alpha = 1.0
         self.iron_fading = False
         self.bounce_t = 0.35
+        self._pot_wobble_time = time.monotonic()
         self.sounds.play("land")
         now = time.monotonic()
-        msg = f"鐵盆已戴在頭上 (層數: {self.iron_count}/5)" if self.iron_count > 1 else "點擊頭頂取下鐵盆"
+        msg = f"鐵盆已戴在頭上 (層數: {self.iron_count}/{max_pots})" if self.iron_count > 1 else "點擊頭頂取下鐵盆"
         self.floaters.append([msg, QColor(255, 230, 110), 0, now])
         self.setToolTip("點擊頭頂取下鐵盆")
+
+        if hasattr(self, "mood_engine") and self.mood_engine.is_enabled():
+            self.mood_engine.record_stat("total_pots_worn", 1)
+            cur_rec = int(self.cfg.get("pet_stats", {}).get("max_pots_record", 0))
+            if self.iron_count > cur_rec:
+                self.mood_engine.set_stat("max_pots_record", self.iron_count)
+
         self.refresh_expr()
         self.wake()
 
@@ -1373,6 +1611,11 @@ class PetWindow(QWidget):
             # 鐵盆扣在頭上時，摸頭直接不觸發（依使用者明確要求，不可取下鐵盆再摸）
             if self.iron_worn:
                 return
+            duration = now - self._wig_start
+            velocity = self._wig_dist / max(0.01, duration)
+            if hasattr(self, "mood_engine") and self.mood_engine.is_enabled():
+                self.mood_engine.on_pat(velocity, duration)
+                self.mood_engine.record_stat("total_pats", 1)
             self.start_pat()
 
     # ====================================================== Mouse events
@@ -1382,7 +1625,10 @@ class PetWindow(QWidget):
         if not hit:
             return
         self.end_pat()
-        self.context_requested.emit(self.mapToGlobal(e.pos()))
+        if hasattr(self, "input_dispatcher"):
+            self.input_dispatcher.handle_body_right_click()
+        else:
+            self.context_requested.emit(self.mapToGlobal(e.pos()))
         e.accept()
 
     def mousePressEvent(self, e):
@@ -1443,8 +1689,13 @@ class PetWindow(QWidget):
                     self._save_pos()
             else:
                 g = QPointF(self.mapToGlobal(e.position().toPoint()))
-                if self.iron_worn and self.head_zone_global().contains(g):
-                    self.remove_iron(all_pots=False)
+                if self.head_zone_global().contains(g):
+                    if self.iron_worn:
+                        self.remove_iron(all_pots=False)
+                        return
+                    if hasattr(self, "input_dispatcher"):
+                        has_double = bool(self.input_dispatcher.find_action_by_trigger("head_double_click"))
+                        self.input_dispatcher.handle_head_single_click(needs_debounce=has_double)
                     return
 
     def mouseDoubleClickEvent(self, e):
@@ -1455,14 +1706,32 @@ class PetWindow(QWidget):
             if self.iron_worn:
                 self.remove_iron(all_pots=True)
                 return
-            self.bounce_t = 0.35
-            self.wake()
-            self.double_clicked_head.emit()
+            if hasattr(self, "input_dispatcher"):
+                self.input_dispatcher.handle_head_double_click()
+            else:
+                self.bounce_t = 0.35
+                self.wake()
+                self.double_clicked_head.emit()
             return
 
         if self.tablet_zone_global().contains(g):
-            # 雙擊平板智慧四分頁輪替
-            self.next_tablet_page()
+            if hasattr(self, "input_dispatcher"):
+                self.input_dispatcher.handle_tablet_double_click()
+            else:
+                self.next_tablet_page()
+
+    def nativeEvent(self, eventType, message):
+        """處理 Windows 全域廣播熱鍵 WM_HOTKEY 訊息。"""
+        if eventType in (b"windows_generic_MSG", "windows_generic_MSG"):
+            try:
+                import ctypes.wintypes
+                msg = ctypes.wintypes.MSG.from_address(int(message))
+                if msg.message == 0x0312:  # WM_HOTKEY
+                    if hasattr(self, "input_dispatcher") and self.input_dispatcher.process_hotkey_message(msg.wParam):
+                        return True, 0
+            except Exception:
+                pass
+        return super().nativeEvent(eventType, message)
 
     def leaveEvent(self, e):
         super().leaveEvent(e)

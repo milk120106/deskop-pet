@@ -2507,22 +2507,58 @@ class PixelChibiRenderer:
         return pm
 
 
+HEART_PIXELS = [
+    (1, 0), (2, 0), (4, 0), (5, 0),
+    (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
+    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2),
+    (1, 3), (2, 3), (3, 3), (4, 3), (5, 3),
+    (2, 4), (3, 4), (4, 4),
+    (3, 5),
+]
+
+NOTE_PIXELS = [
+    (3, 0), (4, 0), (5, 0),
+    (3, 1), (5, 1),
+    (3, 2),
+    (3, 3),
+    (1, 4), (2, 4), (3, 4),
+    (0, 5), (1, 5), (2, 5), (3, 5),
+    (1, 6), (2, 6),
+]
+
+ANGRY_PIXELS = [
+    (2, 0), (4, 0),
+    (2, 1), (4, 1),
+    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2),
+    (2, 3), (4, 3),
+    (0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4),
+    (2, 5), (4, 5),
+    (2, 6), (4, 6),
+]
+
+
 class PixelParticle:
-    """像素煙火粒子。"""
-    def __init__(self, x: float, y: float, vx: float, vy: float, color: QColor, life: float = 1.0):
+    """像素煙火粒子與獨立情緒粒子。"""
+    def __init__(self, x: float, y: float, vx: float, vy: float, color: QColor, life: float = 1.0, kind: str = "spark"):
         self.x = x
         self.y = y
         self.vx = vx
         self.vy = vy
         self.color = color
         self.life = life
+        self.kind = kind
         self.age = 0.0
 
     def update(self, dt: float) -> bool:
         self.age += dt
         self.x += self.vx * dt
         self.y += self.vy * dt
-        self.vy += 80.0 * dt  # 重力
+        if self.kind == "spark":
+            self.vy += 80.0 * dt  # 煙火粒子重力下墜
+        else:
+            # 情緒粒子輕柔飄動微幅上浮
+            self.vx += math.sin(self.age * 6.0) * 6.0 * dt
+            self.vy += 4.0 * dt
         return self.age < self.life
 
 
@@ -2646,6 +2682,7 @@ class PixelChibiWindow(QWidget):
         self.on_ground = True
         self.state_time = 0.0
         self.walk_phase = 0.0
+        self.walk_edge = "bottom"  # bottom, right, top, left (四邊皆地板模式)
         self.balloon_idx = 0
         self.balloon_timer = 0.0
 
@@ -2660,6 +2697,7 @@ class PixelChibiWindow(QWidget):
 
         # 道具
         self.particles: list[PixelParticle] = []
+        self.has_lift_pot = False
 
         # 動態真實時間差 (Delta-Time) 與幀率調度定時器
         self._last_tick = time.monotonic()
@@ -2715,7 +2753,12 @@ class PixelChibiWindow(QWidget):
 
     def _init_position(self):
         ag = self._screen_rect()
-        floor_y = ag.bottom() + 1 - self.char_h
+        if bool(self.cfg.get("q_chibi_ceiling_mode", False)):
+            floor_y = float(ag.top())
+            self.walk_edge = "top"
+        else:
+            floor_y = float(ag.bottom() + 1 - self.char_h)
+            self.walk_edge = "bottom"
         self.pos_x = float(ag.left() + 160)
         self.pos_y = float(floor_y)
         self.move(int(self.pos_x), int(self.pos_y))
@@ -2737,6 +2780,10 @@ class PixelChibiWindow(QWidget):
         self.state_time += dt
         ag = self._screen_rect()
         floor_y = float(ag.bottom() + 1 - self.char_h)
+        ceiling_y = float(ag.top())
+
+        # 重力加速度（支援無重力太空失重模式）
+        g_acc = 18.0 if bool(self.cfg.get("zero_gravity_mode", False)) else 500.0
 
         # 1. 確保圖層永遠高於主寵物 (Z-Order Topmost)
         self.raise_()
@@ -2768,9 +2815,14 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
-        # 4. 視窗與按鈕攀爬辨識 (q_climb_windows)
-        climb_enabled = bool(self.cfg.get("q_climb_windows", False))
-        if climb_enabled and self.state not in ("panic", "bounce", "bowl_smash"):
+        # 4. 視窗與按鈕攀爬辨識 (q_climb_windows 與 q_chibi_allow_climb_window 行為開關)
+        climb_enabled = bool(self.cfg.get("q_climb_windows", False)) or bool(self.cfg.get("q_chibi_allow_climb_window", False))
+        if not bool(self.cfg.get("q_chibi_allow_climb_window", False)) and not bool(self.cfg.get("q_climb_windows", False)):
+            climb_enabled = False
+            if self.state == "climb" and not self.climbing_pet:
+                self.state = "idle"
+
+        if climb_enabled and self.state not in ("panic", "bounce", "bowl_smash", "lift_walk"):
             win_rect = self._get_active_window_rect()
             if win_rect and win_rect.isValid() and not win_rect.isEmpty():
                 if abs(self.pos_x - win_rect.left()) < 24 and win_rect.top() <= self.pos_y <= win_rect.bottom():
@@ -2789,7 +2841,7 @@ class PixelChibiWindow(QWidget):
 
         # 5. 飯盆砸飛拋物線物理 (Bowl Smash & Knock-back)
         if self.state == "bowl_smash":
-            self.vel_y += 500.0 * dt
+            self.vel_y += g_acc * dt
             self.pos_x += self.vel_x * dt
             self.pos_y += self.vel_y * dt
             if self.pos_x < ag.left() + 5:
@@ -2803,7 +2855,7 @@ class PixelChibiWindow(QWidget):
                 self.pos_y = floor_y
                 self.vel_y = 0.0
                 self.vel_x = 0.0
-                self.state = "splat"
+                self.state = "splat" if bool(self.cfg.get("q_chibi_allow_splat", True)) else "idle"
                 self.state_time = 0.0
                 self.post_smash_recover = True
                 if self.sounds:
@@ -2815,7 +2867,7 @@ class PixelChibiWindow(QWidget):
 
         # 6. 慌張失足掉落物理 (Panic Fall)
         if self.state == "panic":
-            self.vel_y += 500.0 * dt
+            self.vel_y += g_acc * dt
             self.pos_y += self.vel_y * dt
             if self.pos_y >= floor_y:
                 self.pos_y = floor_y
@@ -2842,7 +2894,7 @@ class PixelChibiWindow(QWidget):
 
         # 8. 跳躍與飛撲物理 (Jump / Run Jump)
         if self.state in ("jump", "run_jump"):
-            self.vel_y += 500.0 * dt
+            self.vel_y += g_acc * dt
             self.pos_x += self.vel_x * dt
             self.pos_y += self.vel_y * dt
             if self.pos_y >= floor_y:
@@ -2857,6 +2909,35 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
+        # 8.5 舉鍋巡邏狀態 (lift_walk)：雙手托舉大鐵鍋朝主寵走去
+        if self.state == "lift_walk":
+            speed = 36.0
+            if self.pet and self.pet.isVisible():
+                pet_cx = self.pet.x() + self.pet.width() / 2
+                my_cx = self.pos_x + self.char_w / 2
+                dist_to_pet = abs(my_cx - pet_cx)
+                self.facing_right = (pet_cx > my_cx)
+                dx = (speed if self.facing_right else -speed) * dt
+                self.pos_x += dx
+                self.walk_phase = (self.walk_phase + dt * 4.5) % 2.0
+                if dist_to_pet < 85:
+                    self.chibi_throw_pot()
+                    return
+            else:
+                dx = (speed if self.facing_right else -speed) * dt
+                self.pos_x += dx
+                self.walk_phase = (self.walk_phase + dt * 4.5) % 2.0
+                if self.pos_x > ag.right() - self.char_w - 10:
+                    self.facing_right = False
+                elif self.pos_x < ag.left() + 10:
+                    self.facing_right = True
+                if self.state_time > 12.0:
+                    self.state = "idle"
+                    self.state_time = 0.0
+            self.move(int(self.pos_x), int(self.pos_y))
+            self.update()
+            return
+
         # 9. 主寵物碰撞偵測與「Duang～」軟彈物理
         if self.pet and self.pet.isVisible() and not self.climbing_pet:
             pet_geom = self.pet.geometry()
@@ -2865,7 +2946,11 @@ class PixelChibiWindow(QWidget):
                 self.trigger_duang_bounce()
                 return
 
-        # 10. 攀爬主寵物狀態 (頭頂、鐵盆、後背、平板)
+        # 10. 攀爬主寵物狀態 (頭頂、鐵盆、後背、平板) - 受 q_chibi_allow_climb_pet 防禦
+        if not bool(self.cfg.get("q_chibi_allow_climb_pet", True)) and self.climbing_pet:
+            self.dismount_pet()
+            return
+
         if self.climbing_pet and self.pet and self.pet.isVisible():
             if self.pet_mount_slot == "head":
                 head_rect = self.pet.head_zone_global()
@@ -2892,7 +2977,11 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
-        # 11. 軟趴趴狀態 (Splat)
+        # 11. 軟趴趴狀態 (Splat) - 受 q_chibi_allow_splat 防禦
+        if not bool(self.cfg.get("q_chibi_allow_splat", True)) and self.state == "splat":
+            self.state = "idle"
+            self.state_time = 0.0
+
         if self.state == "splat":
             if not self.climbing_pet:
                 self.pos_y = floor_y
@@ -2901,7 +2990,7 @@ class PixelChibiWindow(QWidget):
                     if self.state_time >= 1.5:
                         self.post_smash_recover = False
                         self.state_time = 0.0
-                        if self.pet and getattr(self.pet, "iron_count", 0) > 0 and self.pet.isVisible():
+                        if bool(self.cfg.get("q_chibi_allow_climb_pet", True)) and self.pet and getattr(self.pet, "iron_count", 0) > 0 and self.pet.isVisible():
                             # 隨後起身晃頭，好奇爬上主寵頭頂鐵盆
                             self.mount_pet("iron", pose="sit")
                             log("PixelChibi", "小人晃晃小腦袋起身，好奇爬上主寵頭頂鐵盆！")
@@ -2915,7 +3004,11 @@ class PixelChibiWindow(QWidget):
                 self.update()
                 return
 
-        # 12. 睡覺與驚醒狀態 (Sleep & Wake)
+        # 12. 睡覺與驚醒狀態 (Sleep & Wake) - 受 q_chibi_allow_sleep 防禦
+        if not bool(self.cfg.get("q_chibi_allow_sleep", True)) and self.state == "sleep":
+            self.state = "idle"
+            self.state_time = 0.0
+
         if self.state == "sleep":
             self.pos_y = floor_y
             if self.state_time > 5.0:
@@ -2935,71 +3028,106 @@ class PixelChibiWindow(QWidget):
             self.update()
             return
 
-        # 13. 地面巡邏與行為狀態輪替
-        self.pos_y = floor_y
-        if self.state in ("walk", "run"):
-            speed = 70.0 if self.state == "run" else 40.0
-            dx = (speed if self.facing_right else -speed) * dt
-            self.pos_x += dx
-            rate = 6.5 if self.state == "run" else 4.5
-            self.walk_phase = (self.walk_phase + dt * rate) % 2.0
+        # 13. 地面、天花板與四邊邊界巡邏與行為狀態輪替
+        is_ceiling = bool(self.cfg.get("q_chibi_ceiling_mode", False))
+        is_four_edges = bool(self.cfg.get("q_chibi_four_edges_floor_mode", False))
 
-            if self.pos_x > ag.right() - self.char_w - 10:
-                self.facing_right = False
-            elif self.pos_x < ag.left() + 10:
-                self.facing_right = True
+        if is_four_edges:
+            edge = getattr(self, "walk_edge", "bottom")
+            speed = 48.0
+            self.walk_phase = (self.walk_phase + dt * 4.5) % 2.0
+            if edge == "bottom":
+                self.pos_y = floor_y
+                self.pos_x += speed * dt
+                if self.pos_x >= ag.right() - self.char_w - 4:
+                    self.pos_x = float(ag.right() - self.char_w)
+                    self.walk_edge = "right"
+            elif edge == "right":
+                self.pos_x = float(ag.right() - self.char_w)
+                self.pos_y -= speed * dt
+                if self.pos_y <= ceiling_y + 4:
+                    self.pos_y = ceiling_y
+                    self.walk_edge = "top"
+            elif edge == "top":
+                self.pos_y = ceiling_y
+                self.pos_x -= speed * dt
+                if self.pos_x <= ag.left() + 4:
+                    self.pos_x = float(ag.left())
+                    self.walk_edge = "left"
+            elif edge == "left":
+                self.pos_x = float(ag.left())
+                self.pos_y += speed * dt
+                if self.pos_y >= floor_y - 4:
+                    self.pos_y = floor_y
+                    self.walk_edge = "bottom"
+        else:
+            self.pos_y = ceiling_y if is_ceiling else floor_y
+            if self.state in ("walk", "run"):
+                speed = 70.0 if self.state == "run" else 40.0
+                dx = (speed if self.facing_right else -speed) * dt
+                self.pos_x += dx
+                rate = 6.5 if self.state == "run" else 4.5
+                self.walk_phase = (self.walk_phase + dt * rate) % 2.0
 
-            if self.state == "run" and self.state_time > 2.5:
-                self.state = "walk"
-                self.state_time = 0.0
-            elif self.state == "walk" and self.state_time > 5.0 and random.random() < 0.03:
-                r = random.random()
-                if r < 0.25:
-                    self.state = "run"
-                elif r < 0.45:
-                    self.state = "sit"
-                elif r < 0.60:
-                    self.state = "splat"
-                elif r < 0.75:
-                    self.start_sleep()
-                elif r < 0.88:
-                    self.state = "mischief"
-                else:
-                    self.state = "idle"
-                self.state_time = 0.0
-        elif self.state == "idle":
-            if self.state_time > 2.5:
-                r = random.random()
-                if r < 0.35:
-                    self.state = "facing_front"
-                elif r < 0.50:
-                    self.state = "facing_back"
-                elif r < 0.65:
-                    self.state = "turn"
-                else:
+                if self.pos_x > ag.right() - self.char_w - 10:
+                    self.facing_right = False
+                elif self.pos_x < ag.left() + 10:
+                    self.facing_right = True
+
+                if self.state == "run" and self.state_time > 2.5:
                     self.state = "walk"
-                    self.facing_right = (random.random() > 0.5)
-                self.state_time = 0.0
-        elif self.state == "facing_front":
-            if self.state_time > 1.8:
-                self.state = "walk"
-                self.state_time = 0.0
-        elif self.state == "facing_back":
-            if self.state_time > 1.8:
-                self.state = "turn"
-                self.state_time = 0.0
-        elif self.state == "turn":
-            if self.state_time > 0.4:
-                self.state = "walk"
-                self.state_time = 0.0
-        elif self.state == "mischief":
-            if self.state_time > 2.0:
-                self.state = "walk"
-                self.state_time = 0.0
-        elif self.state == "sit":
-            if self.state_time > 4.5:
-                self.state = "walk"
-                self.state_time = 0.0
+                    self.state_time = 0.0
+                elif self.state == "walk" and self.state_time > 5.0 and random.random() < 0.03:
+                    r = random.random()
+                    if r < 0.20:
+                        self.state = "run"
+                    elif r < 0.35:
+                        self.state = "sit"
+                    elif r < 0.50 and self.cfg.get("q_chibi_allow_splat", True):
+                        self.state = "splat"
+                    elif r < 0.65 and self.cfg.get("q_chibi_allow_sleep", True):
+                        self.start_sleep()
+                    elif r < 0.80 and self.cfg.get("q_chibi_allow_mischief", True):
+                        self.state = "mischief"
+                    else:
+                        self.state = "idle"
+                    self.state_time = 0.0
+            elif self.state == "idle":
+                if self.state_time > 2.5:
+                    r = random.random()
+                    if r < 0.35:
+                        self.state = "facing_front"
+                    elif r < 0.50:
+                        self.state = "facing_back"
+                    elif r < 0.65:
+                        self.state = "turn"
+                    else:
+                        self.state = "walk"
+                        self.facing_right = (random.random() > 0.5)
+                    self.state_time = 0.0
+            elif self.state == "facing_front":
+                if self.state_time > 1.8:
+                    self.state = "walk"
+                    self.state_time = 0.0
+            elif self.state == "facing_back":
+                if self.state_time > 1.8:
+                    self.state = "turn"
+                    self.state_time = 0.0
+            elif self.state == "turn":
+                if self.state_time > 0.4:
+                    self.state = "walk"
+                    self.state_time = 0.0
+            elif self.state == "mischief":
+                if not bool(self.cfg.get("q_chibi_allow_mischief", True)):
+                    self.state = "idle"
+                    self.state_time = 0.0
+                elif self.state_time > 2.0:
+                    self.state = "walk"
+                    self.state_time = 0.0
+            elif self.state == "sit":
+                if self.state_time > 4.5:
+                    self.state = "walk"
+                    self.state_time = 0.0
 
         self.move(int(self.pos_x), int(self.pos_y))
         self.update()
@@ -3039,6 +3167,32 @@ class PixelChibiWindow(QWidget):
         if self.sounds:
             self.sounds.play("hit")
         log("PixelChibi", f"Duang！飯盆砸落！小人慌張蹬腿被震飛彈開 (vel_x={self.vel_x:.1f}, vel_y={self.vel_y:.1f})")
+        self.update()
+
+    def trigger_lift_pot(self):
+        """天降空鐵鍋砸中 Q 版小人 -> 進入舉鍋慢走狀態。"""
+        self.state = "lift_walk"
+        self.has_lift_pot = True
+        self.state_time = 0.0
+        self.walk_phase = 0.0
+        self.climbing_pet = False
+        log("PixelChibi", "天降空鐵鍋砸中 Q 版小人！小人托舉鐵鍋慢行巡邏！")
+        self.update()
+
+    def chibi_throw_pot(self):
+        """將托舉的大鐵鍋朝主寵投擲。"""
+        self.has_lift_pot = False
+        self.state = "idle"
+        self.state_time = 0.0
+        if self.pet and hasattr(self.pet, "props"):
+            head = self.pet.head_zone_global()
+            b = self.pet.props.spawn_iron(self.pos_x + self.char_w / 2, self.pos_y)
+            if b:
+                dx = head.center().x() - b.x
+                dy = head.top() - b.y
+                b.vx = dx * 1.5
+                b.vy = -280.0
+        log("PixelChibi", "Q 版小人將托舉的鐵鍋用力投擲向主寵物！")
         self.update()
 
     def mount_pet(self, slot: str = "head", pose: str = "sit"):
@@ -3188,10 +3342,25 @@ class PixelChibiWindow(QWidget):
             frame_name = self.state
         elif self.state == "flight":
             frame_name = "sit"
+        elif self.state == "lift_walk":
+            frame_name = "walk1" if self.walk_phase < 1.0 else "walk2"
         else:
             frame_name = "idle"
 
-        # 2. 獲取像素幀並繪製
+        # 2. 獲取像素幀並繪製（支援天花板與四邊邊界旋轉矩陣）
+        rot_angle = 0.0
+        if bool(self.cfg.get("q_chibi_ceiling_mode", False)):
+            rot_angle = 180.0
+        elif bool(self.cfg.get("q_chibi_four_edges_floor_mode", False)):
+            edge_map = {"bottom": 0.0, "right": -90.0, "top": 180.0, "left": 90.0}
+            rot_angle = edge_map.get(getattr(self, "walk_edge", "bottom"), 0.0)
+
+        if rot_angle != 0.0:
+            p.save()
+            p.translate(self.char_w / 2.0, self.char_h / 2.0)
+            p.rotate(rot_angle)
+            p.translate(-self.char_w / 2.0, -self.char_h / 2.0)
+
         has_balloon = (self.state == "flight") or bool(self.cfg.get("q_flight_prop", False))
         pm = PixelChibiRenderer.get_pixmap(
             self.character,
@@ -3203,16 +3372,66 @@ class PixelChibiWindow(QWidget):
         )
         p.drawPixmap(0, 0, pm)
 
-        # 3. 繪製煙火像素粒子
+        # 2.1 舉鍋巡邏姿態：雙手高舉大鐵鍋
+        if self.state == "lift_walk":
+            if not hasattr(self, "_lift_bowl_pix") or self._lift_bowl_pix is None:
+                try:
+                    from .pet import Art
+                    src = Art.get("iron_bowl.png")
+                    w = int(self.char_w * 0.85)
+                    self._lift_bowl_pix = QPixmap.fromImage(src.scaledToWidth(w, Qt.SmoothTransformation))
+                except Exception:
+                    self._lift_bowl_pix = None
+            if self._lift_bowl_pix:
+                bx = int((self.char_w - self._lift_bowl_pix.width()) / 2)
+                by = int(-self._lift_bowl_pix.height() * 0.35)
+                p.drawPixmap(bx, by, self._lift_bowl_pix)
+
+        if rot_angle != 0.0:
+            p.restore()
+
+        # 3. 繪製煙火與獨立情緒像素粒子
         if self.particles:
             for pt in self.particles:
                 alpha = max(0, int(255 * (1.0 - pt.age / pt.life)))
                 c = QColor(pt.color)
                 c.setAlpha(alpha)
-                p.fillRect(int(pt.x), int(pt.y), 4, 4, c)
+                if pt.kind == "heart":
+                    p.save()
+                    p.translate(int(pt.x), int(pt.y))
+                    c_heart = QColor(255, 95, 135, alpha)
+                    for hx, hy in HEART_PIXELS:
+                        p.fillRect(hx * 2, hy * 2, 2, 2, c_heart)
+                    p.restore()
+                elif pt.kind == "note":
+                    p.save()
+                    p.translate(int(pt.x), int(pt.y))
+                    c_note = QColor(80, 195, 255, alpha)
+                    for nx, ny in NOTE_PIXELS:
+                        p.fillRect(nx * 2, ny * 2, 2, 2, c_note)
+                    p.restore()
+                elif pt.kind == "angry":
+                    p.save()
+                    p.translate(int(pt.x), int(pt.y))
+                    c_angry = QColor(255, 75, 75, alpha)
+                    for ax, ay in ANGRY_PIXELS:
+                        p.fillRect(ax * 2, ay * 2, 2, 2, c_angry)
+                    p.restore()
+                else:
+                    p.fillRect(int(pt.x), int(pt.y), 4, 4, c)
+
+    def spawn_emotion_particle(self, emotion_type: str = "heart"):
+        """生成獨立情緒粒子（愛心 heart、音符 note、生氣 angry）。"""
+        if not bool(self.cfg.get(f"q_chibi_particle_{emotion_type}", True)):
+            return
+        px = self.char_w / 2 + random.uniform(-6, 6)
+        py = -4.0 + random.uniform(-4, 0)
+        p = PixelParticle(px, py, random.uniform(-8, 8), -28.0, QColor(255, 100, 150), life=1.6, kind=emotion_type)
+        self.particles.append(p)
+        self.update()
 
     def set_monitor(self, provider: str, key_index: int | None = None):
-        """設定此 Q 版小人監控的 API 供應商與 Key，並啟動專屬想法框。"""
+        """設定此 Q 版小人監控的 API 供應商與 Key，並依設定啟動專屬想法框。"""
         from .balance import Ledger
         self.monitor_provider = provider
         self.monitor_key_index = key_index
@@ -3221,7 +3440,16 @@ class PixelChibiWindow(QWidget):
             self.ledger.sim.stop()
         self.ledger = Ledger(self.cfg, provider_override=provider, key_index=key_index)
         self.ledger.changed.connect(self._update_bubble_content)
-        if self.thought_bubble is None:
+        if bool(self.cfg.get("q_chibi_balance_display", False)):
+            if self.thought_bubble is None:
+                self.thought_bubble = ChibiThoughtBubble(self)
+            self._update_bubble_content()
+            self._update_thought_bubble_pos()
+            self.thought_bubble.show()
+            self.thought_bubble.raise_()
+        else:
+            if self.thought_bubble:
+                self.thought_bubble.hide()
             self.thought_bubble = ChibiThoughtBubble(self)
         self._update_bubble_content()
         self._update_thought_bubble_pos()
